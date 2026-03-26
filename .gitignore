@@ -1,0 +1,64 @@
+# =============================================
+# HarmonicMonitor - .gitignore
+# =============================================
+
+# Clases compiladas y JARs de salida
+classes/
+target/
+*.class
+*.jar
+
+# Base de datos local (datos de sesion)
+*.db
+
+# Exportaciones y registros de mediciones
+exports/
+records/
+records1/
+*.csv
+
+# Logs y archivos de depuracion
+*.log
+compile_output.txt
+
+# HTMLs y PDFs generados por scripts
+*.html
+*.pdf
+
+# Scripts de generacion de documentos (internos)
+gen_*.py
+
+# Notas internas y archivos de trabajo
+adversarial.txt
+PREGUNTAR.txt
+NOTEBOOKLM_PROMPT.txt
+PROMPT_DOCUMENTO_TEORIA.md
+COMPARATIVA_TECNICA.md
+conecta.txt
+no conecta.txt
+ultimo antes de explotar.txt
+correccion matematica.txt
+errorde multireport.txt
+error de multi.xlsx
+resumen_analisis_adversarial.txt
+
+# Scripts de parches puntuales
+fix_*.ps1
+apply_theme.ps1
+darken_text.ps1
+fix_brightness.ps1
+
+# Instaladores de salida
+installer_output/
+
+# Librerias (se descargan con Maven)
+lib/
+
+# Claude AI internal
+.claude/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.swp

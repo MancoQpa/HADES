@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" version="2007" revision="B">
+
+  <Header id="ION7400-Sim" version="1.0" revision="A"
+          toolID="HarmonicMonitor-SimGen"
+          nameStructure="IEDName"/>
+
+  <IED name="SIM1" desc="ION 7400 Desktop Simulator" manufacturer="Schneider" type="ION7400">
+    <Services>
+      <DynAssociation/>
+      <GetDirectory/>
+      <GetDataObjectDefinition/>
+      <GetDataSetValue/>
+      <DataSetDirectory/>
+      <ReadWrite/>
+      <GetCBValues/>
+    </Services>
+    <AccessPoint name="AP1">
+      <Server>
+        <Authentication none="true"/>
+        <LDevice inst="LD0">
+          <LN0 lnClass="LLN0" lnType="LLN0_t" inst="">
+            <DOI name="Mod">
+              <DAI name="ctlModel"><Val>status-only</Val></DAI>
+            </DOI>
+          </LN0>
+          <LN lnClass="LPHD" lnType="LPHD_t" inst="1" prefix=""/>
+          <LN lnClass="MMXU" lnType="MMXU_t" inst="1" prefix="M03_"/>
+          <LN lnClass="MHAI" lnType="MHAI_t" inst="1" prefix=""/>
+          <LN lnClass="MSQI" lnType="MSQI_t" inst="1" prefix=""/>
+          <LN lnClass="MMTR" lnType="MMTR_t" inst="1" prefix=""/>
+          <LN lnClass="MSTA" lnType="MSTA_t" inst="1" prefix=""/>
+        </LDevice>
+      </Server>
+    </AccessPoint>
+  </IED>
+
+  <DataTypeTemplates>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         Enumerations
+    ═══════════════════════════════════════════════════════════════ -->
+    <EnumType id="Beh">
+      <EnumVal ord="1">on</EnumVal>
+      <EnumVal ord="2">blocked</EnumVal>
+      <EnumVal ord="3">test</EnumVal>
+      <EnumVal ord="4">test/blocked</EnumVal>
+      <EnumVal ord="5">off</EnumVal>
+    </EnumType>
+
+    <EnumType id="Health">
+      <EnumVal ord="1">Ok</EnumVal>
+      <EnumVal ord="2">Warning</EnumVal>
+      <EnumVal ord="3">Alarm</EnumVal>
+    </EnumType>
+
+    <EnumType id="CtlModels">
+      <EnumVal ord="0">status-only</EnumVal>
+      <EnumVal ord="1">direct-with-normal-security</EnumVal>
+      <EnumVal ord="2">sbo-with-normal-security</EnumVal>
+    </EnumType>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         DATypes  (leaf building blocks)
+    ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- Scalar float -->
+    <DAType id="AnVal_t">
+      <BDA name="f" bType="FLOAT32"/>
+    </DAType>
+
+    <!-- Complex value vector -->
+    <DAType id="Vector_t">
+      <BDA name="mag" bType="Struct" type="AnVal_t"/>
+      <BDA name="ang" bType="Struct" type="AnVal_t"/>
+    </DAType>
+
+    <!-- Complex Measured Value (CMV) as DAType for use inside DOTypes -->
+    <DAType id="CMV_t">
+      <BDA name="cVal" bType="Struct" type="Vector_t"/>
+      <BDA name="q"    bType="Quality"/>
+      <BDA name="t"    bType="Timestamp"/>
+    </DAType>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         DOTypes
+    ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- MV: scalar measured value -->
+    <DOType id="MV_t" cdc="MV">
+      <DA name="mag" bType="Struct" type="AnVal_t" fc="MX"/>
+      <DA name="q"   bType="Quality"               fc="MX"/>
+      <DA name="t"   bType="Timestamp"             fc="MX"/>
+    </DOType>
+
+    <!-- WYE: 3-phase star (phsA/B/C each CMV) -->
+    <DOType id="WYE_t" cdc="WYE">
+      <DA name="phsA" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsB" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsC" bType="Struct" type="CMV_t" fc="MX"/>
+    </DOType>
+
+    <!-- DEL: 3-phase delta (phsAB/BC/CA each CMV) — for ThdPPV -->
+    <DOType id="DEL_t" cdc="DEL">
+      <DA name="phsAB" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBC" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCA" bType="Struct" type="CMV_t" fc="MX"/>
+    </DOType>
+
+    <!-- SEQ: symmetrical components (c1/c2/c3 each CMV) -->
+    <DOType id="SEQ_t" cdc="SEQ">
+      <DA name="c1" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="c2" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="c3" bType="Struct" type="CMV_t" fc="MX"/>
+    </DOType>
+
+    <!-- BCR: binary counter reading (energy) -->
+    <DOType id="BCR_t" cdc="BCR">
+      <DA name="actVal"  bType="INT64"   fc="ST"/>
+      <DA name="frVal"   bType="INT32"   fc="ST"/>
+      <DA name="frPd"    bType="INT32"   fc="CF"/>
+      <DA name="pulsQty" bType="FLOAT32" fc="CF"/>
+      <DA name="q"       bType="Quality" fc="ST"/>
+      <DA name="t"       bType="Timestamp" fc="ST"/>
+    </DOType>
+
+    <!-- SPS: single point status -->
+    <DOType id="SPS_t" cdc="SPS">
+      <DA name="stVal" bType="BOOLEAN"   fc="ST"/>
+      <DA name="q"     bType="Quality"   fc="ST"/>
+      <DA name="t"     bType="Timestamp" fc="ST"/>
+    </DOType>
+
+    <!-- ENS: enumerated status (Beh) -->
+    <DOType id="ENS_Beh_t" cdc="ENS">
+      <DA name="stVal" bType="Enum" type="Beh"    fc="ST"/>
+      <DA name="q"     bType="Quality"             fc="ST"/>
+      <DA name="t"     bType="Timestamp"           fc="ST"/>
+    </DOType>
+
+    <!-- ENS: enumerated status (Health) -->
+    <DOType id="ENS_Health_t" cdc="ENS">
+      <DA name="stVal" bType="Enum" type="Health"  fc="ST"/>
+      <DA name="q"     bType="Quality"             fc="ST"/>
+      <DA name="t"     bType="Timestamp"           fc="ST"/>
+    </DOType>
+
+    <!-- ENC: controllable enumerated -->
+    <DOType id="ENC_t" cdc="ENC">
+      <DA name="stVal"    bType="Enum" type="Beh"       fc="ST"/>
+      <DA name="q"        bType="Quality"               fc="ST"/>
+      <DA name="t"        bType="Timestamp"             fc="ST"/>
+      <DA name="ctlModel" bType="Enum" type="CtlModels" fc="CF"/>
+    </DOType>
+
+    <!-- DPL: device name plate (not used, replaced by SPS placeholder) -->
+
+    <!-- HA: harmonic array — ION 7400 vendor extension
+         phsAHar01..50, phsBHar01..50, phsCHar01..50 -->
+    <DOType id="HA_t" cdc="WYE">
+      <DA name="phsAHar01" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar02" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar03" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar04" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar05" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar06" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar07" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar08" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar09" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar10" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar11" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar12" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar13" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar14" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar15" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar16" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar17" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar18" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar19" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar20" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar21" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar22" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar23" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar24" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar25" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar26" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar27" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar28" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar29" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar30" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar31" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar32" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar33" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar34" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar35" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar36" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar37" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar38" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar39" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar40" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar41" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar42" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar43" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar44" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar45" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar46" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar47" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar48" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar49" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsAHar50" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar01" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar02" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar03" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar04" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar05" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar06" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar07" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar08" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar09" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar10" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar11" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar12" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar13" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar14" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar15" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar16" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar17" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar18" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar19" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar20" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar21" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar22" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar23" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar24" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar25" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar26" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar27" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar28" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar29" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar30" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar31" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar32" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar33" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar34" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar35" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar36" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar37" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar38" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar39" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar40" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar41" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar42" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar43" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar44" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar45" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar46" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar47" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar48" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar49" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsBHar50" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar01" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar02" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar03" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar04" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar05" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar06" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar07" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar08" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar09" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar10" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar11" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar12" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar13" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar14" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar15" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar16" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar17" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar18" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar19" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar20" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar21" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar22" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar23" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar24" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar25" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar26" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar27" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar28" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar29" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar30" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar31" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar32" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar33" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar34" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar35" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar36" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar37" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar38" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar39" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar40" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar41" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar42" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar43" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar44" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar45" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar46" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar47" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar48" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar49" bType="Struct" type="CMV_t" fc="MX"/>
+      <DA name="phsCHar50" bType="Struct" type="CMV_t" fc="MX"/>
+    </DOType>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         LNodeTypes
+    ═══════════════════════════════════════════════════════════════ -->
+
+    <LNodeType id="LLN0_t" lnClass="LLN0">
+      <DO name="Mod"    type="ENC_t"/>
+      <DO name="Beh"    type="ENS_Beh_t"/>
+      <DO name="Health" type="ENS_Health_t"/>
+    </LNodeType>
+
+    <LNodeType id="LPHD_t" lnClass="LPHD">
+      <DO name="PhyHealth" type="ENS_Health_t"/>
+      <DO name="Proxy"     type="SPS_t"/>
+    </LNodeType>
+
+    <!-- MMXU: voltages, currents, powers, PF, Hz -->
+    <LNodeType id="MMXU_t" lnClass="MMXU">
+      <DO name="PhV"    type="WYE_t"/>
+      <DO name="A"      type="WYE_t"/>
+      <DO name="TotW"   type="MV_t"/>
+      <DO name="TotVAr" type="MV_t"/>
+      <DO name="TotVA"  type="MV_t"/>
+      <DO name="TotPF"  type="MV_t"/>
+      <DO name="Hz"     type="MV_t"/>
+    </LNodeType>
+
+    <!-- MHAI: THD current/voltage, K-factor, harmonic spectrum (IEC 61850-7-4) -->
+    <LNodeType id="MHAI_t" lnClass="MHAI">
+      <DO name="ThdA"    type="WYE_t"/>
+      <DO name="ThdPPV"  type="DEL_t"/>
+      <DO name="HKf"     type="WYE_t"/>
+      <DO name="ThdOddA" type="WYE_t"/>
+      <DO name="ThdEvnA" type="WYE_t"/>
+      <DO name="HA"      type="HA_t"/>
+    </LNodeType>
+
+    <!-- MSQI: symmetrical components -->
+    <LNodeType id="MSQI_t" lnClass="MSQI">
+      <DO name="SeqA" type="SEQ_t"/>
+      <DO name="SeqV" type="SEQ_t"/>
+    </LNodeType>
+
+    <!-- MMTR: energy counters -->
+    <LNodeType id="MMTR_t" lnClass="MMTR">
+      <DO name="TotWh"   type="BCR_t"/>
+      <DO name="TotVAh"  type="BCR_t"/>
+      <DO name="TotVArh" type="BCR_t"/>
+      <DO name="SupWh"   type="BCR_t"/>
+      <DO name="SupVArh" type="BCR_t"/>
+    </LNodeType>
+
+    <!-- MSTA: demand statistics -->
+    <LNodeType id="MSTA_t" lnClass="MSTA">
+      <DO name="AvW"   type="MV_t"/>
+      <DO name="MaxW"  type="MV_t"/>
+      <DO name="MinW"  type="MV_t"/>
+      <DO name="AvVAr" type="MV_t"/>
+      <DO name="AvVA"  type="MV_t"/>
+    </LNodeType>
+
+  </DataTypeTemplates>
+
+</SCL>
