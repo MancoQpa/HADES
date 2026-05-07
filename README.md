@@ -1,4 +1,6 @@
-# HADES — Monitor de Armónicos y Detección de Cargas Electrónicas
+# HADES
+
+**H**armonic **A**nalysis for **D**etection of **E**lectronic **S**ignatures
 
 Herramienta de escritorio Java/JavaFX para monitoreo de calidad de energía en alimentadores de media tensión (23 kV) mediante el protocolo **IEC 61850**.
 Detecta automáticamente cargas electrónicas no lineales (cripto-minería, centros de datos, variadores de velocidad) a partir del análisis espectral de armónicos de corriente.

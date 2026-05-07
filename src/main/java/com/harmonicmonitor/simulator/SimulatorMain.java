@@ -72,13 +72,13 @@ public class SimulatorMain {
 
         // Banner
         System.out.println("╔══════════════════════════════════════════════════╗");
-        System.out.println("║     ION 7400 Desktop Simulator — HarmonicMonitor  ║");
+        System.out.println("║         ION 7400 Desktop Simulator — HADES         ║");
         System.out.println("╚══════════════════════════════════════════════════╝");
         System.out.printf("  IED: %-10s  LD: %-6s  MMXU prefix: %s%n", iedName, ldInst, prefix);
         System.out.printf("  Puerto: %-6d  Perfil: %-20s  Ruido: %.0f%%%n",
                 port, profile, noise * 100);
         System.out.printf("  Intervalo actualización: %d ms%n", interval);
-        System.out.println("  HarmonicMonitor → host=127.0.0.1  port=" + port +
+        System.out.println("  HADES → host=127.0.0.1  port=" + port +
                 "  iedName=" + iedName + "  ldInst=" + ldInst + "  prefix=" + prefix);
         System.out.println("──────────────────────────────────────────────────────");
 

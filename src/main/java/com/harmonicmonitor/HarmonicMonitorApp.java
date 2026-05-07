@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * HarmonicMonitor v1.0 — SCADA Dark Theme con TabPane.
+ * HADES v1.0 — SCADA Dark Theme con TabPane.
  * Monitor de armónicos y detección de cargas electrónicas en alimentadores MT 23kV.
  */
 public class HarmonicMonitorApp extends Application {

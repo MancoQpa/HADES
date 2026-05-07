@@ -381,7 +381,7 @@ public class ComtradeTriggerEngine {
                 new FileOutputStream(rpt), StandardCharsets.UTF_8))) {
 
             pw.println("==========================================================");
-            pw.println("  REPORTE DE EVENTO — HarmonicMonitor v1.0");
+            pw.println("  REPORTE DE EVENTO — HADES v1.0");
             pw.println("==========================================================");
             pw.println("Fecha/Hora    : " + dt.format(ts));
             pw.println("Feeder ID     : " + m.getFeederId());

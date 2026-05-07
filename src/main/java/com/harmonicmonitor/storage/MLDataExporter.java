@@ -521,7 +521,7 @@ public class MLDataExporter {
         // Fila 1: título principal (s=2: bold blanco sobre azul)
         s.append("<row r=\"").append(row++).append("\">");
         txt(s, "A", row - 1, 2,
-            "DICCIONARIO DE VARIABLES — HarmonicMonitor v1.0  |  Alimentador MT 23 kV  |  IEEE 519-2022 / IEC 61000-3-6");
+            "DICCIONARIO DE VARIABLES — HADES v1.0  |  Alimentador MT 23 kV  |  IEEE 519-2022 / IEC 61000-3-6");
         s.append("</row>");
 
         // Fila 2: sub-título con normas de referencia (s=2)
@@ -558,7 +558,7 @@ public class MLDataExporter {
         s.append("<row r=\"").append(row++).append("\"></row>");
         s.append("<row r=\"").append(row).append("\">");
         txt(s, "A", row, 0,
-            "Generado automaticamente por HarmonicMonitor v1.0  |  Emilio Medina");
+            "Generado automaticamente por HADES v1.0  |  Emilio Medina");
         s.append("</row>");
 
         s.append("</sheetData></worksheet>");

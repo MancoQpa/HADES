@@ -122,7 +122,7 @@ public class ComtradeWriter {
 
             // Línea 1: station_name , rec_dev_id , rev_year
             pw.printf(Locale.US, "%s,%s,1999%n",
-                "HarmonicMonitor-" + sanitize(cfg.getFeederName()),
+                "HADES-" + sanitize(cfg.getFeederName()),
                 sanitize(m.getFeederId()));
 
             // Línea 2: TT , ##A , ##D
