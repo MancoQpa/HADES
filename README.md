@@ -7,7 +7,7 @@ Detecta automáticamente cargas electrónicas no lineales (cripto-minería, cent
 
 De uso libre bajo licencia GPL v3.
 
-Desarrollado por **Emilio Medina** — Proyecto ANDE-SIGFE.
+Desarrollado por **Emilio Medina**.
 
 ---
 
@@ -23,7 +23,7 @@ Desarrollado por **Emilio Medina** — Proyecto ANDE-SIGFE.
 - Demanda máxima y factor de potencia
 
 ### Detección de carga electrónica
-- Árbol de decisión basado en: factor de cresta de corriente (CV), THD_I, H5/H1, H7/H1
+- Árbol de decisión basado en: coeficiente de variación de corriente (CV = σ/μ), THD_I, H5/H1, H7/H1
 - Perfiles identificados: cripto-minería, centro de datos, variador de velocidad, iluminación electrónica, carga lineal
 - Nivel de confianza por clasificación
 - Análisis de resonancia (frecuencia de resonancia LC)

@@ -25,8 +25,8 @@ public class HelpPanel {
 
         {"⚖ Disclaimer Normativo",
             "DISCLAIMER NORMATIVO — ALCANCE Y LIMITACIONES\n" +
-            "HADES v1.0  |  Proyecto ANDE-SIGFE\n" +
-            "Revisión: Marzo 2026  |  Equipo: Medina / Fernández / Rojas / Paiva / Domínguez\n\n" +
+            "HADES v1.0  |  Harmonic Analysis for Detection of Electronic Signatures\n" +
+            "Revisión: Marzo 2026  |  Equipo: Medina / Rojas / Paiva / Domínguez\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
             "1. NATURALEZA DEL INSTRUMENTO\n" +
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
@@ -1219,8 +1219,7 @@ public class HelpPanel {
 
         {"📖 Sobre HADES",
             "HADES v1.0\n" +
-            "Proyecto ANDE-SIGFE\n" +
-            "Sistema Inteligente de Gestión de Firmas Energéticas\n\n" +
+            "Harmonic Analysis for Detection of Electronic Signatures\n\n" +
             "Monitoreo en tiempo real de feeders de 23 kV mediante análisis de firmas\n" +
             "de energía y comunicaciones IEC 61850 para detección de cargas electrointensivas.\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -1234,11 +1233,10 @@ public class HelpPanel {
             "EQUIPO\n" +
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
             "  Emilio Medina      — Arquitectura, backend IEC 61850, análisis armónico\n" +
-            "  Ubaldo Fernández   — Procesamiento de señales y detección de cargas\n" +
             "  Diego Rojas        — Interfaz gráfica y visualización de datos\n" +
             "  Enrique Paiva      — Integración de normas y validación de modelos\n" +
             "  Sergio Domínguez   — Gestión de Proyecto\n\n" +
-            "  País: Paraguay  |  ANDE — Distribución MT 23 kV  |  2026\n\n" +
+            "  País: Paraguay  |  Distribución MT 23 kV  |  2026\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
             "CARACTERÍSTICAS PRINCIPALES\n" +
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +

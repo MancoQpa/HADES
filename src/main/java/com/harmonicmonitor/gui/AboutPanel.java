@@ -123,14 +123,7 @@ public class AboutPanel {
             "-fx-font-size: 34px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";" +
             "-fx-effect: dropshadow(gaussian, #0078D488, 18, 0.3, 0, 0);");
 
-        Label projectBadge = new Label("Proyecto ANDE-SIGFE");
-        projectBadge.setStyle(
-            "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #CA5010;" +
-            "-fx-background-color: #FFF0E0; -fx-background-radius: 4;" +
-            "-fx-border-color: #CA501040; -fx-border-width: 1; -fx-border-radius: 4;" +
-            "-fx-padding: 3 14 3 14; -fx-letter-spacing: 1;");
-
-        Label sigfeLbl = new Label("Sistema Inteligente de Gestión de Firmas Energéticas");
+        Label sigfeLbl = new Label("Harmonic Analysis for Detection of Electronic Signatures");
         sigfeLbl.setStyle(
             "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
 
@@ -146,7 +139,7 @@ public class AboutPanel {
             "-fx-background-color: " + Theme.SEL + "; -fx-background-radius: 20;" +
             "-fx-padding: 3 14 3 14;");
 
-        hero.getChildren().addAll(iconLbl, titleLbl, projectBadge, sigfeLbl, subtitleLbl, versionLbl);
+        hero.getChildren().addAll(iconLbl, titleLbl, sigfeLbl, subtitleLbl, versionLbl);
         page.getChildren().add(hero);
 
         // ── Two-column main area ──────────────────────────────────────────────
@@ -165,9 +158,8 @@ public class AboutPanel {
             sectionTitle("📋 DESCRIPCIÓN"),
             sep(),
             bodyText(
-                "HADES (Harmonic Analysis for Detection of Electronic Signatures) es el software del proyecto ANDE-SIGFE " +
-                "(Sistema Inteligente de Gestión de Firmas Energéticas), " +
-                "una plataforma de escritorio para el monitoreo en tiempo real " +
+                "HADES (Harmonic Analysis for Detection of Electronic Signatures) es una " +
+                "plataforma de escritorio para el monitoreo en tiempo real " +
                 "de la calidad de energía en alimentadores de media tensión 23 kV, " +
                 "desarrollada sobre el estándar IEC 61850 / MMS.\n\n" +
                 "Su objetivo es detectar y cuantificar la presencia de cargas " +
@@ -195,17 +187,13 @@ public class AboutPanel {
         capCard.getChildren().addAll(
             sectionTitle("🏗 ARQUITECTURA"),
             sep(),
-            bodyText(
-                "La aplicación sigue un diseño en capas:\n\n" +
-                "  Capa de comunicación  — IEC61850Communicator\n" +
-                "  Capa de análisis      — HarmonicAnalyzer, ElectronicLoadDetector,\n" +
-                "                          ResonanceAnalyzer, LoadStabilityAnalyzer\n" +
-                "  Capa de alarmas       — AlarmEngine (4 niveles, umbralización)\n" +
-                "  Capa de persistencia  — DataStorage (SQLite + CSV)\n" +
-                "  Capa de presentación  — JavaFX 17 (panels MVC ligero)\n\n" +
-                "El módulo SimulatedPoller permite desarrollo y demostración\n" +
-                "sin acceso a hardware real, generando señales sintéticas\n" +
-                "basadas en modelos físicos de cada tipo de carga.")
+            featureRow("📡", "Comunicación — IEC61850Communicator, MeasurementPoller"),
+            featureRow("〜", "Análisis — HarmonicAnalyzer, ElectronicLoadDetector"),
+            featureRow("🔬", "Análisis — ResonanceAnalyzer, LoadStabilityAnalyzer"),
+            featureRow("🔔", "Alarmas — AlarmEngine (4 niveles, umbralización)"),
+            featureRow("💾", "Persistencia — DataStorage (SQLite + CSV)"),
+            featureRow("🖥", "Presentación — JavaFX 17 (panels MVC ligero)"),
+            featureRow("⚙", "Simulación — SimulatedPoller (8 perfiles sintéticos)")
         );
 
         leftCol.getChildren().addAll(descCard, capCard);
@@ -238,13 +226,12 @@ public class AboutPanel {
 
         // Team cards per developer
         VBox dev1 = devRow("Emilio Medina",      "Arquitectura, backend IEC 61850, análisis armónico");
-        VBox dev2 = devRow("Ubaldo Fernández",   "Procesamiento de señales y detección de cargas");
         VBox dev3 = devRow("Diego Rojas",        "Interfaz gráfica y visualización de datos");
         VBox dev4 = devRow("Enrique Paiva",      "Integración de normas y validación de modelos");
         VBox dev5 = devRow("Sergio Domínguez",   "Gestión de Proyecto");
 
         VBox teamBox = new VBox(6);
-        teamBox.getChildren().addAll(dev1, dev2, dev3, dev4, dev5);
+        teamBox.getChildren().addAll(dev1, dev3, dev4, dev5);
 
         authorCard.getChildren().addAll(
             sectionTitle("👥 EQUIPO DE DESARROLLO"),
@@ -253,7 +240,6 @@ public class AboutPanel {
             sep(),
             teamBox,
             sep(),
-            infoRow("Proyecto",       "ANDE-SIGFE"),
             infoRow("País",           "Paraguay  🇵🇾"),
             infoRow("Año",            "2026"),
             infoRow("Sector",         "Distribución eléctrica MT 23 kV — ANDE"),
@@ -322,8 +308,8 @@ public class AboutPanel {
         footer.setStyle("-fx-background-color: " + Theme.BG + "; -fx-border-color: " + Theme.BORDER + "; -fx-border-width: 1 0 0 0;");
 
         Label footerLbl = new Label(
-            "Proyecto ANDE-SIGFE  •  " +
-            "Emilio Medina · Ubaldo Fernández · Diego Rojas · Enrique Paiva · Sergio Domínguez  •  " +
+            "HADES v1.0  •  " +
+            "Emilio Medina · Diego Rojas · Enrique Paiva · Sergio Domínguez  •  " +
             "Asunción, Paraguay  🇵🇾  •  2026");
         footerLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #444444; -fx-text-alignment: center;");
         footerLbl.setWrapText(true);
