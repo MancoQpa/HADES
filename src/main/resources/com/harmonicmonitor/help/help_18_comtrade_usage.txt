@@ -1,0 +1,190 @@
+VISOR COMTRADE — GUÍA DE USO
+Módulo: ComtradePanel  |  Formato soportado: IEEE C37.111-1999/2013, IEC 60255-24
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APERTURA DE ARCHIVOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Ir a la pestaña 📁 COMTRADE.
+2. Botón 'Abrir CFG' → seleccionar el archivo .cfg del registro.
+   El archivo .dat debe estar en la misma carpeta con el mismo nombre base.
+3. Desde la pestaña 📼 REGISTROS, doble clic en cualquier registro
+   lo abre directamente en el visor.
+
+Formatos soportados:
+  • ASCII, BINARY, BINARY32
+  • Revisiones 1991, 1999, 2013
+  • Número ilimitado de canales analógicos y digitales
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PANEL IZQUIERDO — INFORMACIÓN Y CANALES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sección INFO:
+  • Estación: nombre de la subestación (campo station_name del .cfg)
+  • Dispositivo: identificador del IED (rec_dev_id)
+  • Revisión: año del formato IEEE C37.111 (1991 / 1999 / 2013)
+  • Formato: ASCII / BINARY / BINARY32
+  • Canales: número de canales analógicos y digitales
+  • Fs: frecuencia de muestreo efectiva en Hz
+  • Muestras: total de muestras del registro
+  • Duración: duración en milisegundos
+  • T_inicio / T_trigger: timestamps del inicio y el disparo
+
+Selector de Canales:
+  • Lista todos los canales analógicos con su unidad.
+  • En la pestaña FFT y Potencia: selección múltiple activa.
+  • En la pestaña Secuencias: seleccionar exactamente 3 canales (VA, VB, VC
+    o IA, IB, IC) para el análisis de Fortescue.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PESTAÑA: FORMAS DE ONDA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Muestra los canales analógicos vs. tiempo en un Canvas JavaFX.
+
+VENTANA DE ANÁLISIS:
+  Los dos sliders 'Inicio' y 'Fin' definen una región del registro
+  (como porcentaje de la duración total) que se usa para:
+    - Cálculo de FFT / armónicos
+    - Análisis de fasores
+    - Cálculo de secuencias simétricas
+    - Análisis de potencia (P, Q, S, FP)
+
+  Utilidad: permite aislar la ventana pre-falla, post-falla o un
+  ciclo específico para análisis parcial.
+
+  Botón 'Resetear ventana': restaura la ventana a todo el registro.
+  Botón 'Analizar ventana': aplica la ventana y refresca todos los tabs.
+
+  Info de ventana: muestra los tiempos en ms y el número de ciclos
+  contenidos (a la frecuencia nominal del registro).
+
+VISUALIZACIÓN:
+  • Cada canal tiene un color asignado de manera consistente.
+  • Leyenda en la parte inferior: nombre [unidad].
+  • Hasta 2000 puntos se muestran directamente; los registros más
+    largos se remuestrean para la visualización (el análisis usa
+    siempre los datos originales completos).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PESTAÑA: FFT — ANÁLISIS ARMÓNICO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Calcula el espectro de frecuencia de cada canal analógico.
+
+ALGORITMO:
+  Transformada Rápida de Fourier (Cooley-Tukey, DIT in-place).
+
+  Ventana de Hann:    w(n) = 0.5 · (1 − cos(2πn/N))
+
+  Normalización coherente (ganancia de ventana = 0.5):
+
+     Aₙ,pico = (4/N) · |FFT(x·w)|ₙ      (amplitud de PICO, n > 0)
+     Aₙ,rms  = Aₙ,pico / √2              (amplitud RMS del armónico n)
+     X₀      = (2/N) · |FFT(x·w)|₀       (componente DC)
+
+  Derivación: para x(t) = Apico·cos(ωt), la ventana Hann da
+  |FFT_k| = Apico·N/4,  luego  (4/N)·|FFT_k| = Apico.
+  Para RMS:  Arms = Apico/√2.
+  ⚠ El factor (4/N) da amplitud de PICO, no RMS directamente.
+
+TABLA DE RESULTADOS:
+  Columnas por canal:
+    Frec (Hz)   — frecuencia central del bin
+    Mag [unidad]— amplitud RMS del armónico (A_pico/√2) en la unidad del canal
+    Fase (°)    — ángulo de fase referenciado al inicio de la ventana
+    % H1        — amplitud como porcentaje del fundamental H1
+
+  Fila final de cada canal: THD (%) calculado desde H₂ en adelante
+    THD = √(X₂² + X₃² + ··· + Xₙ²) / X₁  × 100%
+
+REFERENCIA NORMATIVA:
+  IEC 61000-4-7:2009 — Técnicas de medición de armónicos
+  IEC 61000-4-30:2015 — Métodos Clase A para calidad de energía
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PESTAÑA: FASORES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Diagrama polar del fundamental (H1) de cada canal.
+
+  • Magnitud: amplitud RMS del fundamental (igual que FFT H1)
+  • Ángulo: fase en grados (0° = referencia del primer canal)
+  • Representación: flecha vectorial con longitud proporcional a la magnitud
+  • La diferencia de ángulo entre VA e IA da φ₁ = arccos(DPF)
+
+Uso típico:
+  Verificar secuencia de fases (A→B→C en sistema directo),
+  medir desfase V-I para cálculo de factor de potencia de desplazamiento,
+  detectar desbalance de amplitudes o asimetría de fases.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PESTAÑA: SECUENCIAS SIMÉTRICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Aplica la transformada de Fortescue a los tres canales seleccionados.
+
+  SELECCIÓN DE CANALES:
+  Seleccionar exactamente 3 canales de la lista:
+    - Para tensión: VA, VB, VC
+    - Para corriente: IA, IB, IC
+
+  CÁLCULO (del fundamental H₁ de cada canal):
+    X₁ = ⅓(Xₐ + a·X_b + a²·X_c)      Secuencia Positiva
+    X₂ = ⅓(Xₐ + a²·X_b + a·X_c)      Secuencia Negativa
+    X₀ = ⅓(Xₐ + X_b + X_c)            Secuencia Cero
+
+    a = e^(j·2π/3)   (operador de secuencia, 120°)
+
+  PREFIJO AUTOMÁTICO:
+  La aplicación detecta si los canales son tensión (V, kV) o corriente
+  (A, kA) y usa el prefijo V+/V-/V0 o I+/I-/I0 correspondientemente.
+
+  INTERPRETACIÓN:
+    X1: componente en secuencia de la red (normal)
+    X2: secuencia inversa — indicador de desbalance (límite EN 50160: V2/V1 <= 2%)
+    X0: componente homopolar — circula por el neutro
+
+  Ref: Fortescue C.L. (1918); IEC 60034-26:2006; EN 50160.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PESTAÑA: ANÁLISIS DE POTENCIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Calcula potencias y factores de calidad energética para un par V-I.
+
+  SELECCIÓN DE CANALES:
+  Usar la lista de canales para seleccionar:
+    - Canal de tensión (unidad: V, kV)
+    - Canal de corriente (unidad: A, kA)
+
+  DETECCIÓN AUTOMÁTICA (auto-corrección):
+  Si el canal de índice 0 tiene unidad de corriente y el 1 es tensión,
+  la aplicación los intercambia automáticamente y muestra:
+    '✓ Canales auto-corregidos (ch0=I, ch1=V → intercambiados)'
+
+  MAGNITUDES CALCULADAS (sobre la ventana de análisis activa):
+    P   [W]   = ∫ v(t)·i(t) dt                   (potencia activa real)
+    S   [VA]  = V_rms · I_rms                     (potencia aparente)
+    Q   [VAR] = √(S² − P²)                        (potencia no activa)
+    FP        = P / S                             (factor de potencia verdadero)
+    DPF       = cos(φ₁) = Re(V̇₁*)/(|V₁|·|I₁|)   (DPF del fundamental)
+    THD_V [%] = √(Σ Vₕ², h≥2) / V₁ · 100%
+    THD_I [%] = √(Σ Iₕ², h≥2) / I₁ · 100%
+
+  NOTA SOBRE Q:
+  Q calculada como √(S²−P²) es la 'potencia no activa' total,
+  que incluye Q1 del fundamental + potencia de distorsión D.
+  Ref: IEEE 1459-2010, ecuación (5).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXPORTAR CSV
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Botón 'Exportar CSV': genera un archivo CSV con:
+    - Columna 1: timestamp en microsegundos
+    - Columnas siguientes: valor físico de cada canal analógico
+    - Encabezado: nombre y unidad de cada canal
+
+  Compatible con Excel, MATLAB, Python (pandas), GNU Octave.

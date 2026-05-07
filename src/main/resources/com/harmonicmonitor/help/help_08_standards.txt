@@ -1,0 +1,20 @@
+CUMPLIMIENTO NORMATIVO
+
+Evaluación automática contra tres normas internacionales.
+
+  IEC 61000-3-6:2008
+  Emisiones armónicas en redes MT/AT. Límites para 23 kV:
+  • THDv <= 5% (nivel de planificación)
+  • H5 <= 4%,  H7 <= 4%,  H11/H13 <= 3%
+
+  IEEE 519-2022
+  IMPORTANTE: IEEE 519 NO limita THDi. Limita TDD de corriente.
+  TDD = √(I₂² + I₃² + ··· + Iₕ²) / Iₗ  × 100%     (Iₗ = corriente máx. demanda)
+  • TDD ≤ 8%   (Icc/Iₗ = 20–50, bus de distribución)
+  • THDv ≤ 5% en PCC (Punto de Acoplamiento Común)
+
+  EN 50160:2010
+  Características de tensión en redes de distribución pública.
+  • Desbalance de tensión: ≤ 2% (promedio 10 min, 95% del tiempo)
+  • THDv: ≤ 8% (percentil 95% semanal)
+  • Frecuencia: 50 Hz ± 1%

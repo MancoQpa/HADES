@@ -1,0 +1,143 @@
+FUNDAMENTOS TEÓRICOS: ANÁLISIS ARMÓNICO
+Revisado contra: IEEE 519-2022, IEC 61000-4-7, Arrillaga & Watson (2003)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SERIE DE FOURIER Y CARGAS NO LINEALES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Una señal de corriente periódica puede descomponerse:
+
+   i(t) = I₀ + √2·I₁·cos(ωt+φ₁) + √2·I₂·cos(2ωt+φ₂) + √2·I₃·cos(3ωt+φ₃) + ···
+
+   En forma compacta:  i(t) = I₀ + Σ √2·Iₙ·cos(nωt + φₙ)   (n = 1..∞)
+
+   Iₙ = valor eficaz (RMS) del armónico n-ésimo.
+   √2·Iₙ = amplitud de pico del armónico n-ésimo.
+
+CARGAS LINEALES Y ARMÓNICOS:
+
+Una carga lineal cumple:  i(t) = v(t) / Z
+
+Las cargas lineales NO generan armónicos nuevos, pero SÍ reproducen
+los armónicos presentes en la tensión de la red.
+Si v(t) contiene armonicos, la corriente también los contendrá,
+incluso en transformadores, motores y resistencias puras.
+
+Las cargas NO LINEALES sí generan nuevos armónicos (n ≥ 2)
+independientemente de la pureza de la tensión.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. THDi vs TDD — DISTINCIÓN NORMATIVA CRÍTICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+THDi (Total Harmonic Distortion de corriente):
+
+   THDᵢ = √(I₂² + I₃² + ··· + Iₙ²) / I₁  × 100%
+
+THDᵢ depende de la carga instantánea: a baja carga, THDᵢ sube
+aunque la distorsión absoluta sea pequeña.
+
+TDD (Total Demand Distortion) — métrica de IEEE 519-2022:
+
+   TDD = √(I₂² + I₃² + ··· + Iₙ²) / Iₗ  × 100%
+
+   Iₗ = corriente máxima de demanda del sistema (promedio 15/30 min).
+
+IMPORTANTE: IEEE 519-2022 NO establece límites para THDi.
+IEEE 519 limita TDD de corriente en el PCC (Punto de Acoplamiento Común).
+Ejemplo IEEE 519 Tabla 1 (sistema < 1 kV, Icc/Iₗ = 20–50):
+   TDD ≤ 8%,  H<11 ≤ 4%,  H11–16 ≤ 2%,  H17–22 ≤ 1.5%
+
+NOTA: H13 (rango 11-16) tiene límite 2.0%, NO 1.5% (ese límite es para H17-22).
+
+Para sistemas 1-69 kV (alimentadores MT 23kV): usar Tabla 2 de IEEE 519-2022,
+cuyos límites difieren según la relación Isc/IL del PCC.
+
+IEC 61000-3-6 y EN 50160 sí limitan THDv (tensión).
+
+Ref: IEEE Std 519-2022 Clause 5.3, Tabla 1 (< 1kV) y Tabla 2 (1-69kV).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. FACTOR DE POTENCIA — DEFINICIÓN RIGUROSA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Factor de potencia verdadero:
+
+   FP = P / S = P / (V_rms · I_rms)
+
+En presencia de armónicos se descompone en dos factores:
+
+   FP = DPF · DF
+
+   DPF (Factor de Desplazamiento) = cos(φ₁)
+       ángulo entre el fundamental de tensión y corriente
+
+   DF = I₁ / I_rms = 1 / √(1 + THDᵢ²)
+
+Por lo tanto:
+
+   FP = cos(φ₁) / √(1 + THDᵢ²)
+
+NOTA: Esta fórmula ya incorpora el efecto de I₁/I_rms en el DF.
+No debe agregarse un factor I₁/Itot adicional (sería redundante).
+
+Ejemplo SMPS sin PFC: DPF ≈ 0.97,  THDᵢ ≈ 45%
+   FP = 0.97 / √(1 + 0.45²) = 0.97 / 1.097 ≈ 0.88
+
+Ref: IEEE Std 1459-2010, sec. 3.1-3.3.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. POTENCIA EN SISTEMAS NO SINUSOIDALES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Teoría de Budeanu (histórica, ampliamente usada):
+
+   S² = P² + Q² + D²
+
+   P = potencia activa (transferible)
+   Q = potencia reactiva de Budeanu (suma de reactivas armónicas)
+   D = potencia de distorsión
+
+LIMITACIÓN: La Q de Budeanu no tiene interpretación física clara
+en sistemas no sinusoidales. D no es minimizable por compensación.
+
+IEEE 1459-2010 (framework moderno recomendado):
+
+   S² = P² + Q₁² + D²
+
+   Q₁ = V₁ · I₁ · sin(φ₁)       (reactiva del fundamental)
+   D  = √(S² − P² − Q₁²)         (potencia no fundamental)
+
+Esta formulación tiene base física: Q₁ es minimizable con
+condensadores; D no lo es (requiere filtros armónicos).
+
+NOTA SOBRE EL VISOR COMTRADE:
+La Q calculada con Q = √(S² − P²) corresponde a la Q aparente,
+que incluye tanto Q1 como D. El resultado exacto depende del método
+implementado en cada software (IEEE 1459, Budeanu, o fundamental-only).
+
+Ref: IEEE Std 1459-2010; Czarnecki L.S. (2008) 'Currents' Physical
+     Components (CPC) Power Theory', Electric Power Quality and Utilization.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. RESONANCIA ARMÓNICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Fórmula física exacta (circuito LC):
+
+   f_res = 1 / (2π · √(L·C))
+
+Aproximación para sistemas de distribución con banco de condensadores
+(válida para sistema simple: Scc >> Qc, red inductiva dominante):
+
+   h_res = f_res / f₀ = √(Scc / Qc)
+
+   L = V² / (ω·Scc)    (equivalente inductivo de red)
+   C = Qc / (ω·V²)     (equivalente capacitivo del banco)
+
+Esta aproximación es útil para evaluación preliminar, pero en redes
+reales con múltiples condensadores o cargas distribuidas la resonancia
+debe calcularse con el modelo L-C completo del alimentador.
+
+Ref: Arrillaga J., Watson N.R. (2003) 'Power System Harmonics',
+     Wiley, cap. 4. IEEE Std 1531-2003.

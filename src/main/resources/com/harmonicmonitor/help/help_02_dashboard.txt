@@ -1,0 +1,27 @@
+DASHBOARD — RESUMEN GENERAL
+
+El dashboard muestra en tiempo real el estado del alimentador seleccionado:
+
+  TILES KPI:
+  • Tensión: voltaje promedio trifásico en kV.
+  • Corriente: corriente promedio trifásica en A.
+  • Potencia: potencia activa total trifásica en kW o MW.
+  • THDi: distorsión armónica total de corriente.
+    - Verde:  < 8%  (referencia IEEE 519 para sistemas típicos)
+    - Ámbar:  8-12% (elevado)
+    - Rojo:   > 12% (crítico)
+  • Tipo de Carga: clasificación automática del tipo de carga detectada.
+
+  MÉTRICAS ELÉCTRICAS:
+  • Q: potencia reactiva en kVAR
+  • S: potencia aparente en kVA
+  • FP: factor de potencia verdadero = P / (Vrms * Irms)
+  • Frecuencia: frecuencia de red en Hz
+  • THDv: distorsión armónica de tensión
+  • CV: coeficiente de variación de corriente (indicador de estabilidad)
+  • H5/H1, H7/H1: ratios de armónicos característicos
+  • Resonancia: frecuencia y orden de resonancia detectada
+
+  GRÁFICAS MINI:
+  • Tendencia THDi: área chart con historial reciente
+  • Espectro armónico: barras H1-H13 como % del fundamental

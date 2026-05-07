@@ -1,0 +1,61 @@
+MODELO DE CARGA: VARIADOR DE FRECUENCIA (VFD) 6 PULSOS
+SimProfile.VARIABLE_SPEED_DRIVE
+Revisado contra: IEC 61000-3-4, Mohan et al. (2002)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. RECTIFICADOR 6 PULSOS — TEORÍA DE FOURIER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Topología: 6 diodos conducen en secuencia, creando bus DC.
+La corriente de línea idealizada (fuente de corriente en DC link):
+
+   iₐ(t) = (2√3/π)·Id · [sin(ωt) − (1/5)·sin(5ωt) + (1/7)·sin(7ωt)
+                         − (1/11)·sin(11ωt) + (1/13)·sin(13ωt) + ···]
+
+Armónicos del patrón 6 pulsos: n = 6k ± 1
+   k=1: H₅, H₇
+   k=2: H₁₁, H₁₃
+   k=3: H₁₇, H₁₉
+
+Amplitudes ideales (fuente de corriente pura, sin reactor):
+   Iₙ / I₁ = 1/n  →  I₅ = 20%,  I₇ = 14.3%,  I₁₁ = 9.1%,  I₁₃ = 7.7%
+
+En la práctica con reactores de línea:
+   Reactor DC 3%:  THDi ~ 35%,  H5 ~ 24%,  H7 ~ 17%
+   Reactor AC 5%:  THDi ~ 28%,  H5 ~ 20%,  H7 ~ 14%
+   Filtro armónico: THDi < 12%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ESPECTRO SIMULADO (valores verificados)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Valores reales tras normalización (ciclo de velocidad variable):
+
+  A plena velocidad (THDi = 23%):
+   H5/H1 = 17.7%  H7/H1 = 11.8%  H11/H1 = 5.9%  H13/H1 = 4.7%
+
+  A baja velocidad (THDi = 27%):
+   H5/H1 = 20.8%  H7/H1 = 13.9%  H11/H1 = 6.9%  H13/H1 = 5.6%
+
+Estos valores son consistentes con VFDs reales con reactor AC 5%.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. COMPORTAMIENTO THD vs VELOCIDAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   THD(v_pu) = 28 − 5·v_pu + ruido     (v_pu ∈ [0, 1])
+
+A baja velocidad (baja carga): THDi MAYOR
+A alta velocidad (plena carga): THDi MENOR
+
+Esto es OPUESTO al comportamiento de SMPS (estables) y útil
+para clasificación: VFD tiene correlación THD-carga negativa.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. NORMATIVA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  IEC 61000-3-4:2021  — Limitación de armónicas > 16 A
+  IEC 61800-3:2017    — Requisitos EMC para variadores de velocidad
+  IEEE 519-2022       — TDD en PCC
+  Mohan, Undeland, Robbins (2002) 'Power Electronics', Wiley, cap. 5.

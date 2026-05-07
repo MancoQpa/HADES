@@ -1,0 +1,65 @@
+FUNDAMENTOS TEÓRICOS: COMPONENTES SIMÉTRICAS
+Revisado contra: IEC 60034-26, EN 50160, Fortescue (1918)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRANSFORMADA DE FORTESCUE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Para un sistema trifásico (Xa, Xb, Xc) — tensión o corriente:
+
+   X1 = (1/3)(Xa + a·Xb + a²·Xc)    Secuencia Positiva (A→B→C)
+   X2 = (1/3)(Xa + a²·Xb + a·Xc)    Secuencia Negativa (A→C→B)
+   X0 = (1/3)(Xa + Xb + Xc)          Secuencia Cero (homopolar)
+
+Operador de secuencia:
+   a  = e^(j·2π/3) = −0.5 + j·0.866   (rotación 120° antihorario)
+   a² = e^(j·4π/3) = −0.5 − j·0.866   (rotación 240° antihorario)
+
+SIGNIFICADO FÍSICO:
+  X1 (positiva) = componente en secuencia normal de la red
+  X2 (negativa) = secuencia opuesta — causa calentamiento en motores
+  X0 (cero/homopolar) = componente en fase entre las tres fases
+
+DESBALANCE (IEC 61000-4-27 / EN 50160):
+   Desbalance = V₂ / V₁ · 100%
+   Límite EN 50160: ≤ 2% (promedio 10 min, 95% del tiempo)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RELACIÓN ENTRE ARMÓNICOS Y SECUENCIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El siguiente patrón es válido para sistemas trifásicos EQUILIBRADOS
+con cargas simétricas en las tres fases:
+
+   H1  (50 Hz)   → Secuencia Positiva  (+)
+   H2  (100 Hz)  → Secuencia Negativa  (-)
+   H3  (150 Hz)  → Secuencia Cero      (0)  ← TRIPLEN
+   H4  (200 Hz)  → Secuencia Positiva  (+)
+   H5  (250 Hz)  → Secuencia Negativa  (-)
+   H6  (300 Hz)  → Secuencia Cero      (0)  ← TRIPLEN
+   Patrón: +, -, 0, +, -, 0, ...  (módulo 3)
+
+EXCEPCIONES AL PATRÓN:
+El patrón +/-/0 puede romperse en los siguientes casos:
+  • Cargas monofásicas (rectificadores individuales)
+  • Sistemas con neutro abierto
+  • Tensiones desequilibradas en las tres fases
+  • Desequilibrio de fase en las fuentes
+En estos casos el análisis requiere Fortescue completo por armónico.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ARMÓNICOS TRIPLEN Y EL CONDUCTOR NEUTRO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Los armónicos triplén (H3, H9, H15...) son de secuencia cero:
+están en fase en las tres fases y SE SUMAN en el neutro.
+Para n = 3k (sistema equilibrado):
+
+   I_neutro,3k = 3 · I_fase,3k
+
+Esto puede triplicar la corriente de neutro respecto a una fase,
+con riesgo de sobrecalentamiento del conductor neutro en edificios
+con alta densidad de equipos electrónicos (computadoras, UPS).
+
+Ref: Fortescue C.L. (1918) AIEE Trans. 37:1027-1140.
+     IEC 60034-26:2006 (Efectos del desbalance en motores).

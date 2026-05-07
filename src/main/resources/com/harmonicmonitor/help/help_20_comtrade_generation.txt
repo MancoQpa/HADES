@@ -1,0 +1,155 @@
+GENERADOR DE REGISTROS COMTRADE
+Módulo: ComtradeTriggerEngine + ComtradeWriter + WaveformSynthesizer
+Normativas de trigger: IEC 61000-3-6, IEEE 519-2022, EN 50160, IEC 61000-4-30
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. DESCRIPCIÓN GENERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HADES genera registros COMTRADE automáticamente cuando las
+mediciones de un feeder superan los límites normativos.
+
+Cada evento genera tres archivos en la carpeta 'records/':
+  feederId_CAUSA_YYYYMMDD_HHmmss.cfg      — configuración COMTRADE
+  feederId_CAUSA_YYYYMMDD_HHmmss.dat      — datos de muestras ASCII
+  feederId_CAUSA_YYYYMMDD_HHmmss_report.txt — reporte normativo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. TABLA DE TRIGGERS NORMATIVOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TENSIÓN — IEC 61000-3-6 / EN 50160:
+  THD_V > 5.0%   → WARNING    (preventivo, ~80% del planning level)
+  THD_V > 6.5%   → PQ_RISK    (supera planning level IEC 61000-3-6 MV)
+  THD_V > 8.0%   → CRITICAL   (supera límite absoluto EN 50160)
+  Armónico Vn > planning level individual (tabla IEC 61000-3-6 Tabla 1)
+
+CORRIENTE — IEEE 519-2022 Tabla 2 (sistemas 1kV-69kV, Isc/IL=20-50):
+  THD_I > 5.0%   → WARNING    (preventivo)
+  THD_I > 8.0%   → PQ_RISK    (límite TDD para Isc/IL=20-50, MT 23kV)
+  THD_I > 12.0%  → CRITICAL   (1.5 × TDD limit)
+  Armónico In > límite individual:
+    H<11: 4.0%,  H11-16: 2.0%,  H17-22: 1.5%,  H23-34: 0.6%,  >34: 0.3%
+  NOTA: para alimentadores 23kV se aplica la Tabla 2, no la Tabla 1 (BT).
+  Los límites individuales por rango son los mismos para Isc/IL=20-50.
+
+FACTOR DE POTENCIA:
+  FP < 0.85      → WARNING    (acercándose al mínimo recomendado)
+  FP < 0.75      → PQ_RISK    (muy bajo para suministro en MT)
+
+DESBALANCE DE TENSIÓN — EN 50160 / IEC 61000-4-30:
+  Vunbal > 2.0%  → PQ_RISK    (supera límite EN 50160)
+  Vunbal > 3.0%  → CRITICAL
+
+DETECCIÓN DE CARGA (cambio de tipo detectado):
+  CRYPTO_MINING / DATA_CENTER / INDUSTRIAL → DETECTION
+
+ALARMA DE AlarmEngine:
+  Nivel CRITICAL o DETECTION → registro forzado inmediato
+
+MANUAL:
+  Botón '⚡ Disparo manual' en la pestaña 📼 REGISTROS → INFO
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. PARÁMETROS DEL REGISTRO GENERADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Formato:      IEEE C37.111-1999 ASCII
+Canales:      6 analógicos  (VA, VB, VC, IA, IB, IC)
+Unidades:     V (tensión fase-tierra)  |  A (corriente de fase)
+Duración:     8 ciclos = 160 ms @ 50 Hz
+              → 2 ciclos pre-trigger + 6 ciclos post-trigger
+Fs:           64 Sa/ciclo = 3200 Sa/s @ 50 Hz  (cumple IEC 61000-4-7)
+Resolución:   INT16 (16 bits) → rango dinámico ~96 dB
+Escalado:     valor_fisico = a × raw  (b = 0)
+              a_V = Vpico / 32767    [V/raw]
+              a_I = Ipico / 32767    [A/raw]
+Timestamps:   microsegundos desde el inicio (timemult = 1.0)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. SÍNTESIS DE FORMA DE ONDA (WaveformSynthesizer)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Los datos de medición IEC 61850 son valores RMS + espectro armónico.
+Para generar el COMTRADE se sintetiza la forma de onda:
+
+   xₙ(t) = Σ √2·Xₕ·sin(h·ωt + h·φₙ)   (h = 1..25)
+
+   n: fase (A=0°, B=−120°, C=+120°)
+   h: orden armónico (1..25)
+   Xₕ: amplitud RMS del armónico h (del espectro MHAI del IED)
+   ω = 2π·f₀   (50 Hz nominal)
+
+NOTA: la multiplicación h*phi_n produce automáticamente las
+secuencias correctas sin necesidad de tabla:
+  H5 (h=5): 5*(-120°) = -600° = +120° → secuencia NEGATIVA ✓
+  H7 (h=7): 7*(-120°) = -840° = -120° → secuencia POSITIVA ✓
+  H3 (h=3): 3*(-120°) = -360° =   0° → secuencia CERO     ✓
+
+Si el IED no provee espectro MHAI, se usa síntesis analítica
+con patrón de rectificador 6-pulsos calibrado al THDi medido.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. REPORTE DE TEXTO (report.txt)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada registro genera un reporte que incluye:
+  • Fecha, hora, feeder, nivel y causa del trigger
+  • Medición completa en el instante del evento:
+    V, I, P, Q, S, FP, f, THD_V, THD_I, tipo de carga, K-factor
+  • Espectro armónico de corriente L1 (H1 a H25 en A y %H1)
+    con indicación '← SUPERA IEEE 519' por armónico individual
+  • Espectro armónico de tensión L1 con límites IEC 61000-3-6
+  • Normas de referencia usadas en el trigger
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. COOLDOWN Y GESTIÓN DE REGISTROS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Para evitar generación excesiva de archivos:
+  • Cooldown: 30 segundos mínimo entre registros del mismo tipo
+    y mismo feeder. Clave de cooldown = feederId + '_' + causa.
+  • El disparo manual no tiene cooldown.
+  • Las alarmas CRITICAL/DETECTION siempre disparan (sin cooldown).
+  • Máximo 500 entradas en el historial en memoria.
+
+Almacenamiento en disco:
+  Carpeta: records/ (relativa al directorio de ejecución)
+  Los archivos NO se eliminan automáticamente.
+  Para liberar espacio, usar el explorador de archivos.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. INTERFAZ — PESTAÑA 📼 REGISTROS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TABLA DE REGISTROS:
+  Columnas: Fecha/Hora, Feeder, Nivel, Causa, Descripción, Archivo .cfg
+  Colores por nivel:
+    Rojo      CRÍTICO    — violación severa
+    Naranja   PQ-RIESGO  — supera planning level
+    Violeta   DETECCIÓN  — carga identificada
+    Ámbar     WARNING    — advertencia preventiva
+
+BOTONES DE ACCIÓN:
+  ⚡ Disparo manual  — graba el estado actual del feeder seleccionado
+  📂 Abrir en visor  — abre el .cfg en la pestaña COMTRADE (doble clic)
+  📄 Ver reporte     — abre el _report.txt en el editor del sistema
+  🗂 Carpeta        — abre la carpeta records/ en el explorador
+  ↻ Refrescar       — recarga la lista desde el motor
+  ✕ Limpiar lista   — borra la vista en pantalla (NO borra archivos)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. VALORES LÍMITE DE REFERENCIA (IEC 61000-3-6 Tabla 1, red MT 1-36kV)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Armónico  Límite THDv    |  Armónico  Límite Vn/V1
+  THD total  6.5%          |  H3         4.0%
+                           |  H5         5.0%
+IEEE 519-2022 TDD limits   |  H7         4.0%
+(Isc/IL=20-50, 1kV-69kV): |  H9         1.2%
+  H < 11     4.0%          |  H11        3.0%
+  H 11-16    2.0%          |  H13        2.5%
+  H 17-22    1.5%          |  H17        1.6%
+  H 23-34    0.6%          |  H19        1.2%
+  H > 34     0.3%          |  H23-H25    1.2%/0.8%
+  TDD total  8.0%          |

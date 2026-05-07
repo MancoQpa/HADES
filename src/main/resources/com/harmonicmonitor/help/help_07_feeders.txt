@@ -1,0 +1,22 @@
+GESTIÓN DE FEEDERS
+
+Configuración y conexión de alimentadores MT vía IEC 61850.
+
+  IDENTIFICACIÓN:
+  • ID: identificador único del feeder (ej. AL-01)
+  • Nombre: nombre descriptivo para mostrar en la UI
+
+  CONEXIÓN IEC 61850 MMS:
+  • Host/IP: dirección IP del IED
+  • Puerto: 102 (MMS ACSE estándar)
+  • Nombre IED, Ref. MMXU, LD Instance, Polling interval
+
+  PARÁMETROS DE RED:
+  • Vnom: tensión nominal en kV
+  • Inom: corriente nominal en A
+  • Scc: potencia de cortocircuito en MVA (para análisis de resonancia)
+  • Capacitancia: capacitancia total del feeder en uF
+
+  AGREGAR SIMULADO:
+  Agrega un feeder con datos simulados (no requiere IED real).
+  Seleccione el perfil de carga para el comportamiento deseado.

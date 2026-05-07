@@ -1,0 +1,30 @@
+ANÁLISIS DE ARMÓNICOS
+
+Visualiza el espectro armónico completo H1-H25 del alimentador.
+
+  SELECTOR DE FASE:
+  • L1, L2, L3: muestra el espectro de esa fase específica
+  • Prom.: promedio trifásico de los espectros
+
+  GRÁFICA DE BARRAS:
+  • Eje X: orden armónico H1 a H25
+  • Eje Y: amplitud como % del fundamental (H1 = 100%)
+  • Colores:
+    - Azul:  nivel normal  (< 8%)
+    - Ámbar: elevado       (8-15%)
+    - Rojo:  crítico       (> 15%)
+
+  TARJETAS RESUMEN:
+  • H2  (100 Hz): armónico par — indica asimetría o perturbación no repetitiva
+  • H3  (150 Hz): triplen — cargadores, SMPS monofásicos, EAF
+  • H5  (250 Hz): 5° orden — firma de rectificadores trifásicos y VFD
+  • H7  (350 Hz): 7° orden — acompaña al H5 en el patrón 6k±1
+  • H9  (450 Hz): triplen 9° — cargas electrónicas mixtas
+  • H11-H13: armónicos de alta frecuencia en rectificadores
+
+  TABLA DE DATOS:
+  • Para cada orden H1-H25:
+    - Frecuencia en Hz (n × 50 Hz)
+    - Amplitud de corriente en A y %H1
+    - Amplitud de tensión en V y %H1
+    - Estado: OK / ELEVADO / CRÍTICO

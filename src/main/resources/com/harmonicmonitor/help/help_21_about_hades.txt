@@ -1,0 +1,47 @@
+HADES v1.0
+Harmonic Analysis for Detection of Electronic Signatures
+
+Monitoreo en tiempo real de feeders de 23 kV mediante análisis de firmas
+de energía y comunicaciones IEC 61850 para detección de cargas electrointensivas.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROPÓSITO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Detectar y cuantificar la presencia de cargas electrointensivas no lineales
+en redes de distribución MT 23 kV (ANDE — Administración Nacional
+de Electricidad, Paraguay), evaluando el impacto en la calidad de energía
+y generando registros normativos de perturbaciones.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EQUIPO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Emilio Medina      — Arquitectura, backend IEC 61850, análisis armónico
+  Diego Rojas        — Interfaz gráfica y visualización de datos
+  Enrique Paiva      — Integración de normas y validación de modelos
+  Sergio Domínguez   — Gestión de Proyecto
+
+  País: Paraguay  |  Distribución MT 23 kV  |  2026
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CARACTERÍSTICAS PRINCIPALES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Monitoreo en tiempo real vía IEC 61850 MMS (ION 7400 y otros IEDs)
+  • Análisis armónico H1-H50 con espectro completo por fase
+  • Detección automática de 6 tipos de carga electrointensiva
+  • Motor de alarmas de 4 niveles (WARNING/PQ_RISK/CRITICAL/DETECTION)
+  • Análisis de resonancia LC por feeder
+  • Evaluación de cumplimiento normativo (IEC 61000, IEEE 519, EN 50160)
+  • Generación automática de registros COMTRADE por trigger normativo
+  • Visor COMTRADE con FFT, fasores, Fortescue y análisis de potencia
+  • 6 perfiles de simulación de firmas energéticas sin IED real
+  • Almacenamiento SQLite + exportación CSV
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECNOLOGÍAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Java 17+ / JavaFX 17 / iec61850bean 1.9 / Maven 3.6+
+  SQLite (JDBC) / SLF4J 2.0 / IEEE C37.111-1999 (COMTRADE)

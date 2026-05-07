@@ -1,0 +1,91 @@
+DETECCIÓN DE CARGAS ELECTRÓNICAS
+
+El módulo ElectronicLoadDetector clasifica automáticamente el tipo de carga
+usando análisis multivariable de señales armónicas: CV, THDi, THDv, H5/H1, H7/H1, FP.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ROL DEL THDv EN LA CLASIFICACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El THDv (distorsión armónica de tensión) permite identificar la FUENTE
+de la distorsión, no solo su presencia:
+
+  THDv alto + THDi bajo  → UPSTREAM_DISTORTION
+    La distorsión proviene de aguas arriba (otra rama de la red,
+    otro feeder o la subestación). El alimentador monitoreado no
+    es la fuente.  Referencia: IEC 61000-3-6 §5.
+
+  THDv alto + THDi alto  → Carga local impactando la red
+    Mayor certeza: la carga no lineal está en este alimentador
+    y su distorsión se propaga a la tensión de red.
+
+  THDv bajo  + THDi alto → Red rígida (Scc alta)
+    La carga no lineal existe, pero la red tiene baja impedancia
+    y absorbe la distorsión sin elevarla en tensión.
+    NO descarta la presencia de carga electrónica.
+
+  Límites normativos THDv: EN 50160 ≤ 8% (MT, perc. 95%),
+  IEC 61000-3-6 ≤ 5% (nivel de planificación MT).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TIPOS DE CARGA DETECTADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  UPSTREAM_DISTORTION  (prioridad máxima)
+  THDv > 5% y THDi < 8% y H5/H1 < 8%
+  La distorsión se origina fuera del alimentador monitoreado.
+
+  LINEAR
+  THDi < 5% y H5/H1 < 5%
+  Sin patrón armónico característico. Carga lineal.
+
+  LIGHTING  (lámparas LED masivas)
+  THDi > 10%, H5/H1 < 8%, FP 0.75–0.95
+  H3 dominante; efecto de masa de drivers LED sin PFC.
+
+  CRYPTO_MINING  (minería / HPC)
+  THDi > 15%, CV < 5%, H5/H1 > 15%, H7/H1 > 10%, FP > 0.92
+  SMPS de alta densidad con PFC activo. Consumo muy estable.
+  IMPORTANTE: No exclusivo de criptomonedas; coincide con UPS
+  industriales, cargadores EV de alta potencia y rectificadores
+  de gran escala. Confirmación requiere análisis temporal del CV.
+
+  DATA_CENTER
+  THDi > 15%, CV < 5%, H5/H1 > 15%, H7/H1 > 10%, FP ≤ 0.92
+  Similar al cripto pero con factor de potencia no tan alto.
+
+  INDUSTRIAL  (rectificador 6-pulsos)
+  THDi > 8%, H5 > 12%, H7 > 8%, H11 > 5%, H13 > 4%
+  Firma típica de variadores de frecuencia (VFD) y rectificadores
+  de gran escala (electrometalurgia, tracción, compensadores).
+
+  ELECTRONIC_LIGHT  (electrónica ligera)
+  THDi > 8%, H5 > 8% o H7 > 5%
+  Electrónica de consumo, SMPS de baja potencia.
+
+  MIXED_ELECTRONIC
+  THDi > 5% sin firma espectral clara dominante.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÍNDICE DE ELECTRÓNICA (0-100)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Score compuesto de 4 componentes (pesos suma máx = 100):
+
+  25 pts — CV inverso:   carga estable → electrónica de alta densidad
+  35 pts — THDi:         corriente distorsionada → carga no lineal
+  25 pts — H5 + H7:      firma espectral rectificador 6/12-pulsos
+  15 pts — THDv:         distorsión propagada a tensión (confirma impacto
+                         en red; bajo en redes rígidas, no penaliza detección)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARÁMETROS CLAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  CV = σ(I) / μ(I) · 100%
+  CV < 5%: carga muy estable (SMPS regulado, servidores, miners)
+  H₅/H₁, H₇/H₁: ratios armónicos de 5° y 7° orden
+  H₁₁/H₁, H₁₃/H₁: ratios de 11° y 13° orden (firma 6-pulsos)
+
+  Refs: IEEE 1459-2010, IEC 61000-3-12, IEC 61000-3-6 §5,
+  papers de caracterización de data centers y granjas de minería.

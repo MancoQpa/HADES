@@ -1,0 +1,102 @@
+VISOR COMTRADE — FUNDAMENTOS TÉCNICOS DEL FORMATO
+Revisado contra: IEEE C37.111-1999, IEC 60255-24, IEEE 1159.3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. EL FORMATO COMTRADE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMTRADE (Common Format for Transient Data Exchange) es el estándar
+internacional para registros de perturbaciones eléctricas.
+
+Normas:
+  IEEE C37.111-1991   — primera versión
+  IEEE C37.111-1999   — revisión con mejoras en escalado y precisión
+  IEC 60255-24:2013   — revisión conjunta IEEE/IEC (más canales, CFF)
+
+Estructura de archivos:
+  nombre.cfg  — archivo de configuración (texto, obligatorio)
+  nombre.dat  — datos de muestras (ASCII o BINARY, obligatorio)
+  nombre.hdr  — encabezado descriptivo (texto libre, opcional)
+  nombre.inf  — información adicional (opcional)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ESTRUCTURA DEL ARCHIVO .CFG (IEEE C37.111-1999)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Línea 1:   station_name , rec_dev_id , rev_year
+Línea 2:   TT , ##A , ##D           (total, analógicos, digitales)
+Líneas 3.. (por cada canal analógico):
+  An, ch_id, ph, ccbm, uu, a, b, skew, min, max, primary, secondary, PS
+  An:  número de canal (1-based)
+  ph:  fase (A, B, C, N, ...)
+  uu:  unidad física (V, kV, A, kA, ...)
+  a, b: escala lineal: valor_fisico = a * raw + b
+  min/max: rango del entero raw
+  primary/secondary: relación del TP/TC
+  PS: P (valores primarios) o S (secundarios)
+Líneas D (por cada canal digital):
+  Dn, ch_id, ph, ccbm, y  (y = estado normal: 0 o 1)
+Línea lf:  frecuencia nominal (50 / 60)
+Línea nrates: número de secciones de muestreo
+Líneas samp,endsamp: tasa [Sa/s] y última muestra de esa sección
+Línea start: dd/mm/yyyy,hh:mm:ss.ssssss
+Línea trigger: dd/mm/yyyy,hh:mm:ss.ssssss
+Línea filetype: ASCII / BINARY / BINARY32
+Línea timemult: multiplicador de timestamp (1.0 = microsegundos)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. ESTRUCTURA DEL ARCHIVO .DAT ASCII
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Una línea por muestra:
+   n , t , ch1 , ch2 , ... , chN
+
+   n:   número de muestra (1-based)
+   t:   timestamp en µs desde el inicio (× timemult)
+   ch1..chN: valores enteros raw (INT16 en BINARY)
+
+Conversión a valor físico:
+   valor = a * raw + b
+
+Ejemplo para canal de tensión con a=0.5737, b=0.0, raw=23135:
+   V = 0.5737 * 23135 = 13271 V = 13.27 kV (fase-tierra)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. ESTRUCTURA DEL ARCHIVO .DAT BINARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Por muestra (little-endian):
+   4 bytes: número de muestra (UINT32)
+   4 bytes: timestamp (UINT32, µs × timemult)
+   N * 2 bytes: valor INT16 de cada canal analógico
+   ceil(D/16) * 2 bytes: estados digitales (UINT16 words)
+
+BINARY32:
+   Igual pero los canales analógicos son 4 bytes (INT32).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. TASAS DE MUESTREO TÍPICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  64 Sa/ciclo  → 3200 Sa/s @ 50Hz  (mínimo para H25 con margen)
+  128 Sa/ciclo → 6400 Sa/s @ 50Hz  (captura H50)
+  256 Sa/ciclo → 12800 Sa/s @ 50Hz (transitorio de alta frecuencia)
+
+La tasa de muestreo del visor se lee directamente del .cfg.
+La frecuencia efectiva se calcula desde los timestamps:
+   Fs_eff = (N-1) / (t_last - t_first) [µs -> s]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. HERRAMIENTAS EXTERNAS COMPATIBLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Los archivos .cfg/.dat generados por HADES pueden abrirse con:
+  • WaveWin 4 (ABB)              — visor de registros de perturbaciones
+  • PSCAD / EMTP-ATP            — simuladores de transitorios
+  • PowerFactory (DIgSILENT)    — análisis de sistemas
+  • MATLAB Signal Processing TB  — análisis personalizado
+  • Python: comtrade (PyPI)      — pip install comtrade
+  • OpenDSS                      — simulación de distribución
+  • ATPDraw                      — preprocesador ATP
+
+Ref: IEEE Std C37.111-1999; IEC 60255-24:2013; IEEE 1159.3-2019.

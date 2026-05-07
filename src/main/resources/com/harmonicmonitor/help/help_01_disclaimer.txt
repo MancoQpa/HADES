@@ -1,0 +1,199 @@
+DISCLAIMER NORMATIVO — ALCANCE Y LIMITACIONES
+HADES v1.0  |  Harmonic Analysis for Detection of Electronic Signatures
+Revisión: Marzo 2026  |  Equipo: Medina / Rojas / Paiva / Domínguez
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. NATURALEZA DEL INSTRUMENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HADES es un sistema de MONITOREO E INVESTIGACIÓN.
+
+NO es:
+  • Instrumento de medición certificado (IEC 61557 / IEC 61010)
+  • Analizador de referencia Clase A (IEC 61000-4-30)
+  • Sustituto de un estudio normativo formal (IEC 61000-3-6)
+
+Las alarmas y triggers son INDICADORES DE ALERTA TEMPRANA para
+orientar investigaciones operativas. No constituyen por sí solos
+evidencia de incumplimiento normativo y NO deben usarse directamente
+para sanciones regulatorias, descargos contractuales ni disputas
+técnicas sin la correspondiente verificación con instrumentación
+certificada y metodología normativa completa.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. LO QUE CUMPLE CON LAS NORMAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  COMTRADE — IEEE C37.111-1999 / IEC 60255-24:
+    Los archivos .cfg y .dat generados son conformes al estandar.
+    Compatibles con cualquier visor COMTRADE certificado.
+
+  Definiciones de potencia — IEEE Std 1459-2010:
+    FP = P/S,   DPF = cos(φ₁),   Q_aparente = √(S²−P²)
+    Reportadas como magnitudes distintas, sin confusión terminológica.
+
+  Medicion armonica — IEC 61000-4-7 (via IED):
+    Los valores de armonicos provienen del nodo MHAI del ION 7400.
+    La conformidad con IEC 61000-4-7 Clase A es responsabilidad de
+    Schneider Electric. HADES consume esos datos sin
+    alterar ni reescalar los valores informados por el IED.
+
+  Trigger THD_V absoluto — EN 50160:
+    El umbral CRITICO THD_V > 8.0% corresponde al limite absoluto
+    de EN 50160 para redes MT (media de 10 min, 95% del tiempo).
+
+  Uso de THDv en clasificacion de cargas (nuevo en v1.0):
+    THDv se usa para identificar la FUENTE de la distorsion:
+    THDv alto + THDi bajo  → distorsion aguas arriba (UPSTREAM_DISTORTION)
+    THDv alto + THDi alto  → carga local impactando la red (mayor certeza)
+    THDv bajo  + THDi alto → red rigida (alta Scc); carga no lineal presente
+                            pero la red absorbe la distorsion de tension.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. LIMITACION CRITICA: THD_I vs TDD (IEEE 519-2022)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DESCRIPCION DEL PROBLEMA:
+
+Los triggers de corriente comparan THD_I contra los umbrales de
+TDD establecidos en IEEE 519-2022. Son magnitudes distintas:
+
+   THDᵢ = √(I₂² + I₃² + ··· + Iₙ²) / I₁  × 100%    ← lo que calcula esta app
+
+   TDD  = √(I₂² + I₃² + ··· + Iₙ²) / Iₗ  × 100%    ← lo que define IEEE 519
+
+   donde Iₗ = corriente máxima de demanda (promedio 15/30 min)
+
+EFECTO PRÁCTICO:
+
+Cuando la carga opera por debajo de su demanda máxima (I₁ < Iₗ):
+
+   THDᵢ / TDD = Iₗ / I₁  >  1
+
+   Ejemplo — carga al 40% de su máximo:
+     THDᵢ = 20%  →  TDD real =  8.0%   (en el límite normativo)
+     THDᵢ = 30%  →  TDD real = 12.0%   (supera el límite)
+
+   La aplicacion genera alarma WARNING con THD_I > 5% aunque el
+   TDD real pueda estar dentro del limite de la norma.
+
+JUSTIFICACION DEL DISEÑO:
+
+En monitoreo en tiempo real, IL no esta disponible de forma
+instantanea: requiere un periodo de demanda completado (15/30 min).
+La sustitucion THD_I ~ TDD es una aproximacion CONSERVADORA que:
+
+   * Puede generar falsas alarmas a baja carga
+   * Nunca silencia una violacion real a plena carga
+   * Es practica comun en sistemas SCADA de primera linea
+
+IEEE 519-2022 Sec. 2.3 reconoce esta distincion explicitamente:
+  'TDD is used rather than THD because THD can be misleadingly
+   high when the fundamental current is small.'
+
+RECOMENDACION PARA EL OPERADOR:
+
+Los triggers WARNING/PQ_RISK de corriente deben interpretarse como
+'investigar este feeder', NO como 'este feeder viola IEEE 519-2022'.
+La verificacion definitiva requiere calcular TDD con IL del sistema.
+
+MEJORA FUTURA PLANIFICADA:
+Incorporar campo IL configurable por feeder (en FeederConfig) para
+calcular TDD real y reemplazar esta aproximacion.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. LIMITACION: PLANNING LEVEL 6.5% (IEC 61000-3-6)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El trigger THD_V > 6.5% se etiqueta como 'planning level
+IEC 61000-3-6 MV'. Aclaracion normativa:
+
+IEC 61000-3-6 Tabla 1 establece el nivel de compatibilidad MT:
+   THD = 8%
+
+El planning level NO está tabulado en la norma. Se calcula como:
+   Gₕ = √(G²_compat − G²_fondo − Σ E²_instalaciones)
+
+El valor 6.5% es una aproximacion al 80% del nivel de compatibilidad
+(criterio conservador), no un valor directamente extraido de la norma.
+Es valido como umbral de alerta preventiva, pero NO debe citarse como
+'planning level de IEC 61000-3-6' sin un estudio de red especifico.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. LIMITACION: PUNTO DE MEDICION vs PCC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IEEE 519-2022 e IEC 61000-3-6 definen sus limites en el PCC
+(Point of Common Coupling).
+
+HADES mide en el punto donde esta instalado el IED
+(ION 7400), que puede o no coincidir con el PCC segun la
+topologia de red de ANDE.
+
+   Si el IED esta aguas abajo del PCC: medicion mas distorsionada.
+   Si el IED esta en el PCC: medicion es normativa directa.
+
+La identificacion del PCC es responsabilidad del estudio de red.
+Las alarmas aplican al punto de instalacion del IED, no
+necesariamente al PCC contractual.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. LIMITACION: FORMA DE ONDA COMTRADE SINTETIZADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Los COMTRADE generados automaticamente son SINTETIZADOS desde
+valores RMS + espectro armonico. NO son registros de senales reales.
+
+Supuestos del sintetizador (WaveformSynthesizer):
+  * Sistema trifasico equilibrado (fases 0 deg, -120 deg, +120 deg)
+  * Estado estacionario (sin transitorios ni variaciones de ciclo)
+  * Sin interarmonicos ni subharmonicos
+  * Frecuencia exactamente 50.000 Hz
+
+Uso valido de los archivos generados:
+  CORRECTO:   Documentar magnitud y espectro del evento
+  CORRECTO:   Comparacion visual de niveles armonicos
+  INCORRECTO: Analisis de transitorios reales
+  INCORRECTO: Prueba de reles de proteccion (requiere senal real)
+  INCORRECTO: Forense de calidad de energia con precision Clase A
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. TABLA RESUMEN DE CONFORMIDAD NORMATIVA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Aspecto                          Norma               Estado
+  ─────────────────────────────    ─────────────────   ──────
+  Formato COMTRADE (.cfg/.dat)     IEEE C37.111-1999   CONFORME
+  Definiciones de potencia         IEEE 1459-2010      CONFORME
+  Datos de medicion armonica       IEC 61000-4-7       VIA IED
+  Trigger THD_V limite absoluto    EN 50160            CONFORME
+  Trigger THD_I vs TDD             IEEE 519-2022       APROX.
+  Planning level 6.5%              IEC 61000-3-6       APROX.
+  Punto de medicion vs PCC         IEEE 519-2022       TOPOLOGIA
+  Forma de onda sintetizada        IEC 60255-24        SINTET.
+  THDv — fuente de distorsion      IEC 61000-3-6 §5    CONFORME
+  UPSTREAM_DISTORTION detection    IEC 61000-3-6 §5    CONFORME
+
+  CONFORME  = Implementacion directamente trazable a la norma
+  VIA IED   = Conformidad delegada al instrumento certificado
+  APROX.    = Valor valido como indicacion; verificacion formal
+              requerida para conclusiones normativas definitivas
+  TOPOLOGIA = Depende del punto de instalacion del IED en la red
+  SINTET.   = Datos calculados, no registros de senal real
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. REFERENCIAS NORMATIVAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  IEEE 519-2022     — Harmonic Control in Electric Power Systems
+  IEC 61000-3-6     — Emission limits for distorting loads in MV/HV
+  IEC 61000-4-7     — Measurement techniques for harmonics (Cl A/B)
+  IEC 61000-4-30    — Power quality measurement methods (Cl A)
+  EN 50160:2010     — Voltage characteristics of electricity supplied
+                      by public distribution networks
+  IEEE 1459-2010    — Definitions for Measurement of Electric Power
+  IEEE C37.111-1999 — Common Format for Transient Data Exchange
+  IEC 60255-24:2013 — Common format for transient data exchange
+  IEC 61000-3-7     — Flicker emission limits in MV/HV networks
+  IEC 61557-12      — Performance measuring instruments (PQ meters)
+  CIGRE WG C4.109 (2014) — Harmonic parameters of AC arc furnaces

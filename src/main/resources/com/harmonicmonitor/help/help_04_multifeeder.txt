@@ -1,0 +1,22 @@
+MONITOR MULTI-FEEDER
+
+Tabla SCADA que muestra todos los alimentadores en tiempo real.
+
+  COLUMNAS:
+  #        — Número de orden
+  Alimentador — Nombre del feeder configurado
+  Estado   — Semáforo: OK / WARN / CRIT
+  Va (kV)  — Tensión fase-neutro promedio
+  Ia (A)   — Corriente promedio trifásica
+  P (kW)   — Potencia activa
+  Q (kVAR) — Potencia reactiva
+  FP       — Factor de potencia
+  THDi %   — Distorsión armónica de corriente (coloreado)
+  THDv %   — Distorsión armónica de tensión
+  Tipo Carga — Clasificación de carga detectada
+  Alrm.    — Número de alarmas activas
+
+  INTERACCIÓN:
+  • Doble clic en fila: navega al Dashboard con ese feeder
+  • Búsqueda: filtra por nombre o ID de feeder
+  • Exportar CSV: exporta datos de todos los feeders

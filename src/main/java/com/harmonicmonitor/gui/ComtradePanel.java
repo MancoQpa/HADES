@@ -6,26 +6,19 @@ import com.harmonicmonitor.comtrade.ComtradeReader.ComtradeRecord;
 import com.harmonicmonitor.model.FeederConfig;
 import com.harmonicmonitor.model.FeederMeasurement;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.util.Duration;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 
-import javax.imageio.ImageIO;
 import java.io.*;
 import java.util.*;
 import java.util.Arrays;
@@ -45,7 +38,8 @@ import java.util.concurrent.Executors;
 public class ComtradePanel {
 
     private static final int MAX_DISPLAY_POINTS = 2000;
-    private static final String[] CHANNEL_COLORS = {
+    // Package-private so builder classes in the same package can reference it.
+    static final String[] CHANNEL_COLORS = {
         "#0078D4", "#CA5010", "#4CAF50", "#C42B1C",
         "#9C27B0", "#00BCD4", "#FF9800", "#8BC34A"
     };
@@ -712,298 +706,34 @@ public class ComtradePanel {
     // ── Waveform plotting ─────────────────────────────────────────────────────
 
     private void plotWaveforms() {
-        waveformChart.getData().clear();
-        if (currentRecord == null || currentRecord.analogData == null) return;
-        List<Integer> sel = selectedIndices();
-        if (sel.isEmpty()) return;
-
-        int n     = currentRecord.numSamples;
-        double fs = currentRecord.getEffectiveSampleRate();
-
-        // Determine visible range: zoom applies from start, then offset by window start
-        double zoomFraction = zoomSlider != null ? zoomSlider.getValue() / 100.0 : 1.0;
-        int visibleSamples  = (int) Math.max(2, n * zoomFraction);
-        int step            = Math.max(1, visibleSamples / MAX_DISPLAY_POINTS);
-
-        // Analysis window boundaries (in time) for the status label
-        int wsS = (winEndSample < 0) ? 0 : winStartSample;
-        int weS = (winEndSample < 0) ? n : winEndSample;
-
-        // Compute per-unit scale if normalization is enabled
-        boolean normWave = cbNormWaveforms != null && cbNormWaveforms.isSelected();
-        double scaleV = 1.0, scaleI = 1.0;
-        if (normWave) {
-            for (int idx : sel) {
-                if (idx >= currentRecord.numAnalogChannels) continue;
-                String unit = idx < currentRecord.analogChannelUnits.size()
-                    ? currentRecord.analogChannelUnits.get(idx).trim() : "";
-                boolean isV = isVoltageUnit(unit);
-                double peak = 0;
-                for (int s = 0; s < n; s++) peak = Math.max(peak, Math.abs(currentRecord.analogData[idx][s]));
-                if (isV) scaleV = Math.max(scaleV, peak);
-                else     scaleI = Math.max(scaleI, peak);
-            }
-            if (scaleV <= 0) scaleV = 1.0;
-            if (scaleI <= 0) scaleI = 1.0;
-        }
-        ((NumberAxis) waveformChart.getYAxis()).setLabel(normWave ? "Amplitud (p.u.)" : "Amplitud");
-
-        // Build series with per-channel colors
-        List<String> seriesColors = new ArrayList<>();
-        for (int idx : sel) {
-            if (idx >= currentRecord.numAnalogChannels) continue;
-            String unit = idx < currentRecord.analogChannelUnits.size()
-                ? currentRecord.analogChannelUnits.get(idx).trim() : "";
-            boolean isV = isVoltageUnit(unit);
-            double scale = normWave ? (isV ? scaleV : scaleI) : 1.0;
-            XYChart.Series<Number, Number> series = new XYChart.Series<>();
-            series.setName(chNameWithUnit(idx));
-            for (int s = 0; s < visibleSamples; s += step) {
-                double tMs = currentRecord.timestamps != null && s < currentRecord.timestamps.length
-                    ? currentRecord.timestamps[s] / 1000.0
-                    : s / fs * 1000.0;
-                series.getData().add(new XYChart.Data<>(tMs, currentRecord.analogData[idx][s] / scale));
-            }
-            waveformChart.getData().add(series);
-            seriesColors.add(channelColors.getOrDefault(idx, CHANNEL_COLORS[idx % CHANNEL_COLORS.length]));
-        }
-
-        // Apply colors after chart has rendered (Timeline ensures nodes exist)
-        new Timeline(new KeyFrame(Duration.millis(60), ev -> {
-            for (int i = 0; i < seriesColors.size(); i++) {
-                applySeriesColor(i, seriesColors.get(i));
-            }
-        })).play();
-
-        double tWinStart = wsS / fs * 1000.0;
-        double tWinEnd   = weS / fs * 1000.0;
-        String winStr = (winEndSample < 0)
-            ? "ventana: todo el registro"
-            : String.format("ventana análisis: %.2f–%.2f ms", tWinStart, tWinEnd);
-        status(String.format("Formas de onda: %d canal(es), %d puntos de %d  |  %s",
-            sel.size(), Math.min(visibleSamples, MAX_DISPLAY_POINTS), n, winStr));
+        if (currentRecord == null) return;
+        new WaveformChartBuilder(
+            currentRecord, waveformChart,
+            zoomSlider, cbNormWaveforms != null && cbNormWaveforms.isSelected(),
+            channelColors, winStartSample, winEndSample,
+            this::status, selectedIndices()
+        ).render();
     }
 
     // ── FFT + Harmonics table ─────────────────────────────────────────────────
 
     private void plotFft() {
-        fftChart.getData().clear();
-        harmonicsTable.getColumns().clear();
-        harmonicsTable.getItems().clear();
-
-        if (currentRecord == null || currentRecord.analogData == null) return;
-        List<Integer> sel = selectedIndices();
-        if (sel.isEmpty()) return;
-
-        double fs = currentRecord.getEffectiveSampleRate();
-        double f0 = currentRecord.nominalFrequency;
-
-        // Build spectra for all selected channels using the analysis window
-        int maxOrder = 50;
-        List<String>   chNames = new ArrayList<>();
-        List<double[]> mags    = new ArrayList<>();
-        List<String>   units   = new ArrayList<>();
-
-        for (int idx : sel) {
-            if (idx >= currentRecord.numAnalogChannels) continue;
-            chNames.add(chNameWithUnit(idx));
-            mags.add(calculateFFTMagnitude(extractWindow(currentRecord.analogData[idx]), fs, f0, maxOrder));
-            units.add(idx < currentRecord.analogChannelUnits.size()
-                ? currentRecord.analogChannelUnits.get(idx).trim() : "");
-        }
-        if (mags.isEmpty()) return;
-
-        // FFT Bar chart — show as % of H1 — series names include unit
-        for (int c = 0; c < chNames.size(); c++) {
-            double h1 = mags.get(c)[0];
-            if (h1 <= 0) continue;
-            XYChart.Series<String, Number> series = new XYChart.Series<>();
-            series.setName(chNames.get(c));
-            for (int h = 1; h <= maxOrder; h++) {
-                series.getData().add(new XYChart.Data<>("H" + h, mags.get(c)[h - 1] / h1 * 100.0));
-            }
-            fftChart.getData().add(series);
-        }
-
-        // Table columns: Orden | Frec(Hz) | [per channel: Mag(unit) | %H1]
-        TableColumn<ObservableList<String>, String> colOrder = new TableColumn<>("Orden");
-        colOrder.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().get(0)));
-        colOrder.setPrefWidth(52);
-        TableColumn<ObservableList<String>, String> colFreq = new TableColumn<>("Frec. (Hz)");
-        colFreq.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().get(1)));
-        colFreq.setPrefWidth(72);
-        harmonicsTable.getColumns().addAll(colOrder, colFreq);
-
-        for (int c = 0; c < chNames.size(); c++) {
-            final int ci = c;
-            String unit = units.get(c);
-            String header = chNames.get(c);
-
-            TableColumn<ObservableList<String>, String> colMag = new TableColumn<>(header + " Mag [" + unit + "]");
-            colMag.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().get(2 + ci * 2)));
-            harmonicsTable.getColumns().add(colMag);
-
-            TableColumn<ObservableList<String>, String> colPct = new TableColumn<>(header + " % H1");
-            colPct.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().get(2 + ci * 2 + 1)));
-            harmonicsTable.getColumns().add(colPct);
-        }
-
-        // Fill rows H1..H50
-        for (int h = 1; h <= maxOrder; h++) {
-            ObservableList<String> row = FXCollections.observableArrayList();
-            row.add("H" + h);
-            row.add(String.format("%.1f", h * f0));  // frequency
-            for (int c = 0; c < mags.size(); c++) {
-                double mag = mags.get(c)[h - 1];
-                double h1  = mags.get(c)[0];
-                row.add(String.format("%.4f", mag));
-                row.add(h > 1 && h1 > 0 ? String.format("%.2f%%", mag / h1 * 100.0) : (h == 1 ? "100.00%" : "—"));
-            }
-            harmonicsTable.getItems().add(row);
-        }
-
-        // THD summary row
-        ObservableList<String> thdRow = FXCollections.observableArrayList();
-        thdRow.add("THD");
-        thdRow.add("—");
-        StringBuilder statusSb = new StringBuilder("FFT  |");
-        for (int c = 0; c < mags.size(); c++) {
-            double[] m = mags.get(c);
-            double thdSq = 0;
-            for (int h = 1; h < m.length; h++) thdSq += m[h] * m[h];
-            double thd = m[0] > 0 ? Math.sqrt(thdSq) / m[0] * 100.0 : 0;
-            thdRow.add("—");
-            thdRow.add(String.format("THD=%.2f%%", thd));
-            statusSb.append(String.format("  %s: H1=%.4f  THD=%.2f%%", chNames.get(c), m[0], thd));
-        }
-        harmonicsTable.getItems().add(thdRow);
-        status(statusSb.toString() + "  |  Fs=" + String.format("%.0f Hz", fs));
+        if (currentRecord == null) return;
+        new FftChartBuilder(
+            currentRecord, fftChart, harmonicsTable,
+            winStartSample, winEndSample,
+            this::status, selectedIndices()
+        ).render();
     }
 
     // ── Phasor diagram ────────────────────────────────────────────────────────
 
     private void drawPhasors() {
-        GraphicsContext gc = phasorCanvas.getGraphicsContext2D();
-        double W  = phasorCanvas.getWidth();
-        double H  = phasorCanvas.getHeight();
-        if (W <= 0 || H <= 0) return;
-        double cx = W / 2, cy = H / 2;
-        double R  = Math.min(W, H) * 0.36;
-
-        // Background
-        gc.setFill(Color.web("#F0F0F0")); gc.fillRect(0, 0, W, H);
-
-        // Reference circle + axes
-        gc.setStroke(Color.web("#CCCCCC")); gc.setLineWidth(1);
-        gc.strokeOval(cx - R, cy - R, R * 2, R * 2);
-        gc.setStroke(Color.web("#CCCCCC")); gc.setLineDashes(4);
-        gc.strokeLine(cx - R * 1.12, cy, cx + R * 1.12, cy);
-        gc.strokeLine(cx, cy - R * 1.12, cx, cy + R * 1.12);
-        gc.setLineDashes(0);
-
-        // Axis labels
-        gc.setFill(Color.web("#333333")); gc.setFont(javafx.scene.text.Font.font(11));
-        gc.fillText("0°",   cx + R * 1.04, cy + 4);
-        gc.fillText("90°",  cx - 22,       cy - R * 1.04);
-        gc.fillText("180°", cx - R * 1.14, cy + 4);
-        gc.fillText("270°", cx - 22,       cy + R * 1.08);
-
-        if (currentRecord == null) {
-            lblPhasorValues.setText("Cargue un archivo para ver el diagrama.");
-            return;
-        }
-        List<Integer> sel = selectedIndices();
-        if (sel.isEmpty()) {
-            gc.setFill(Color.web("#333333")); gc.setFont(javafx.scene.text.Font.font(13));
-            gc.fillText("Seleccione canales para el diagrama fasorial", 20, H / 2);
-            lblPhasorValues.setText("Sin canales seleccionados.");
-            return;
-        }
-
-        double fs = currentRecord.getEffectiveSampleRate();
-        double f0 = currentRecord.nominalFrequency;
-
-        // Compute H1 complex for each channel
-        List<double[]> phasors  = new ArrayList<>(); // [mag, phase_rad]
-        List<String>   names    = new ArrayList<>();
-        List<Boolean>  isVolt   = new ArrayList<>();
-        double maxMag = 0, maxV = 0, maxI = 0;
-        for (int idx : sel) {
-            if (idx >= currentRecord.numAnalogChannels) continue;
-            double[][] spec = calculateComplexSpectrum(currentRecord.analogData[idx], fs, f0, 1);
-            double mag = spec[0][0];
-            phasors.add(new double[]{mag, spec[0][1]});
-            maxMag = Math.max(maxMag, mag);
-            names.add(chNameWithUnit(idx));
-            String unit = idx < currentRecord.analogChannelUnits.size()
-                ? currentRecord.analogChannelUnits.get(idx).trim() : "";
-            boolean isV = isVoltageUnit(unit);
-            isVolt.add(isV);
-            if (isV) maxV = Math.max(maxV, mag);
-            else     maxI = Math.max(maxI, mag);
-        }
-        if (maxMag <= 0) { lblPhasorValues.setText("No se pudo calcular espectro."); return; }
-        boolean normIndep = cbNormIndep != null && cbNormIndep.isSelected();
-        if (maxV <= 0) maxV = maxMag;   // fallback si no hay canales V
-        if (maxI <= 0) maxI = maxMag;   // fallback si no hay canales I
-
-        // Referencia de fase: primer canal de tensión (VA/VR) → se coloca en 0°.
-        // Si no hay canales V, usar el primer canal disponible como referencia.
-        double phaseRef = 0;
-        for (int i = 0; i < phasors.size(); i++) {
-            if (isVolt.get(i)) { phaseRef = phasors.get(i)[1]; break; }
-        }
-        if (phaseRef == 0 && !phasors.isEmpty()) phaseRef = phasors.get(0)[1];
-
-        // Segunda pasada: dibujar dos círculos si hay V e I en modo independiente
-        if (normIndep && maxV > 0 && maxI > 0 && maxV != maxI) {
-            // Círculo auxiliar para el grupo menor (indicativo visual)
-            double scaleMinor = Math.min(maxV, maxI) / Math.max(maxV, maxI);
-            gc.setStroke(Color.web("#AAAAAA")); gc.setLineWidth(0.8); gc.setLineDashes(3);
-            double Rminor = R * scaleMinor;
-            gc.strokeOval(cx - Rminor, cy - Rminor, Rminor * 2, Rminor * 2);
-            gc.setLineDashes(0);
-        }
-
-        // Draw phasors
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Ref: %.1f° → VA en 0°\n", Math.toDegrees(phaseRef)));
-        if (normIndep && maxV != maxI) {
-            sb.append(String.format("V: max=%.2f  I: max=%.2f\n", maxV, maxI));
-        }
-        sb.append("\n");
-        for (int i = 0; i < phasors.size(); i++) {
-            double mag   = phasors.get(i)[0];
-            // Restar phaseRef para que VA/VR quede en 0° (horizontal derecha)
-            double phase = phasors.get(i)[1] - phaseRef;
-            double refMax = normIndep ? (isVolt.get(i) ? maxV : maxI) : maxMag;
-            double norm   = mag / refMax * R;
-            double ex     = cx + norm * Math.cos(phase);
-            double ey     = cy - norm * Math.sin(phase); // screen Y inverted
-
-            int chIdx = i < sel.size() ? sel.get(i) : i;
-            Color color = Color.web(channelColors.getOrDefault(chIdx, CHANNEL_COLORS[chIdx % CHANNEL_COLORS.length]));
-            gc.setStroke(color); gc.setLineWidth(2.5);
-            gc.strokeLine(cx, cy, ex, ey);
-
-            // Arrowhead
-            double arrowLen = 10, arrowAng = Math.PI / 8;
-            gc.strokeLine(ex, ey,
-                ex - arrowLen * Math.cos(phase - arrowAng),
-                ey + arrowLen * Math.sin(phase - arrowAng));
-            gc.strokeLine(ex, ey,
-                ex - arrowLen * Math.cos(phase + arrowAng),
-                ey + arrowLen * Math.sin(phase + arrowAng));
-
-            // Label
-            gc.setFill(color);
-            gc.fillText(names.get(i), ex + 6, ey - 2);
-
-            // Mostrar ángulo relativo a VA (phaseRef)
-            double deg = Math.toDegrees(phase);
-            sb.append(String.format("%s:  %.4f  ∠ %.1f°\n", names.get(i), mag, deg));
-        }
-        lblPhasorValues.setText(sb.toString().trim());
+        new PhasorDiagramRenderer(
+            currentRecord, phasorCanvas, lblPhasorValues,
+            cbNormIndep, channelColors,
+            winStartSample, winEndSample, selectedIndices()
+        ).render();
     }
 
     // ── Sequence components (Fortescue) ───────────────────────────────────────
@@ -1194,9 +924,13 @@ public class ComtradePanel {
     }
 
     // ── FFT / Signal processing ───────────────────────────────────────────────
+    // These methods are package-private static so that FftChartBuilder and
+    // PhasorDiagramRenderer (same package) can call them without holding a
+    // ComtradePanel reference.  They are also called from calculatePower() and
+    // complexH1() inside this class.
 
     /** Returns magnitude[maxOrder] (RMS). */
-    private double[] calculateFFTMagnitude(double[] samples, double fs, double f0, int maxOrder) {
+    static double[] calculateFFTMagnitude(double[] samples, double fs, double f0, int maxOrder) {
         double[][] c = calculateComplexSpectrum(samples, fs, f0, maxOrder);
         double[] mag = new double[maxOrder];
         for (int i = 0; i < maxOrder; i++) mag[i] = c[i][0];
@@ -1206,7 +940,7 @@ public class ComtradePanel {
     /**
      * Returns [maxOrder][2] where [h][0] = magnitude_rms, [h][1] = phase_radians.
      */
-    private double[][] calculateComplexSpectrum(double[] samples, double fs, double f0, int maxOrder) {
+    static double[][] calculateComplexSpectrum(double[] samples, double fs, double f0, int maxOrder) {
         double[][] result = new double[maxOrder][2];
         if (samples == null || samples.length < 4 || fs <= 0 || f0 <= 0) return result;
 
@@ -1241,7 +975,7 @@ public class ComtradePanel {
     }
 
     /** Cooley-Tukey in-place FFT (n must be power of 2). */
-    private void fft(double[] re, double[] im, int n) {
+    static void fft(double[] re, double[] im, int n) {
         int j = 0;
         for (int i = 1; i < n; i++) {
             int bit = n >> 1;
@@ -1290,12 +1024,23 @@ public class ComtradePanel {
             || (u.endsWith("A") && !u.endsWith("VA") && !u.endsWith("KVA"));
     }
 
-    /** Returns the sub-array of signal within the current analysis window. */
+    /**
+     * Returns the sub-array of signal within the current analysis window.
+     * Instance convenience method — delegates to the static overload.
+     */
     private double[] extractWindow(double[] signal) {
+        return extractWindow(signal, winStartSample, winEndSample);
+    }
+
+    /**
+     * Static overload used by FftChartBuilder and PhasorDiagramRenderer.
+     * winEnd < 0 means "use the entire signal".
+     */
+    static double[] extractWindow(double[] signal, int winStart, int winEnd) {
         if (signal == null) return new double[0];
-        if (winEndSample < 0) return signal;          // no window set — use all
-        int s = Math.max(0, winStartSample);
-        int e = Math.min(signal.length, winEndSample);
+        if (winEnd < 0) return signal;                 // no window set — use all
+        int s = Math.max(0, winStart);
+        int e = Math.min(signal.length, winEnd);
         if (s >= e) return signal;                     // degenerate — fall back to full
         return Arrays.copyOfRange(signal, s, e);
     }
@@ -1360,20 +1105,6 @@ public class ComtradePanel {
         return l;
     }
 
-    /** Aplica color hex al nodo de la serie nro. slot en el waveformChart (llamar en JavaFX thread). */
-    private void applySeriesColor(int slot, String hexColor) {
-        if (slot >= waveformChart.getData().size()) return;
-        XYChart.Series<?, ?> s = waveformChart.getData().get(slot);
-        String style = "-fx-stroke: " + hexColor + "; -fx-background-color: " + hexColor + ", white;";
-        if (s.getNode() != null) {
-            s.getNode().setStyle("-fx-stroke: " + hexColor + ";");
-        }
-        // Colorear también la línea de leyenda y todos los símbolos de datos
-        for (XYChart.Data<?, ?> d : s.getData()) {
-            if (d.getNode() != null) d.getNode().setStyle(style);
-        }
-    }
-
     /** Convierte javafx Color a hex CSS (#RRGGBB). */
     private String toHex(Color c) {
         return String.format("#%02X%02X%02X",
@@ -1382,9 +1113,4 @@ public class ComtradePanel {
             (int)(c.getBlue()  * 255));
     }
 
-    /** True si la unidad del canal es tipo voltaje (V, kV, etc.). */
-    private boolean isVoltageUnit(String unit) {
-        String u = unit.trim().toLowerCase();
-        return u.equals("v") || u.equals("kv") || u.equals("mv") || u.startsWith("v/") || u.contains("volt");
-    }
 }

@@ -24,9 +24,15 @@ compile_output.txt
 # HTMLs y PDFs generados por scripts
 *.html
 *.pdf
+# Excepciones: documentacion tecnica versionada
+!harmonic_monitor_teoria.html
+!validation_test_table.html
 
 # Scripts de generacion de documentos (internos)
 gen_*.py
+# Excepciones: generadores versionados
+!gen_teoria_html.py
+!gen_validation_html.py
 
 # Notas internas y archivos de trabajo
 adversarial.txt

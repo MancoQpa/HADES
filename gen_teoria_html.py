@@ -1,0 +1,836 @@
+"""
+HarmonicMonitor - Documento Consolidado de Teoria y Referencia
+Genera: harmonic_monitor_teoria.html  (abrir en Chrome/Edge -> Ctrl+P -> PDF)
+"""
+import datetime
+
+OUTPUT = "harmonic_monitor_teoria.html"
+FECHA  = datetime.date.today().strftime("%d/%m/%Y")
+
+HTML = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>HarmonicMonitor — Fundamentos Teoricos y Referencia</title>
+<style>
+  @page {{
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+  }}
+  @media print {{
+    .pagebreak {{ page-break-before: always; }}
+  }}
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.55;
+    color: #212121;
+    background: #fff;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 10mm 14mm;
+  }}
+
+  /* ── Portada ── */
+  .cover {{
+    text-align: center;
+    padding: 24mm 8mm 18mm;
+    border-bottom: 4px solid #0D3B66;
+    margin-bottom: 16mm;
+  }}
+  .cover .logo {{ font-size: 32pt; margin-bottom: 6px; }}
+  .cover h1 {{ font-size: 21pt; color: #0D3B66; margin-bottom: 8px; line-height: 1.2; }}
+  .cover h2 {{ font-size: 12pt; color: #555; font-weight: normal; margin-bottom: 20px; }}
+  .cover .badge-band {{
+    background: #E65100; color: #fff;
+    display: inline-block; padding: 4px 18px;
+    border-radius: 4px; font-size: 11pt; font-weight: bold;
+    margin-bottom: 16px;
+  }}
+
+  /* ── Estructura ── */
+  h1.sec {{
+    font-size: 14pt; color: #fff; background: #0D3B66;
+    padding: 6px 13px; border-radius: 4px;
+    margin: 20px 0 10px;
+  }}
+  h2.sub {{
+    font-size: 11pt; color: #0D3B66;
+    border-left: 4px solid #1565C0; padding-left: 9px;
+    margin: 14px 0 7px;
+  }}
+  h2.sub.teal   {{ color:#00695C; border-color:#00695C; }}
+  h2.sub.purple {{ color:#4A148C; border-color:#4A148C; }}
+  h2.sub.green  {{ color:#2E7D32; border-color:#2E7D32; }}
+  h2.sub.orange {{ color:#E65100; border-color:#E65100; }}
+  h2.sub.red    {{ color:#B71C1C; border-color:#B71C1C; }}
+  h3.subsub {{
+    font-size: 9.5pt; color: #1565C0; font-style: italic;
+    margin: 10px 0 5px;
+  }}
+  p {{ margin-bottom: 8px; text-align: justify; }}
+  ul, ol {{ margin: 5px 0 8px 20px; }}
+  li {{ margin-bottom: 3px; }}
+
+  /* ── Cajas ── */
+  .box {{
+    border-radius: 4px; padding: 9px 13px; margin: 8px 0;
+  }}
+  .box-blue   {{ background:#E3F2FD; border-left:5px solid #1565C0; }}
+  .box-teal   {{ background:#E0F2F1; border-left:5px solid #00695C; }}
+  .box-red    {{ background:#FFEBEE; border-left:5px solid #B71C1C; }}
+  .box-orange {{ background:#FFF3E0; border-left:5px solid #E65100; }}
+  .box-amber  {{ background:#FFFDE7; border-left:5px solid #F57F17; }}
+  .box-purple {{ background:#F3E5F5; border-left:5px solid #4A148C; }}
+  .box-green  {{ background:#E8F5E9; border-left:5px solid #2E7D32; }}
+  .box-grey   {{ background:#F5F5F5; border-left:5px solid #757575; }}
+  .box-title  {{ font-weight:bold; margin-bottom:4px; }}
+
+  /* ── Formulas ── */
+  .formula {{
+    font-family: 'Courier New', monospace;
+    font-size: 9pt; background: #F0F4F8;
+    border: 1px solid #CFD8DC; border-radius: 4px;
+    padding: 8px 14px; margin: 7px 0;
+    white-space: pre-wrap;
+  }}
+
+  /* ── Tablas ── */
+  table {{ width:100%; border-collapse:collapse; margin:8px 0; font-size:8.5pt; }}
+  th {{ padding:5px 7px; color:#fff; font-weight:bold; text-align:left; }}
+  th.navy   {{ background:#0D3B66; }}
+  th.blue   {{ background:#1976D2; }}
+  th.teal   {{ background:#00695C; }}
+  th.purple {{ background:#4A148C; }}
+  th.green  {{ background:#2E7D32; }}
+  th.grey   {{ background:#424242; }}
+  th.orange {{ background:#E65100; }}
+  th.red    {{ background:#B71C1C; }}
+  td {{ padding:4px 7px; border-bottom:1px solid #E0E0E0; vertical-align:top; }}
+  tr:nth-child(even) td {{ background:#F5F5F5; }}
+  td.center {{ text-align:center; }}
+  td.bold   {{ font-weight:bold; }}
+  td.mono   {{ font-family:'Courier New',monospace; font-size:8pt; }}
+  td.green  {{ color:#2E7D32; font-weight:bold; }}
+  td.orange {{ color:#E65100; font-weight:bold; }}
+  td.red    {{ color:#B71C1C; font-weight:bold; }}
+  td.blue   {{ color:#1565C0; font-weight:bold; }}
+  td.purple {{ color:#4A148C; font-weight:bold; }}
+
+  /* ── Badges ── */
+  .badge {{
+    display:inline-block; border-radius:3px; padding:1px 6px;
+    font-size:8pt; font-weight:bold; color:#fff;
+  }}
+  .b-blue   {{ background:#1565C0; }}
+  .b-teal   {{ background:#00695C; }}
+  .b-green  {{ background:#2E7D32; }}
+  .b-orange {{ background:#E65100; }}
+  .b-red    {{ background:#B71C1C; }}
+  .b-purple {{ background:#4A148C; }}
+  .b-amber  {{ background:#F57F17; }}
+  .b-grey   {{ background:#757575; }}
+
+  sub {{ font-size:72%; vertical-align:sub; }}
+  sup {{ font-size:72%; vertical-align:super; }}
+
+  .toc {{ border:1px solid #E0E0E0; border-radius:5px; padding:10px 16px; margin:12px 0; }}
+  .toc-entry {{
+    display:flex; justify-content:space-between;
+    padding:3px 0; border-bottom:1px dotted #ccc; font-size:9pt;
+  }}
+  .toc-num {{ color:#1565C0; font-weight:bold; min-width:28px; }}
+
+  .footer {{
+    text-align:center; font-size:7.5pt; color:#888;
+    margin-top:24px; padding-top:7px; border-top:1px solid #E0E0E0;
+  }}
+
+  /* ── Modelo de carga (cabecera de bloque) ── */
+  .model-hdr {{
+    padding:8px 12px; border-radius:4px; margin:12px 0 4px;
+    font-size:10pt; font-weight:bold;
+  }}
+</style>
+</head>
+<body>
+
+<!-- ══════ PORTADA ══════ -->
+<div class="cover">
+  <div class="logo">⚡</div>
+  <h1>HADES v1.0</h1>
+  <h2>Fundamentos Teoricos, Algoritmo de Deteccion y Referencia de la Aplicacion</h2>
+  <div class="badge-band">HADES</div>
+  <br>
+  <p style="font-size:9pt;color:#555">Harmonic Analysis for Detection of Electronic Signatures</p>
+
+  <table style="margin:16px auto;max-width:420px;font-size:9pt;">
+    <tr style="background:#E3F2FD"><td style="padding:5px 10px;font-weight:bold;width:120px">Version</td><td style="padding:5px 10px">v 1.0 — 2026</td></tr>
+    <tr><td style="padding:5px 10px;font-weight:bold">Sector</td><td style="padding:5px 10px">Distribucion electrica MT 23 kV — ANDE, Paraguay</td></tr>
+    <tr style="background:#E3F2FD"><td style="padding:5px 10px;font-weight:bold">Protocolo</td><td style="padding:5px 10px">IEC 61850 / MMS — ION 7400 (Schneider Electric)</td></tr>
+    <tr><td style="padding:5px 10px;font-weight:bold">Equipo</td><td style="padding:5px 10px">E. Medina · D. Rojas · E. Paiva · S. Dominguez</td></tr>
+    <tr style="background:#E3F2FD"><td style="padding:5px 10px;font-weight:bold">Normas</td><td style="padding:5px 10px">IEEE 519-2022 · IEC 61000-3-6 · EN 50160 · IEEE 1459-2010</td></tr>
+  </table>
+
+  <p style="font-size:8.5pt;color:#555;text-align:justify;max-width:380px;margin:0 auto">
+    Este documento consolida los fundamentos teoricos del algoritmo de deteccion de carga electronica,
+    el contenido normativo de las secciones '¿Por que?' y 'Ayuda', y la informacion del panel 'Acerca de'.
+    Dirigido a ingenieros de distribucion, investigadores de calidad de energia y personal tecnico de ANDE.
+  </p>
+</div>
+
+<!-- ══════ INDICE ══════ -->
+<div class="toc">
+  <div style="font-weight:bold;font-size:10pt;color:#0D3B66;margin-bottom:6px">Indice de Contenidos</div>
+  <div class="toc-entry"><span><span class="toc-num">1.</span> Descripcion del Sistema</span></div>
+  <div class="toc-entry"><span><span class="toc-num">2.</span> Fundamentos Teoricos</span></div>
+  <div class="toc-entry"><span><span class="toc-num">3.</span> Modelos de Carga Electronica</span></div>
+  <div class="toc-entry"><span><span class="toc-num">4.</span> Algoritmo de Deteccion de Carga</span></div>
+  <div class="toc-entry"><span><span class="toc-num">5.</span> Motor de Alarmas (AlarmEngine)</span></div>
+  <div class="toc-entry"><span><span class="toc-num">6.</span> Protocolo IEC 61850 y Modelo de Datos</span></div>
+  <div class="toc-entry"><span><span class="toc-num">7.</span> Marco Normativo</span></div>
+  <div class="toc-entry"><span><span class="toc-num">8.</span> Disclaimer Normativo y Limitaciones</span></div>
+  <div class="toc-entry"><span><span class="toc-num">9.</span> Acerca de la Aplicacion</span></div>
+</div>
+
+<!-- ══════ CAP 1 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">1. Descripcion del Sistema</h1>
+
+<h2 class="sub">1.1 Proposito y contexto</h2>
+<p>
+HADES es una plataforma de escritorio para el monitoreo en tiempo real de la calidad de
+energia en alimentadores de media tension 23 kV, desarrollada sobre el estandar IEC 61850 / MMS.
+Su objetivo es detectar y cuantificar la presencia de cargas electrointensivas no lineales
+—mineria de criptomonedas, datacenters, hornos de arco electrico y variadores de frecuencia—
+mediante el analisis de <strong>firmas de energia</strong>: espectro armonico, factor de potencia,
+coeficiente de variacion y patrones temporales de consumo.
+</p>
+
+<h2 class="sub">1.2 Arquitectura en capas</h2>
+<table>
+  <tr>
+    <th class="teal" style="width:20%">Capa</th>
+    <th class="teal" style="width:32%">Modulo Java</th>
+    <th class="teal">Responsabilidad</th>
+  </tr>
+  <tr><td>Comunicacion</td><td class="mono">IEC61850Communicator</td>
+      <td>Conexion MMS al ION 7400; polling de MMXU, MHAI, MSQI, MMTR</td></tr>
+  <tr><td>Analisis</td><td class="mono">HarmonicAnalyzer</td>
+      <td>Calculo de THD, ratios H5/H1, H7/H1 a partir del espectro</td></tr>
+  <tr><td>Analisis</td><td class="mono">ElectronicLoadDetector</td>
+      <td>Clasificacion multivariable del tipo de carga (7 categorias)</td></tr>
+  <tr><td>Analisis</td><td class="mono">ResonanceAnalyzer</td>
+      <td>Estimacion de frecuencia de resonancia LC y evaluacion de riesgo</td></tr>
+  <tr><td>Analisis</td><td class="mono">LoadStabilityAnalyzer</td>
+      <td>Calculo del coeficiente de variacion CV = σ/μ de la corriente</td></tr>
+  <tr><td>Alarmas</td><td class="mono">AlarmEngine</td>
+      <td>Motor de 4 niveles: WARNING / PQ_RISK / CRITICAL / DETECTION</td></tr>
+  <tr><td>Persistencia</td><td class="mono">DataStorage</td>
+      <td>Almacenamiento SQLite + exportacion CSV</td></tr>
+  <tr><td>Presentacion</td><td class="mono">GUI (JavaFX 17)</td>
+      <td>Paneles MVC: Dashboard, Armonicos, Tendencias, Alarmas, COMTRADE</td></tr>
+  <tr><td>Simulacion</td><td class="mono">SimulatedPoller</td>
+      <td>6 perfiles de carga sintetica para desarrollo sin IED real</td></tr>
+</table>
+
+<h2 class="sub">1.3 Funcionalidades principales</h2>
+<ul>
+  <li>Conexion IEC 61850 MMS al ION 7400 y otros IEDs; reconexion automatica con backoff exponencial</li>
+  <li>Analisis armonico H1-H50 con FFT en tiempo real por fase</li>
+  <li>Deteccion automatica del tipo de carga: LINEAR, LIGHTING, CRYPTO_MINING, DATA_CENTER, MIXED_ELECTRONIC, INDUSTRIAL, ELECTRONIC_LIGHT</li>
+  <li>Motor de alarmas de 4 niveles con historial de 1 000 eventos</li>
+  <li>Tendencias historicas y exportacion CSV (buffer circular de 120 puntos)</li>
+  <li>Visor COMTRADE: formas de onda, FFT, fasores, Fortescue y analisis de potencia</li>
+  <li>Simulador con 6 perfiles de carga (CRYPTO_MINER, DATACENTER, ARC_FURNACE, VFD, INDUSTRIAL_LINEAR, MIXED_COMMERCIAL)</li>
+  <li>Evaluacion normativa automatica: IEC 61000 / IEEE 519 / EN 50160</li>
+  <li>Generacion automatica de registros COMTRADE por trigger normativo (cooldown 30 s)</li>
+</ul>
+
+<!-- ══════ CAP 2 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">2. Fundamentos Teoricos</h1>
+
+<h2 class="sub">2.1 Serie de Fourier y armonicos en sistemas de potencia</h2>
+<p>
+Toda señal de corriente periodica en un sistema electrico puede descomponerse en la suma de sus
+componentes de Fourier. El desarrollo en serie de Fourier de la corriente de una carga no lineal es:
+</p>
+<div class="formula">i(t) = I₀ + Σ [ √2 · Iₙ · cos(n·ω·t + φₙ) ]   n = 1, 2, 3, ...
+
+  I₀  = componente continua (CC)  [usualmente 0 en AC]
+  Iₙ  = valor eficaz (RMS) del armonico de orden n
+  φₙ  = angulo de fase del armonico n
+  ω   = 2π·f₀  (pulsacion fundamental, f₀ = 50 Hz)</div>
+<p class="box box-blue" style="font-size:8pt"><strong>Referencia:</strong> IEC 61000-4-7:2009. El factor √2 convierte de RMS a amplitud de pico.</p>
+<p>
+<strong>Cargas lineales vs. no lineales.</strong> Una carga lineal cumple i(t) = v(t)/Z y
+<em>no genera</em> armonicos nuevos. Las cargas <strong>no lineales</strong> (rectificadores,
+SMPS, arcos electricos) generan armonicos de orden n ≥ 2 de forma independiente a la pureza de la tension.
+</p>
+
+<h2 class="sub">2.2 THD<sub>i</sub> vs. TDD — distincion normativa critica</h2>
+<div class="formula">THDi = √( Σ Iₙ² | n≥2 ) / I₁ × 100%     ← denominador: corriente fundamental INSTANTANEA
+TDD  = √( Σ Iₙ² | n≥2 ) / I_L × 100%    ← denominador: corriente maxima de DEMANDA
+
+  I_L = corriente maxima de demanda (promedio 15-30 min, definida por IEEE 519)</div>
+<p>
+<strong>Efecto practico.</strong> Cuando la carga opera por debajo de su demanda maxima (I₁ &lt; I<sub>L</sub>),
+el THD<sub>i</sub> resulta mayor que el TDD real. HarmonicMonitor usa THD<sub>i</sub> como
+<em>aproximacion conservadora</em> del TDD en tiempo real.
+</p>
+<div class="box box-amber"><div class="box-title">IEEE 519-2022 Sec. 2.3</div>
+"TDD is used rather than THD because THD can be misleadingly high when the fundamental current is small."
+Las alarmas de corriente deben interpretarse como <strong>'investigar este feeder'</strong>, no como
+violacion definitiva de IEEE 519.</div>
+
+<h2 class="sub">2.3 Factor de potencia en presencia de armonicos</h2>
+<p>En presencia de armonicos, el factor de potencia <strong>verdadero</strong> se descompone (IEEE 1459-2010):</p>
+<div class="formula">FP  = P / S = P / (V_rms · I_rms)
+FP  = DPF · DF
+
+  DPF = cos(φ₁)              = factor de desplazamiento (solo fundamental)
+  DF  = I₁ / I_rms = 1/√(1+THDi²)  = factor de distorsion
+
+Por lo tanto:   FP = cos(φ₁) / √(1 + THDi²)
+
+Ejemplo SMPS sin PFC: DPF=0.97, THDi=45%
+  FP = 0.97 / √(1+0.45²) = 0.97 / 1.097 = 0.88</div>
+
+<h2 class="sub">2.4 Potencia en sistemas no sinusoidales (IEEE 1459-2010)</h2>
+
+<h3 class="subsub">Budeanu (historica)</h3>
+<div class="formula">S² = P² + Q² + D²</div>
+<p>Q de Budeanu no tiene interpretacion fisica clara en sistemas no sinusoidales; D no es minimizable por compensacion reactiva.</p>
+
+<h3 class="subsub">IEEE 1459-2010 (recomendada)</h3>
+<div class="formula">S² = P² + Q₁² + D²
+  Q₁ = V₁·I₁·sin(φ₁)  (reactiva del fundamental, minimizable con condensadores)
+  D  = √(S²−P²−Q₁²)    (potencia no fundamental; requiere filtros activos)</div>
+<p class="box box-teal" style="font-size:8pt">
+HarmonicMonitor calcula Q = √(S²−P²), que corresponde a la 'potencia no activa' total (incluye Q₁ + D).
+</p>
+
+<h2 class="sub">2.5 Resonancia armonica en alimentadores MT</h2>
+<p>
+La resonancia paralela ocurre cuando la reactancia capacitiva de los cables MT resuena con la reactancia
+inductiva del sistema. El resultado es amplificacion de la tension armonica que puede dañar equipos.
+</p>
+<div class="formula">Formula exacta (circuito LC):       f_res = 1 / (2π · √(L·C))
+
+Aproximacion para sistemas de distribucion:
+  h_res = f_res/f₀ = √(S_cc / Q_c)
+
+  S_cc = potencia de cortocircuito en el nodo (MVA)
+  Q_c  = potencia reactiva capacitiva del cable/banco (MVAR)
+  L    = V² / (ω·S_cc)   [equivalente inductivo de red]
+  C    = Q_c / (ω·V²)    [equivalente capacitivo del feeder]</div>
+<p>
+<strong>Riesgo practico.</strong> Si h<sub>res</sub> coincide con H5 o H7 de un rectificador, la corriente
+puede amplificarse 3× o mas. HarmonicMonitor calcula h<sub>res</sub> por ambos metodos y promedia resultados.
+Ref: Arrillaga &amp; Watson (2003) <em>Power System Harmonics</em>, Wiley, cap. 4.
+</p>
+
+<h2 class="sub">2.6 Componentes simetricas — Transformada de Fortescue</h2>
+<div class="formula">X₁ = (1/3)(Xₐ + a·X_b + a²·X_c)   Secuencia Positiva  (A→B→C, rotacion normal)
+X₂ = (1/3)(Xₐ + a²·X_b + a·X_c)   Secuencia Negativa  (A→C→B, rotacion inversa)
+X₀ = (1/3)(Xₐ + X_b + X_c)         Secuencia Cero      (homopolar)
+
+  a = e^(j·2π/3) = −0.5 + j·0.866   (operador de secuencia, rotacion 120°)
+
+Desbalance de tension (EN 50160):   V_desbal = V₂/V₁ × 100%   ≤ 2%</div>
+
+<h3 class="subsub">Relacion entre armonicos y secuencias (sistema trifasico equilibrado)</h3>
+<table>
+  <tr>
+    <th class="purple" style="width:22%">Orden</th>
+    <th class="purple" style="width:14%">Frec (Hz)</th>
+    <th class="purple" style="width:18%">Secuencia</th>
+    <th class="purple">Comentario</th>
+  </tr>
+  <tr><td>H1 (fundamental)</td><td class="center">50</td><td class="center green">Positiva (+)</td><td>Secuencia normal de la red</td></tr>
+  <tr><td>H2</td><td class="center">100</td><td class="center red">Negativa (−)</td><td>Indica asimetria; genera calentamiento en motores</td></tr>
+  <tr><td>H3</td><td class="center">150</td><td class="center orange">Cero (0)</td><td><strong>TRIPLEN</strong> — se suma en el neutro (I<sub>N</sub> = 3·I<sub>fase</sub>)</td></tr>
+  <tr><td>H5</td><td class="center">250</td><td class="center red">Negativa (−)</td><td>Firma de rectificadores trifasicos 6-pulsos</td></tr>
+  <tr><td>H7</td><td class="center">350</td><td class="center green">Positiva (+)</td><td>Acompaña a H5 en el patron 6k±1</td></tr>
+  <tr><td>H11</td><td class="center">550</td><td class="center red">Negativa (−)</td><td>Segunda familia del 6-pulsos (k=2)</td></tr>
+  <tr><td>H13</td><td class="center">650</td><td class="center green">Positiva (+)</td><td>Segunda familia del 6-pulsos (k=2)</td></tr>
+</table>
+<p style="font-size:8pt;color:#555;font-style:italic">
+Nota: El patron +/−/0 puede romperse con cargas monofasicas, neutro abierto o tensiones desequilibradas.
+Los triplenos (H3, H9...) son suprimidos por transformadores DY en el lado MT 23 kV.
+</p>
+
+<!-- ══════ CAP 3 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">3. Modelos de Carga Electronica</h1>
+<p>
+Cada tipo de carga electrointensiva produce una <strong>firma espectral caracteristica</strong>.
+Los siguientes modelos estan implementados en <code>SimulatedPoller</code>.
+</p>
+
+<table>
+  <tr>
+    <th class="navy" style="width:20%">Perfil</th>
+    <th class="navy" style="width:10%">THD<sub>i</sub></th>
+    <th class="navy" style="width:8%">FP</th>
+    <th class="navy" style="width:7%">H3/H1</th>
+    <th class="navy" style="width:7%">H5/H1</th>
+    <th class="navy" style="width:7%">H7/H1</th>
+    <th class="navy" style="width:7%">CV</th>
+    <th class="navy">Patron dominante</th>
+  </tr>
+  <tr style="background:#FFEBEE"><td><strong>Cripto-Miner (SMPS sin PFC)</strong></td><td class="center">40-50%</td><td class="center">0.85-0.88</td><td class="center">3%</td><td class="center bold">35%</td><td class="center bold">23%</td><td class="center">&lt;1%</td><td>H5, H7 dominantes; patron 6k±1</td></tr>
+  <tr style="background:#F3E5F5"><td><strong>Datacenter (PFC activo)</strong></td><td class="center">15-20%</td><td class="center">0.99</td><td class="center">2.5%</td><td class="center bold">14%</td><td class="center bold">9%</td><td class="center">2-5%</td><td>H5 residual, H3 suprimido por PFC</td></tr>
+  <tr style="background:#FFFDE7"><td><strong>Horno de Arco (EAF)</strong></td><td class="center">15-35%</td><td class="center">0.70-0.85</td><td class="center">14%</td><td class="center">9%</td><td class="center">3.8%</td><td class="center">&gt;10%</td><td>H2, H3, H4 (pares!); muy variable</td></tr>
+  <tr style="background:#E8F5E9"><td><strong>Variador de Frecuencia 6-pulsos</strong></td><td class="center">23-28%</td><td class="center">0.93-0.95</td><td class="center">2%</td><td class="center bold">18-26%</td><td class="center bold">12-17%</td><td class="center">5-15%</td><td>H5, H7, H11, H13; THD↑ a baja velocidad</td></tr>
+  <tr style="background:#E3F2FD"><td><strong>Industrial Lineal (motor DOL)</strong></td><td class="center">3-5%</td><td class="center">0.83-0.88</td><td class="center">1%</td><td class="center">3%</td><td class="center">1.8%</td><td class="center">3-8%</td><td>Casi sinusoidal; H5 &lt; 5%</td></tr>
+  <tr style="background:#FFF3E0"><td><strong>Mixta Comercial</strong></td><td class="center">14-20%</td><td class="center">0.91-0.94</td><td class="center">7-12%</td><td class="center">13%</td><td class="center">9%</td><td class="center">4-8%</td><td>H3 (residencial) + H5/H7 (HVAC)</td></tr>
+</table>
+
+<h2 class="sub red">3.1 SMPS sin PFC — Mineria Cripto (CRYPTO_MINER)</h2>
+<div class="formula">AC ─[Puente de diodos]─[Capacitor bulk C]─[DC-DC conversor]─▶ DC
+
+El puente conduce solo cuando v_red > V_condensador.
+Resultado: pulsos de corriente angostos (20-40° de conduccion).
+
+Armónicos presentes: H1, H3, H5, H7, H9, H11, H13... (todos los impares)
+Para instalacion trifasica equilibrada: patron 6k±1 (H5, H7, H11, H13...); H3 se cancela entre fases
+DPF ≈ 0.95-0.98; FP verdadero con THDi=45%: FP = 0.97/√(1+0.45²) = 0.88</div>
+<ul>
+  <li><strong>Hardware MODERNO</strong> (Antminer S19, post-2015): PFC activo obligatorio (IEC 61000-3-2 Clase A). THD<sub>i</sub> real: 10-20%, FP &gt; 0.99</li>
+  <li><strong>Hardware LEGADO</strong> (fuentes ATX pre-2010 sin PFC): THD<sub>i</sub> medido 65-130%, FP 0.55-0.70</li>
+  <li>El simulador usa modelo legado para maximo contraste armonico en demostraciones</li>
+</ul>
+
+<h2 class="sub purple">3.2 Datacenter con PFC activo (DATACENTER)</h2>
+<div class="formula">AC ─[Filtro EMI]─[Boost PFC]─[Bus DC 380V]─[Convertidor LLC]─▶ 12V/48V
+
+El controlador Boost fuerza i(t) ~ v(t):
+  i_ref(t) = k · |v_red(t)|   (referencia proporcional a la tension)
+Resultado: corriente casi sinusoidal con residuos H5/H7 del conmutado.</div>
+<ul>
+  <li>Estandar 80 PLUS Platinum: THD<sub>i</sub> &lt; 20%. Titanium: THD<sub>i</sub> &lt; 5%</li>
+  <li>Dell PowerEdge R740: THD<sub>i</sub> = 8.2%, FP = 0.998 (medicion real)</li>
+  <li>HPE ProLiant DL380: THD<sub>i</sub> = 11.4%, FP = 0.997 (medicion real)</li>
+  <li>Distinguible de Cripto por FP ≤ 0.92 (PFC parcial o modelos mas antiguos)</li>
+</ul>
+
+<h2 class="sub orange">3.3 Horno de Arco Electrico — EAF (ARC_FURNACE)</h2>
+<div class="formula">v_arco = f(i, longitud_arco, temperatura_plasma)
+
+La caracteristica V-I del arco NO es antisimetrica:
+  f(−i) ≠ −f(i)  →  genera armonicos PARES e IMPARES</div>
+<ul>
+  <li>A diferencia de rectificadores (solo impares), el EAF produce H2, H3, H4, H5... mezclados</li>
+  <li>La presencia de H2 y otros pares es la <strong>firma diagnostica del EAF</strong></li>
+  <li>Flicker severo: P<sub>st</sub> hasta 3-4 (limite MT: P<sub>st</sub> ≤ 0.8 segun IEC 61000-3-7)</li>
+  <li>Compensacion reactiva dinamica (SVC/STATCOM) imprescindible para controlar flicker</li>
+</ul>
+
+<h2 class="sub green">3.4 Variador de Frecuencia 6-Pulsos — VFD (VARIABLE_SPEED_DRIVE)</h2>
+<div class="formula">Desarrollo de Fourier del rectificador 6-pulsos:
+i_a(t) = (2√3/π)·I_d·[ sin(ωt) − (1/5)sin(5ωt) + (1/7)sin(7ωt)
+                       − (1/11)sin(11ωt) + (1/13)sin(13ωt) + ... ]
+
+Armonicos del patron 6k±1:  H5, H7, H11, H13, H17, H19...
+Amplitudes ideales (sin reactor): Iₙ/I₁ = 1/n
+  → I₅=20%, I₇=14.3%, I₁₁=9.1%, I₁₃=7.7%</div>
+<ul>
+  <li>Con reactor DC 3%: THD<sub>i</sub> ≈ 35%, H5 ≈ 24%, H7 ≈ 17%</li>
+  <li>Con reactor AC 5%: THD<sub>i</sub> ≈ 28%, H5 ≈ 20%, H7 ≈ 14%</li>
+  <li>Comportamiento inverso al SMPS: THD MAYOR a BAJA velocidad (util para clasificacion)</li>
+  <li>CV variable (5-15%) por ciclos de aceleracion/desaceleracion; distingue de SMPS estable</li>
+</ul>
+
+<!-- ══════ CAP 4 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">4. Algoritmo de Deteccion de Carga Electronica</h1>
+<p>
+El modulo <code>ElectronicLoadDetector.java</code> implementa un clasificador multivariable
+basado en cuatro indicadores de firmas de energia. Se ejecuta en cada ciclo de polling (cada 5 s).
+</p>
+
+<h2 class="sub teal">4.1 Indicadores de clasificacion</h2>
+<table>
+  <tr>
+    <th class="teal" style="width:24%">Indicador</th>
+    <th class="teal" style="width:8%">Simbolo</th>
+    <th class="teal" style="width:26%">Formula</th>
+    <th class="teal" style="width:16%">Umbral</th>
+    <th class="teal">Significado fisico</th>
+  </tr>
+  <tr><td>Coef. de Variacion de corriente</td><td class="center bold">CV</td>
+      <td class="mono">σ(I) / μ(I) × 100%</td>
+      <td>&lt; 5% → electronica</td>
+      <td>Carga estable → SMPS regulado. ASIC miners: CV ≈ 0.3-0.8%</td></tr>
+  <tr><td>THD de corriente</td><td class="center bold">THD<sub>i</sub></td>
+      <td class="mono">√(ΣIₙ² | n≥2) / I₁ × 100%</td>
+      <td>15% → cripto/DC; 8% → industrial</td>
+      <td>Nivel de distorsion armonica total respecto al fundamental</td></tr>
+  <tr><td>Ratio H5/H1</td><td class="center bold">H5/H1</td>
+      <td class="mono">I₅ / I₁</td>
+      <td>&gt; 15% → firma rectificador</td>
+      <td>Armonico de 5° orden dominante en rectificadores trifasicos</td></tr>
+  <tr><td>Ratio H7/H1</td><td class="center bold">H7/H1</td>
+      <td class="mono">I₇ / I₁</td>
+      <td>&gt; 10% → firma rectificador</td>
+      <td>Acompana al H5 en el patron 6k±1 de rectificadores de 6 pulsos</td></tr>
+  <tr><td>Factor de potencia verdadero</td><td class="center bold">FP</td>
+      <td class="mono">P / (V<sub>rms</sub>·I<sub>rms</sub>)</td>
+      <td>&gt; 0.92 → distingue cripto/DC</td>
+      <td>FP &gt; 0.92 indica SMPS con PFC activo → CRYPTO vs DATA_CENTER</td></tr>
+  <tr><td>Ratios H11/H1, H13/H1</td><td class="center bold">H11, H13</td>
+      <td class="mono">Iₙ / I₁</td>
+      <td>H11&gt;5%, H13&gt;4% → 6-pulsos</td>
+      <td>Necesarios para confirmar firma completa de rectificador industrial</td></tr>
+</table>
+
+<h2 class="sub">4.2 Arbol de decision (ElectronicLoadDetector.classifyInternal)</h2>
+<table>
+  <tr>
+    <th class="navy" style="width:5%">Paso</th>
+    <th class="navy" style="width:42%">Condicion</th>
+    <th class="navy" style="width:18%">Resultado</th>
+    <th class="navy">Contexto fisico</th>
+  </tr>
+  <tr><td class="center bold blue">1</td>
+      <td class="mono">THDi &lt; 5% AND H5/H1 &lt; 5%</td>
+      <td class="blue bold">LINEAR</td>
+      <td>Carga esencialmente sinusoidal (motores, resistencias)</td></tr>
+  <tr><td class="center bold" style="color:#F57F17">2</td>
+      <td class="mono">THDi &gt; 10% AND H5/H1 &lt; 8% AND 0.75 &lt; FP &lt; 0.95</td>
+      <td class="bold" style="color:#F57F17">LIGHTING</td>
+      <td>H3 dominante; patron LED/fluorescente</td></tr>
+  <tr><td class="center bold red">3</td>
+      <td class="mono">CV &lt; 5% AND THDi &gt; 15% AND H5/H1 &gt; 15% AND H7/H1 &gt; 10% AND FP &gt; 0.92</td>
+      <td class="red bold">CRYPTO_MINING</td>
+      <td>SMPS alta potencia con PFC activo: estable + rectificador + FP alto</td></tr>
+  <tr><td class="center bold purple">4</td>
+      <td class="mono">CV &lt; 5% AND THDi &gt; 15% AND H5/H1 &gt; 15% AND H7/H1 &gt; 10%</td>
+      <td class="purple bold">DATA_CENTER</td>
+      <td>Como cripto pero FP ≤ 0.92: PFC parcial o modelos mas antiguos</td></tr>
+  <tr><td class="center bold green">5</td>
+      <td class="mono">THDi &gt; 8% AND H5&gt;12% AND H7&gt;8% AND H11&gt;5% AND H13&gt;4%</td>
+      <td class="green bold">INDUSTRIAL</td>
+      <td>Firma completa de rectificador 6-pulsos (VFD, convertidores industriales)</td></tr>
+  <tr><td class="center bold orange">6</td>
+      <td class="mono">THDi &gt; 8% AND (H5/H1 &gt; 8% OR H7/H1 &gt; 5%)</td>
+      <td class="orange bold">ELECTRONIC_LIGHT</td>
+      <td>Distorsion elevada sin firma completa (UPS pequenos, cargadores)</td></tr>
+  <tr><td class="center bold" style="color:#424242">7</td>
+      <td class="mono">THDi &gt; 5%</td>
+      <td class="bold" style="color:#424242">MIXED_ELECTRONIC</td>
+      <td>Distorsion moderada sin firma clara (carga comercial mixta)</td></tr>
+  <tr><td class="center bold blue">8</td>
+      <td class="mono">resto</td>
+      <td class="blue bold">LINEAR</td>
+      <td>Sin distorsion significativa detectable</td></tr>
+</table>
+
+<h2 class="sub">4.3 Indice de electrointensidad (0-100)</h2>
+<div class="formula">Indice = C_cv + C_thd + C_ratio
+
+  C_cv   = max(0, (5·CV_thresh − CV) / (5·CV_thresh)) × 30   [estabilidad]
+  C_thd  = min(THDi / 40.0, 1.0) × 40                        [distorsion]
+  C_ratio = min((H5/H1 + H7/H1) / 0.5, 1.0) × 30             [firma espectral]
+
+  CV_thresh = 0.05 (5%); THDi en %; H5/H1 y H7/H1 en fraccion
+  Pesos: 30 (estabilidad) / 40 (distorsion) / 30 (espectro)
+  Un indice > 70 indica alta probabilidad de carga electrointensiva.</div>
+
+<h2 class="sub">4.4 Coeficiente de Variacion (CV) — calculo e implementacion</h2>
+<div class="formula">CV = σ(I) / μ(I) × 100%
+
+  σ(I) = desviacion estandar muestral de la corriente en la ventana
+  μ(I) = media aritmetica de la corriente en la ventana
+  Ventana: ultimas 60 muestras a 5 s de intervalo = 5 MINUTOS (deslizante, FIFO)
+
+Interpretacion practica:
+  CV &lt; 1%   → ASIC miner, UPS en plena carga
+  CV 1-5%   → Datacenter, cargadores EV
+  CV 5-15%  → VFD en ciclo de velocidad, carga comercial
+  CV > 15%  → EAF, carga muy variable</div>
+
+<!-- ══════ CAP 5 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">5. Motor de Alarmas (AlarmEngine)</h1>
+<p>
+El motor de alarmas evalua cada medicion nueva y emite eventos a los listeners registrados.
+Implementa histeresis simple para evitar alarmas repetitivas del mismo tipo.
+</p>
+
+<table>
+  <tr>
+    <th class="grey" style="width:12%">Nivel</th>
+    <th class="grey" style="width:10%">Color GUI</th>
+    <th class="grey" style="width:16%">Parametro</th>
+    <th class="grey" style="width:32%">Condicion de disparo</th>
+    <th class="grey">Norma de referencia</th>
+  </tr>
+  <tr style="background:#FFFDE7"><td class="bold" style="color:#F57F17">WARNING</td><td>Ambar</td><td>THD<sub>v</sub></td><td>THD<sub>v</sub> &gt; 80% del limite (4.0%)</td><td>IEC 61000-3-6</td></tr>
+  <tr style="background:#FFF3E0"><td class="bold orange">PQ_RISK</td><td>Naranja</td><td>THD<sub>v</sub></td><td>THD<sub>v</sub> &gt; 5.0% (planning level)</td><td>IEC 61000-3-6</td></tr>
+  <tr style="background:#FFEBEE"><td class="bold red">CRITICAL</td><td>Rojo</td><td>THD<sub>v</sub></td><td>THD<sub>v</sub> &gt; 7.5% (1.5 × planning level)</td><td>EN 50160 (abs. 8%)</td></tr>
+  <tr style="background:#FFFDE7"><td class="bold" style="color:#F57F17">WARNING</td><td>Ambar</td><td>THD<sub>i</sub></td><td>THD<sub>i</sub> &gt; 6.4% (80% de 8%)</td><td>IEEE 519 / IEC 61000-3-4</td></tr>
+  <tr style="background:#FFF3E0"><td class="bold orange">PQ_RISK</td><td>Naranja</td><td>THD<sub>i</sub></td><td>THD<sub>i</sub> &gt; 8.0%</td><td>IEEE 519-2022 TDD limit</td></tr>
+  <tr style="background:#FFEBEE"><td class="bold red">CRITICAL</td><td>Rojo</td><td>THD<sub>i</sub></td><td>THD<sub>i</sub> &gt; 12.0% (1.5 × limite)</td><td>IEEE 519-2022</td></tr>
+  <tr style="background:#FFF3E0"><td class="bold orange">PQ_RISK</td><td>Naranja</td><td>Desbal. Tension</td><td>V<sub>desbal</sub> &gt; 2.0%</td><td>EN 50160</td></tr>
+  <tr style="background:#FFEBEE"><td class="bold red">CRITICAL</td><td>Rojo</td><td>Desbal. Tension</td><td>V<sub>desbal</sub> &gt; 3.0% (1.5×)</td><td>EN 50160</td></tr>
+  <tr style="background:#FFF3E0"><td class="bold orange">PQ_RISK</td><td>Naranja</td><td>Desbal. Corriente</td><td>I<sub>desbal</sub> &gt; 10.0%</td><td>Umbral configurable</td></tr>
+  <tr style="background:#FFEBEE"><td class="bold red">CRITICAL</td><td>Rojo</td><td>Resonancia</td><td>H<sub>res</sub>/H1 &gt; 3.0× (amplificacion)</td><td>IEC 61000-3-6, CIGRE</td></tr>
+  <tr style="background:#FFF3E0"><td class="bold orange">PQ_RISK</td><td>Naranja</td><td>Resonancia</td><td>H<sub>res</sub> cercano + armonicos presentes</td><td>IEC 61000-3-6</td></tr>
+  <tr style="background:#F3E5F5"><td class="bold purple">DETECTION</td><td>Violeta</td><td>Tipo Carga</td><td>LoadType cambia a CRYPTO_MINING o DATA_CENTER</td><td>Deteccion interna</td></tr>
+  <tr style="background:#FFFDE7"><td class="bold" style="color:#F57F17">WARNING</td><td>Ambar</td><td>Tipo Carga</td><td>LoadType = ELECTRONIC_LIGHT o MIXED_ELECTRONIC</td><td>Deteccion interna</td></tr>
+  <tr style="background:#FFEBEE"><td class="bold red">CRITICAL</td><td>Rojo</td><td>Sobreintensidad</td><td>I<sub>max</sub> &gt; 1.2 × I<sub>nominal</sub></td><td>Umbral configurable</td></tr>
+  <tr style="background:#FFF3E0"><td class="bold orange">PQ_RISK</td><td>Naranja</td><td>Sobreintensidad</td><td>I<sub>max</sub> &gt; 1.05 × I<sub>nominal</sub></td><td>Umbral configurable</td></tr>
+  <tr style="background:#FFFDE7"><td class="bold" style="color:#F57F17">WARNING</td><td>Ambar</td><td>Factor de Potencia</td><td>FP &lt; 0.85</td><td>Recomendacion operativa</td></tr>
+  <tr style="background:#FFF3E0"><td class="bold orange">PQ_RISK</td><td>Naranja</td><td>Factor de Potencia</td><td>FP &lt; 0.80</td><td>ANDE requisito minimo</td></tr>
+</table>
+<p style="font-size:8pt;color:#555;font-style:italic">
+Las alarmas DETECTION solo se emiten cuando el LoadType cambia (histeresis). Historial maximo: 1 000 eventos.
+Los registros COMTRADE se generan automaticamente para niveles CRITICAL y DETECTION (cooldown 30 s por parametro+feeder).
+</p>
+
+<!-- ══════ CAP 6 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">6. Protocolo IEC 61850 y Modelo de Datos</h1>
+
+<h2 class="sub">6.1 Arquitectura del protocolo</h2>
+<p>
+IEC 61850 es la norma internacional para comunicacion en subestaciones. HarmonicMonitor usa
+exclusivamente el servicio <strong>MMS (Manufacturing Message Specification)</strong> sobre TCP/IP
+para lectura de mediciones en tiempo real.
+</p>
+<table>
+  <tr>
+    <th class="blue" style="width:27%">Capa / Elemento</th>
+    <th class="blue" style="width:43%">Descripcion</th>
+    <th class="blue">Ejemplo ION 7400</th>
+  </tr>
+  <tr><td><strong>IED</strong></td><td>Dispositivo fisico con modelo de datos IEC 61850</td><td>ION 7400 — Schneider Electric</td></tr>
+  <tr><td><strong>MMS</strong></td><td>Protocolo de lectura/escritura de datos (ISO 9506)</td><td>Puerto TCP 102 (IANA estandar)</td></tr>
+  <tr><td><strong>ACSE</strong></td><td>Capa de sesion / autenticacion</td><td>Asociacion MMS sobre TCP</td></tr>
+  <tr><td><strong>Logical Device (LD)</strong></td><td>Agrupacion logica de nodos en el IED</td><td>LD0 (cbo2LD0)</td></tr>
+  <tr><td><strong>Logical Node (LN)</strong></td><td>Funcion electrica con datos</td><td>M03_MMXU1 (medicion 3φ)</td></tr>
+  <tr><td><strong>Data Object (DO)</strong></td><td>Dato del LN</td><td>PhV (tension fase-tierra)</td></tr>
+  <tr><td><strong>Data Attribute (DA)</strong></td><td>Valor del DO con Functional Constraint (FC)</td><td>PhV.phsA.cVal.mag.f [MX]</td></tr>
+  <tr><td><strong>MMXU</strong></td><td>LN de medicion de potencia (IEEE C37.118)</td><td>Tension, corriente, P, Q, S, FP, f</td></tr>
+  <tr><td><strong>MHAI</strong></td><td>LN de armonicos de corriente/tension</td><td>ThdA, ThdPPV, HKf, harmonics[1..50]</td></tr>
+  <tr><td><strong>MSQI</strong></td><td>LN de componentes simetricas</td><td>SeqA (secuencias de corriente), SeqV</td></tr>
+  <tr><td><strong>MMTR</strong></td><td>LN de energia (contadores)</td><td>TotWh, TotVArh, TotVAh (FC=ST, INT64)</td></tr>
+</table>
+
+<h2 class="sub">6.2 Configuracion de conexion al ION 7400 (ANDE)</h2>
+<div class="formula">Host:         169.254.0.10   (IP link-local del ION 7400 en red local)
+Puerto:       102            (MMS ACSE estandar — IANA)
+IED Name:     cbo2
+LD Instance:  LD0            → referencia: cbo2LD0/
+Prefijo MMXU: M03_           → LN completo: cbo2LD0/M03_MMXU1
+LN MHAI:      MHAI1          → cbo2LD0/MHAI1
+LN MSQI:      MSQI1          → cbo2LD0/MSQI1
+Intervalo:    5 000 ms       (polling cada 5 segundos)</div>
+<p style="font-size:8pt;color:#555;font-style:italic">
+La referencia cbo2LD0/M03_MMXU1 es especifica al ION 7400 de la subestacion ANDE.
+Otros IEDs pueden tener prefijos distintos o no requerirlos.
+</p>
+
+<!-- ══════ CAP 7 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">7. Marco Normativo</h1>
+
+<div class="box box-green" style="margin-bottom:10px">
+  <div class="box-title">IEC 61000-3-6:2008 — Emisiones armonicas en redes MT/AT</div>
+  <ul>
+    <li>Define los <strong>niveles de planificacion</strong> para THD de tension en el PCC.</li>
+    <li>Para redes MT (1-36 kV): THD<sub>V</sub> ≤ 6.5% (planning level); nivel de compatibilidad = 8%</li>
+    <li>Limites individuales: H3 ≤ 4%, H5 ≤ 5%, H7 ≤ 4%, H11 ≤ 3%, H13 ≤ 2.5%</li>
+    <li style="font-style:italic">El valor 6.5% es una aproximacion al 80% del nivel de compatibilidad. Para uso normativo formal requiere estudio de red especifico.</li>
+  </ul>
+</div>
+
+<div class="box box-blue" style="margin-bottom:10px">
+  <div class="box-title">IEEE 519-2022 — Harmonic Control in Electric Power Systems</div>
+  <ul>
+    <li>Limita <strong>TDD de corriente</strong> (NO THD<sub>i</sub>) en el PCC para sistemas de distribucion.</li>
+    <li>Para sistemas 1-69 kV, Tabla 2, Isc/IL = 20-50: TDD ≤ 8%, H&lt;11 ≤ 4%, H11-16 ≤ 2%, H17-22 ≤ 1.5%</li>
+    <li>THD de tension en el PCC: ≤ 5% para sistemas hasta 69 kV.</li>
+    <li style="font-style:italic">THD<sub>i</sub> no esta limitado directamente; la confusion THD<sub>i</sub> ≈ TDD es una aproximacion conservadora aceptada en monitoreo SCADA en tiempo real.</li>
+  </ul>
+</div>
+
+<div class="box box-teal" style="margin-bottom:10px">
+  <div class="box-title">EN 50160:2010 — Caracteristicas de tension en redes de distribucion publica</div>
+  <ul>
+    <li>THD de tension ≤ 8% (percentil 95% semanal, medias de 10 min).</li>
+    <li>Desbalance de tension: V₂/V₁ ≤ 2% (promedio 10 min, 95% del tiempo).</li>
+    <li>Frecuencia: 50 Hz ±1% (99.5% del tiempo) / ±4% (100% del tiempo).</li>
+  </ul>
+</div>
+
+<div class="box box-purple" style="margin-bottom:10px">
+  <div class="box-title">IEEE 1459-2010 — Definitions for the Measurement of Electric Power</div>
+  <ul>
+    <li>Define el marco conceptual de potencias en sistemas no sinusoidales utilizado en HarmonicMonitor.</li>
+    <li>FP verdadero = P/S; DPF = cos(φ₁); Q₁ = V₁·I₁·sin(φ₁); D = √(S²−P²−Q₁²)</li>
+  </ul>
+</div>
+
+<div class="box box-orange" style="margin-bottom:10px">
+  <div class="box-title">IEC 61000-4-7:2009 — Tecnicas de medicion de armonicos (Clase A/B)</div>
+  <ul>
+    <li>Define el metodo de medicion usando DFT con ventanas de 10 ciclos (200 ms @ 50 Hz).</li>
+    <li>Clase A: incertidumbre maxima ±5% para H ≤ 25; usada en instrumentacion certificada como ION 7400.</li>
+    <li>HarmonicMonitor consume los datos del nodo MHAI del IED sin reescalarlos; la conformidad Clase A es responsabilidad de Schneider Electric.</li>
+  </ul>
+</div>
+
+<h2 class="sub">7.1 Tabla de conformidad normativa de HarmonicMonitor</h2>
+<table>
+  <tr>
+    <th class="grey" style="width:28%">Aspecto</th>
+    <th class="grey" style="width:20%">Norma</th>
+    <th class="grey" style="width:12%">Estado</th>
+    <th class="grey">Observacion</th>
+  </tr>
+  <tr><td>Formato COMTRADE (.cfg/.dat)</td><td>IEEE C37.111-1999</td><td><span class="badge b-green">CONFORME</span></td><td>Implementacion directamente trazable a la norma</td></tr>
+  <tr><td>Definiciones de potencia</td><td>IEEE 1459-2010</td><td><span class="badge b-green">CONFORME</span></td><td>FP, DPF, Q₁, D implementados segun la norma</td></tr>
+  <tr><td>Medicion armonica H1-H50</td><td>IEC 61000-4-7</td><td><span class="badge b-blue">VIA IED</span></td><td>Conformidad Clase A delegada al ION 7400 (Schneider)</td></tr>
+  <tr><td>Trigger THDv limite absoluto</td><td>EN 50160 (8%)</td><td><span class="badge b-green">CONFORME</span></td><td>Umbral CRITICAL = 8%</td></tr>
+  <tr><td>Trigger THDi vs TDD</td><td>IEEE 519-2022</td><td><span class="badge b-amber">APROX.</span></td><td>THD<sub>i</sub> usado como aproximacion conservadora del TDD</td></tr>
+  <tr><td>Planning level 6.5%</td><td>IEC 61000-3-6</td><td><span class="badge b-amber">APROX.</span></td><td>≈80% del nivel de compatibilidad; requiere estudio formal</td></tr>
+  <tr><td>Punto de medicion vs PCC</td><td>IEEE 519-2022</td><td><span class="badge b-grey">TOPOLOGIA</span></td><td>Depende de la ubicacion del IED en la red ANDE</td></tr>
+  <tr><td>Forma de onda COMTRADE</td><td>IEC 60255-24</td><td><span class="badge b-purple">SINTETIZADA</span></td><td>Calculada desde RMS + espectro; NO es señal real de osciloscopio</td></tr>
+</table>
+<p style="font-size:8pt;color:#555;font-style:italic">
+CONFORME = Trazable directamente a la norma. VIA IED = Delegada al instrumento certificado.
+APROX. = Valido como indicacion; verificacion formal requerida para conclusiones normativas.
+TOPOLOGIA = Depende del punto de instalacion. SINTETIZADA = Datos calculados, no señal real.
+</p>
+
+<!-- ══════ CAP 8 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">8. Disclaimer Normativo y Limitaciones</h1>
+
+<div class="box box-red" style="margin-bottom:12px">
+  <div class="box-title">Naturaleza del instrumento</div>
+  <ul>
+    <li>HarmonicMonitor es un sistema de <strong>MONITOREO E INVESTIGACION</strong>.</li>
+    <li>NO es un instrumento de medicion certificado (IEC 61557 / IEC 61010).</li>
+    <li>NO es un analizador de referencia Clase A (IEC 61000-4-30).</li>
+    <li>NO sustituye un estudio normativo formal (IEC 61000-3-6).</li>
+    <li>Las alarmas son <strong>INDICADORES DE ALERTA TEMPRANA</strong> para orientar investigaciones operativas,
+    no constituyen por si solos evidencia de incumplimiento normativo.</li>
+  </ul>
+</div>
+
+<div class="box box-orange" style="margin-bottom:12px">
+  <div class="box-title">Limitacion critica: THD<sub>i</sub> ≠ TDD</div>
+  <ul>
+    <li>Las alarmas de corriente comparan THD<sub>i</sub> contra umbrales de TDD (IEEE 519-2022). Son magnitudes distintas.</li>
+    <li>A baja carga (I₁ &lt; I<sub>L</sub>): THD<sub>i</sub>/TDD = I<sub>L</sub>/I₁ &gt; 1 → la app puede generar falsas alarmas.</li>
+    <li>La sustitucion THD<sub>i</sub> ≈ TDD es una aproximacion conservadora (nunca silencia una violacion real a plena carga).</li>
+    <li>Mejora futura planificada: campo I<sub>L</sub> configurable por feeder en FeederConfig para calcular TDD real.</li>
+  </ul>
+</div>
+
+<div class="box box-amber" style="margin-bottom:12px">
+  <div class="box-title">Punto de medicion vs. PCC</div>
+  <ul>
+    <li>IEEE 519-2022 e IEC 61000-3-6 definen sus limites en el PCC (Point of Common Coupling).</li>
+    <li>HarmonicMonitor mide en el punto donde esta instalado el ION 7400, que puede o no coincidir con el PCC.</li>
+    <li>La identificacion del PCC es responsabilidad del estudio de red de ANDE.</li>
+  </ul>
+</div>
+
+<div class="box box-purple">
+  <div class="box-title">Forma de onda COMTRADE sintetizada</div>
+  <ul>
+    <li>Los COMTRADE generados automaticamente son <strong>SINTETIZADOS</strong> desde valores RMS + espectro armonico.</li>
+    <li>NO son registros de señales reales (sin transitorios, sin interarmonicos, sistema equilibrado supuesto).</li>
+    <li>Uso VALIDO: documentar magnitud/espectro del evento, comparacion visual de niveles.</li>
+    <li>Uso INCORRECTO: analisis de transitorios reales, prueba de reles, forense Clase A.</li>
+  </ul>
+</div>
+
+<!-- ══════ CAP 9 ══════ -->
+<div class="pagebreak"></div>
+<h1 class="sec">9. Acerca de la Aplicacion</h1>
+
+<h2 class="sub">9.1 Equipo de desarrollo</h2>
+<table>
+  <tr>
+    <th class="navy" style="width:25%">Nombre</th>
+    <th class="navy">Rol</th>
+  </tr>
+  <tr><td class="bold blue">Emilio Medina</td><td>Arquitectura, backend IEC 61850, analisis armonico, integracion ION 7400</td></tr>
+  <tr><td class="bold blue">Diego Rojas</td><td>Interfaz grafica JavaFX 17, visualizacion de datos, visor COMTRADE</td></tr>
+  <tr><td class="bold blue">Enrique Paiva</td><td>Integracion de normas IEC/IEEE, validacion de modelos y umbrales</td></tr>
+</table>
+
+<h2 class="sub">9.2 Informacion del proyecto</h2>
+<table>
+  <tr style="background:#E3F2FD"><td style="padding:5px 8px;font-weight:bold;width:20%">Proyecto</td><td style="padding:5px 8px">HADES</td></tr>
+  <tr><td style="padding:5px 8px;font-weight:bold">Pais</td><td style="padding:5px 8px">Republica del Paraguay (Asuncion)</td></tr>
+  <tr style="background:#E3F2FD"><td style="padding:5px 8px;font-weight:bold">Sector</td><td style="padding:5px 8px">Distribucion electrica MT 23 kV — ANDE (Administracion Nacional de Electricidad)</td></tr>
+  <tr><td style="padding:5px 8px;font-weight:bold">Protocolo</td><td style="padding:5px 8px">IEC 61850 / MMS / ACSE — ION 7400 Schneider Electric</td></tr>
+  <tr style="background:#E3F2FD"><td style="padding:5px 8px;font-weight:bold">Version</td><td style="padding:5px 8px">v 1.0 — 2026</td></tr>
+  <tr><td style="padding:5px 8px;font-weight:bold">Objetivo</td><td style="padding:5px 8px">Detectar cargas electrointensivas no lineales en alimentadores MT 23 kV mediante firmas de energia</td></tr>
+</table>
+
+<h2 class="sub teal">9.3 Stack tecnologico</h2>
+<table>
+  <tr>
+    <th class="teal" style="width:22%">Tecnologia</th>
+    <th class="teal">Uso en la aplicacion</th>
+  </tr>
+  <tr><td class="bold teal">Java 17+</td><td>Lenguaje principal; modulos JPMS</td></tr>
+  <tr><td class="bold teal">JavaFX 17</td><td>Interfaz grafica de escritorio; graficas Canvas y Charts</td></tr>
+  <tr><td class="bold teal">Maven 3.6+</td><td>Gestion de dependencias y build; tambien compile.bat para entornos sin Maven</td></tr>
+  <tr><td class="bold teal">iec61850bean 1.9.0</td><td>Biblioteca IEC 61850 MMS (com.beanit); parser SCL, ClientSap, ServerModel</td></tr>
+  <tr><td class="bold teal">asn1bean 1.13.0</td><td>Codificacion/decodificacion ASN.1 (BER) para MMS</td></tr>
+  <tr><td class="bold teal">SLF4J 2.0.9</td><td>Logging abstracto con backend simple</td></tr>
+  <tr><td class="bold teal">SQLite (JDBC)</td><td>Base de datos embebida para almacenamiento de mediciones</td></tr>
+  <tr><td class="bold teal">FFT Cooley-Tukey</td><td>Implementacion propia (DIT in-place) con ventana de Hann para el visor COMTRADE</td></tr>
+  <tr><td class="bold teal">Fortescue</td><td>Transformada de componentes simetricas implementada en el visor COMTRADE</td></tr>
+  <tr><td class="bold teal">IEEE C37.111-1999</td><td>Generacion y lectura de registros COMTRADE (formato ASCII e IEC 60255-24)</td></tr>
+</table>
+
+<h2 class="sub green">9.4 Normas de referencia</h2>
+<table>
+  <tr>
+    <th class="green" style="width:22%">Norma</th>
+    <th class="green" style="width:40%">Descripcion</th>
+    <th class="green">Aplicacion en HarmonicMonitor</th>
+  </tr>
+  <tr><td class="bold">IEC 61850</td><td>Comunicacion en subestaciones (MMS/GOOSE/SV)</td><td>Protocolo de conexion al ION 7400</td></tr>
+  <tr><td class="bold">IEC 61000-3-6:2008</td><td>Emisiones armonicas en redes MT/AT</td><td>Umbrales de THD<sub>v</sub> y armonicos individuales</td></tr>
+  <tr><td class="bold">IEC 61000-3-7:2008</td><td>Fluctuaciones de tension / Flicker en MT/AT</td><td>Referencia para modelo EAF</td></tr>
+  <tr><td class="bold">IEC 61000-4-7:2009</td><td>Tecnicas de medicion de armonicos (Clase A/B)</td><td>FFT del visor COMTRADE</td></tr>
+  <tr><td class="bold">IEC 61000-4-30:2015</td><td>Metodos de medicion de calidad de energia Clase A</td><td>Referencia normativa de medicion</td></tr>
+  <tr><td class="bold">IEEE 519-2022</td><td>Harmonic control in electric power systems</td><td>Umbrales de TDD/THD<sub>i</sub> de corriente</td></tr>
+  <tr><td class="bold">IEEE 1459-2010</td><td>Definitions for measurement of electric power</td><td>FP, DPF, Q₁, potencia de distorsion</td></tr>
+  <tr><td class="bold">EN 50160:2010</td><td>Caracteristicas de tension en redes publicas</td><td>THD<sub>v</sub> ≤ 8%, desbalance ≤ 2%</td></tr>
+  <tr><td class="bold">IEEE C37.111-1999</td><td>COMTRADE — Common Format for Transient Data Exchange</td><td>Generacion y lectura de registros</td></tr>
+  <tr><td class="bold">IEC 60255-24:2013</td><td>COMTRADE revision conjunta IEEE/IEC</td><td>Compatibilidad de archivos generados</td></tr>
+  <tr><td class="bold">CIGRE WG C4.109 (2014)</td><td>Harmonic parameters of AC arc furnaces</td><td>Modelo y espectro del EAF simulado</td></tr>
+</table>
+
+<div class="footer">
+  Documento generado automaticamente desde el codigo fuente de HarmonicMonitor v1.0 |
+  Fecha: {FECHA} |
+  Fuentes: ElectronicLoadDetector.java · HarmonicAnalyzer.java · ResonanceAnalyzer.java ·
+  AlarmEngine.java · SimulatedPoller.java · HelpPanel.java · AboutPanel.java<br>
+  Emilio Medina · Diego Rojas · Enrique Paiva · Sergio Dominguez — Paraguay — 2026
+</div>
+
+</body>
+</html>
+"""
+
+with open(OUTPUT, "w", encoding="utf-8") as f:
+    f.write(HTML)
+
+print(f"HTML generado: {OUTPUT}")
+print("Abrir en Chrome/Edge -> Ctrl+P -> Guardar como PDF")
+print("Configuracion: Tamano A4 Vertical, Margenes Ninguno, Graficos de fondo: SI")

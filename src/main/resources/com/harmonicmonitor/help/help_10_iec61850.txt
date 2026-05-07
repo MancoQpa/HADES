@@ -1,0 +1,22 @@
+PROTOCOLO IEC 61850 Y MMS
+
+IEC 61850 es la norma internacional para comunicación en subestaciones.
+
+  ARQUITECTURA:
+  • IED: relé, medidor, controlador
+  • MMS: protocolo de mensajería (Manufacturing Message Specification)
+  • ACSE: capa de sesión (Application Control Service Element)
+  • SCL: archivo XML de configuración (Substation Configuration Language)
+
+  MODELO DE DATOS:
+  Servidor > LD > LN > DO > DA
+
+  NODO MMXU (medición de potencia):
+  • PhV: tensión fase-tierra  • A: corriente de fase
+  • TotW: P activa  • TotVAr: Q reactiva  • TotVA: S aparente
+  • TotPF: factor de potencia  • Hz: frecuencia
+
+  FUNCTIONAL CONSTRAINTS:
+  • MX: medición analógica  • ST: estado  • CF: configuración
+
+  PUERTO: 102 (IANA)

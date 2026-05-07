@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>HarmonicMonitor — Tabla de Validacion</title>
+<style>
+  @page {
+    size: A4 landscape;
+    margin: 15mm 12mm 15mm 12mm;
+  }
+  @media print {
+    .pagebreak { page-break-before: always; }
+    .noprint { display: none; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 9pt;
+    line-height: 1.45;
+    color: #212121;
+    background: #fff;
+    max-width: 277mm;
+    margin: 0 auto;
+    padding: 8mm 10mm;
+  }
+  .header-band {
+    background: #0D3B66;
+    color: #fff;
+    padding: 7px 14px;
+    border-radius: 5px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-band h1 { font-size: 11pt; font-weight: bold; }
+  .header-band .meta { font-size: 8pt; opacity: 0.85; }
+
+  h2 {
+    font-size: 10.5pt;
+    color: #0D3B66;
+    border-left: 4px solid #1565C0;
+    padding-left: 9px;
+    margin: 14px 0 7px;
+  }
+  h2.teal { color: #00695C; border-color: #00695C; }
+  h2.grey  { color: #424242; border-color: #757575; }
+
+  p { margin-bottom: 6px; font-size: 8.5pt; }
+  .note { font-size: 7.5pt; color: #555; font-style: italic; margin: 5px 0 8px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 10px;
+    font-size: 8pt;
+  }
+  th {
+    padding: 5px 6px;
+    text-align: left;
+    color: #fff;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  th.blue   { background: #1976D2; }
+  th.teal   { background: #00695C; }
+  th.grey   { background: #424242; }
+  th.navy   { background: #0D3B66; }
+  td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #E0E0E0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #F5F5F5; }
+  td.center { text-align: center; }
+  td.mono { font-family: 'Courier New', monospace; font-size: 7.5pt; }
+  td.bold { font-weight: bold; }
+
+  .badge {
+    display: inline-block;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .sep-row td {
+    border-top: 2px solid #E65100 !important;
+    background: #FFF8E1 !important;
+  }
+
+  sub { font-size: 72%; vertical-align: sub; }
+  sup { font-size: 72%; vertical-align: super; }
+
+  .footer {
+    text-align: center;
+    font-size: 7pt;
+    color: #888;
+    margin-top: 18px;
+    padding-top: 6px;
+    border-top: 1px solid #ddd;
+  }
+  .step-num {
+    width: 24px;
+    height: 24px;
+    background: #0D3B66;
+    color: #fff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 10pt;
+  }
+</style>
+</head>
+<body>
+
+<div class="header-band">
+  <h1>HarmonicMonitor v1.0 — Tabla de Entradas para Validacion del Algoritmo de Deteccion de Carga</h1>
+  <div class="meta">Rev. 1.0 &nbsp;|&nbsp; 16/03/2026 &nbsp;|&nbsp; CONFIDENCIAL — Uso interno de pruebas</div>
+</div>
+
+<p>Inyeccion de perfiles armonicos desde Patron de Energia al medidor ION 7400 — Alimentador MT 23 kV</p>
+
+<!-- ═══════════════════════════════════════════════════
+     SECCION 1: Configuracion de la Aplicacion
+═══════════════════════════════════════════════════ -->
+<h2>1. Configuracion de la Aplicacion — HarmonicMonitor</h2>
+<table>
+  <tr>
+    <th class="blue" style="width:16%">Parametro</th>
+    <th class="blue" style="width:12%">Valor a configurar</th>
+    <th class="blue" style="width:38%">Descripcion</th>
+    <th class="blue" style="width:34%">Donde configurar (GUI)</th>
+  </tr>
+  <tr><td>Host ION 7400</td><td class="bold">169.254.0.10</td>
+      <td>IP del medidor en red local (link-local)</td>
+      <td>Gestion de Alimentadores → Boton ION 7400</td></tr>
+  <tr><td>Puerto MMS</td><td class="bold">102</td>
+      <td>Puerto estandar IEC 61850 MMS</td>
+      <td>Gestion de Alimentadores → Puerto</td></tr>
+  <tr><td>Nombre IED (iedName)</td><td class="bold">cbo2</td>
+      <td>Nombre del IED en el modelo SCL del ION 7400</td>
+      <td>Gestion de Alimentadores → Nombre IED</td></tr>
+  <tr><td>Instancia LD (ldInst)</td><td class="bold">LD0</td>
+      <td>Instancia del Logical Device en el ION 7400</td>
+      <td>Gestion de Alimentadores → LD Inst</td></tr>
+  <tr><td>Prefijo MMXU (mmxuPrefix)</td><td class="bold">M03_</td>
+      <td>Prefijo del LN MMXU en el ION 7400 (cbo2LD0/M03_MMXU1)</td>
+      <td>Gestion de Alimentadores → Prefijo MMXU</td></tr>
+  <tr><td>LN MHAI (armonicos)</td><td class="bold">MHAI1</td>
+      <td>Logical Node con ThdA, ThdPPV, HKf, harmonics[H1..H50]</td>
+      <td>Gestion de Alimentadores → LN MHAI</td></tr>
+  <tr><td>Intervalo de poll</td><td class="bold">5 000 ms</td>
+      <td>Lectura cada 5 s durante la prueba</td>
+      <td>Gestion de Alimentadores → Intervalo (ms)</td></tr>
+  <tr style="border-top: 1.5px solid #1565C0;">
+      <td>Tension nominal (kV)</td><td class="bold">23 kV</td>
+      <td>Tension linea-linea del alimentador MT</td>
+      <td>Gestion de Alimentadores → Tension nominal</td></tr>
+  <tr><td>Corriente nominal (A)</td><td class="bold">200 A</td>
+      <td>I<sub>n</sub> del alimentador (referencia de carga)</td>
+      <td>Gestion de Alimentadores → Corriente nominal</td></tr>
+  <tr><td>Capacitancia feeder (µF)</td><td class="bold">5.0 µF</td>
+      <td>Para calculo de frecuencia de resonancia</td>
+      <td>Gestion de Alimentadores → Capacitancia</td></tr>
+  <tr><td>Scc en barra (MVA)</td><td class="bold">100 MVA</td>
+      <td>Potencia de cortocircuito (para Z del sistema)</td>
+      <td>Gestion de Alimentadores → Scc</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════
+     SECCION 2: Umbrales del algoritmo
+═══════════════════════════════════════════════════ -->
+<h2 class="teal">2. Umbrales del Algoritmo de Deteccion (FeederConfig)</h2>
+<table>
+  <tr>
+    <th class="teal" style="width:22%">Parametro</th>
+    <th class="teal" style="width:10%">Valor</th>
+    <th class="teal" style="width:30%">Variable Java</th>
+    <th class="teal" style="width:38%">Descripcion</th>
+  </tr>
+  <tr><td>CV max. carga electronica</td><td class="bold center">5 %</td>
+      <td class="mono">maxCvElectronicThreshold = 0.05</td>
+      <td>Coef. de Variacion (σ/μ) de corriente &lt; 5% → carga estable</td></tr>
+  <tr><td>THD<sub>i</sub> min. cripto/datacenter</td><td class="bold center">15 %</td>
+      <td class="mono">minThdICryptoThreshold = 15.0</td>
+      <td>THD de corriente minimo para clasificar como cripto o datacenter</td></tr>
+  <tr><td>H5/H1 min. firma rectificador</td><td class="bold center">15 %</td>
+      <td class="mono">minH5h1CryptoThreshold = 0.15</td>
+      <td>Ratio 5° armonico / fundamental &gt; 15%</td></tr>
+  <tr><td>H7/H1 min. firma rectificador</td><td class="bold center">10 %</td>
+      <td class="mono">minH7h1CryptoThreshold = 0.10</td>
+      <td>Ratio 7° armonico / fundamental &gt; 10%</td></tr>
+  <tr><td>FP alto (distingue cripto vs DC)</td><td class="bold center">0.92</td>
+      <td class="mono">highPF hardcoded = 0.92</td>
+      <td>FP &gt; 0.92 → SMPS con PFC activo → CRYPTO_MINING; ≤ 0.92 → DATA_CENTER</td></tr>
+  <tr><td>THD<sub>i</sub> min. lineal → mixta</td><td class="bold center">5 %</td>
+      <td class="mono">hardcoded = 5.0 %</td>
+      <td>THD<sub>i</sub> &gt; 5% es requisito minimo para MIXED_ELECTRONIC</td></tr>
+  <tr><td>Firma 6-pulsos (industrial)</td><td class="bold center">H5&gt;12% H7&gt;8% H11&gt;5% H13&gt;4%</td>
+      <td class="mono">sixPulseSignature (hardcoded)</td>
+      <td>Requiere adicionalmente THD<sub>i</sub> &gt; 8%</td></tr>
+  <tr><td>THD tension max. (calidad)</td><td class="bold center">5 %</td>
+      <td class="mono">maxThdVoltagePct = 5.0</td>
+      <td>Limite IEC 61000-3-6 — genera alarma si se supera</td></tr>
+  <tr><td>Amplif. resonancia max.</td><td class="bold center">3×</td>
+      <td class="mono">resonanceAmplificationMax = 3.0</td>
+      <td>Si I<sub>resonancia</sub> &gt; 3×I<sub>fund</sub> → alarma RESONANCE_RISK</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════
+     SECCION 3: Casos de prueba (PAGINA 2)
+═══════════════════════════════════════════════════ -->
+<div class="pagebreak"></div>
+
+<div class="header-band">
+  <h1>HarmonicMonitor v1.0 — Casos de Prueba</h1>
+  <div class="meta">Rev. 1.0 &nbsp;|&nbsp; 16/03/2026 &nbsp;|&nbsp; CONFIDENCIAL</div>
+</div>
+
+<h2>3. Casos de Prueba — Configuracion del Patron de Energia</h2>
+<p class="note">
+  Cada fila define un escenario a programar en el patron. Los valores de corriente estan sobre base I<sub>n</sub> = 200 A (feeder MT 23 kV).
+  Tension de prueba: 13 280 V (fase-neutro, derivada de 23 kV / √3). Frecuencia fundamental: 50 Hz.
+  Las columnas H5/H1 y H7/H1 (<strong>negrita</strong>) son los discriminadores principales.
+</p>
+
+<table>
+  <tr>
+    <th class="navy" style="width:5%">ID</th>
+    <th class="navy" style="width:13%">Escenario</th>
+    <th class="navy" style="width:11%">Clasificacion<br>esperada</th>
+    <th class="navy" style="width:4%">I<sub>fund</sub><br>(A)</th>
+    <th class="navy" style="width:5%">THD<sub>i</sub><br>(%)</th>
+    <th class="navy" style="width:4%">FP</th>
+    <th class="navy" style="width:4%">CV<br>(%)</th>
+    <th class="navy" style="width:4%">H3/H1<br>(%)</th>
+    <th class="navy" style="width:4%"><strong>H5/H1</strong><br>(%)</th>
+    <th class="navy" style="width:4%"><strong>H7/H1</strong><br>(%)</th>
+    <th class="navy" style="width:4%">H9/H1<br>(%)</th>
+    <th class="navy" style="width:4%">H11/H1<br>(%)</th>
+    <th class="navy" style="width:4%">H13/H1<br>(%)</th>
+    <th class="navy" style="width:30%">Condiciones para PASS</th>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-01</td>
+    <td>Carga Lineal (motores directos)</td>
+    <td class="center"><span class="badge" style="background:#1565C0">LINEAR</span></td>
+    <td class="center">90</td>
+    <td class="center bold">4.0</td>
+    <td class="center">0.850</td>
+    <td class="center">8.0</td>
+    <td class="center">1.0</td>
+    <td class="center bold">3.0</td>
+    <td class="center bold">2.0</td>
+    <td class="center">0.5</td>
+    <td class="center">1.0</td>
+    <td class="center">0.5</td>
+    <td style="font-size:7.5pt;color:#444">THDi &lt; 5% y H5/H1 &lt; 5% → caso base lineal</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-02</td>
+    <td>Iluminación LED (masiva)</td>
+    <td class="center"><span class="badge" style="background:#F57F17">LIGHTING</span></td>
+    <td class="center">60</td>
+    <td class="center bold">12.0</td>
+    <td class="center">0.850</td>
+    <td class="center">6.0</td>
+    <td class="center">40.0</td>
+    <td class="center bold">6.0</td>
+    <td class="center bold">3.0</td>
+    <td class="center">2.0</td>
+    <td class="center">1.5</td>
+    <td class="center">1.0</td>
+    <td style="font-size:7.5pt;color:#444">THDi &gt; 10%, H3 dominante<br>H5/H1 &lt; 8%, PF ∈ [0.75, 0.95]</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-03</td>
+    <td>Minería Cripto (SMPS con PFC)</td>
+    <td class="center"><span class="badge" style="background:#B71C1C">CRYPTO_MINING</span></td>
+    <td class="center">170</td>
+    <td class="center bold">42.0</td>
+    <td class="center">0.985</td>
+    <td class="center">0.8</td>
+    <td class="center">3.0</td>
+    <td class="center bold">35.0</td>
+    <td class="center bold">22.0</td>
+    <td class="center">8.0</td>
+    <td class="center">7.0</td>
+    <td class="center">5.0</td>
+    <td style="font-size:7.5pt;color:#444">CV &lt; 5%, THDi &gt; 15%<br>H5/H1 &gt; 15%, H7/H1 &gt; 10%<br>FP &gt; 0.92</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-04</td>
+    <td>Centro de Datos (PFC parcial)</td>
+    <td class="center"><span class="badge" style="background:#4A148C">DATA_CENTER</span></td>
+    <td class="center">150</td>
+    <td class="center bold">20.0</td>
+    <td class="center">0.880</td>
+    <td class="center">1.5</td>
+    <td class="center">5.0</td>
+    <td class="center bold">28.0</td>
+    <td class="center bold">18.0</td>
+    <td class="center">6.0</td>
+    <td class="center">4.0</td>
+    <td class="center">2.0</td>
+    <td style="font-size:7.5pt;color:#444">CV &lt; 5%, THDi &gt; 15%<br>H5/H1 &gt; 15%, H7/H1 &gt; 10%<br>FP ≤ 0.92 (distingue de cripto)</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-05</td>
+    <td>Industrial 6-Pulsos (VFD)</td>
+    <td class="center"><span class="badge" style="background:#1B5E20">INDUSTRIAL</span></td>
+    <td class="center">130</td>
+    <td class="center bold">26.0</td>
+    <td class="center">0.930</td>
+    <td class="center">9.0</td>
+    <td class="center">2.0</td>
+    <td class="center bold">25.0</td>
+    <td class="center bold">11.0</td>
+    <td class="center">1.0</td>
+    <td class="center">9.0</td>
+    <td class="center">8.0</td>
+    <td style="font-size:7.5pt;color:#444">THDi &gt; 8%<br>H5 &gt; 12%, H7 &gt; 8%<br>H11 &gt; 5%, H13 &gt; 4%<br>CV &gt; 5% (no estable)</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-06</td>
+    <td>Electrónica Ligera (UPS / cargadores)</td>
+    <td class="center"><span class="badge" style="background:#E65100">ELECTRONIC_LIGHT</span></td>
+    <td class="center">80</td>
+    <td class="center bold">10.0</td>
+    <td class="center">0.880</td>
+    <td class="center">5.5</td>
+    <td class="center">15.0</td>
+    <td class="center bold">10.0</td>
+    <td class="center bold">4.0</td>
+    <td class="center">2.0</td>
+    <td class="center">1.0</td>
+    <td class="center">0.5</td>
+    <td style="font-size:7.5pt;color:#444">THDi &gt; 8%<br>H5/H1 &gt; 8% ó H7/H1 &gt; 5%<br>NO firma 6-pulsos completa</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-07</td>
+    <td>Mixta Electrónica (comercial diurno)</td>
+    <td class="center"><span class="badge" style="background:#BF360C">MIXED_ELECTRONIC</span></td>
+    <td class="center">100</td>
+    <td class="center bold">7.0</td>
+    <td class="center">0.910</td>
+    <td class="center">7.0</td>
+    <td class="center">12.0</td>
+    <td class="center bold">6.0</td>
+    <td class="center bold">4.0</td>
+    <td class="center">1.5</td>
+    <td class="center">1.0</td>
+    <td class="center">0.5</td>
+    <td style="font-size:7.5pt;color:#444">5% &lt; THDi &lt; 15%<br>NO firma específica → mixta</td>
+  </tr>
+  <tr class="sep-row">
+    <td class="center" style="font-weight:bold">TC-08<br><small>(frontera)</small></td>
+    <td>Frontera Lineal / Mixta</td>
+    <td class="center"><span class="badge" style="background:#BF360C">MIXED_ELECTRONIC</span></td>
+    <td class="center">80</td>
+    <td class="center bold">5.2</td>
+    <td class="center">0.890</td>
+    <td class="center">10.0</td>
+    <td class="center">4.0</td>
+    <td class="center bold">3.5</td>
+    <td class="center bold">2.0</td>
+    <td class="center">1.0</td>
+    <td class="center">0.5</td>
+    <td class="center">0.3</td>
+    <td style="font-size:7.5pt;color:#444">THDi justo sobre 5%<br>→ MIXED (no LINEAR)<br>Validar frontera</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-09<br><small>(frontera)</small></td>
+    <td>Frontera Cripto / Datacenter</td>
+    <td class="center"><span class="badge" style="background:#B71C1C">CRYPTO_MINING</span></td>
+    <td class="center">160</td>
+    <td class="center bold">22.0</td>
+    <td class="center">0.930</td>
+    <td class="center">2.0</td>
+    <td class="center">4.0</td>
+    <td class="center bold">22.0</td>
+    <td class="center bold">14.0</td>
+    <td class="center">6.0</td>
+    <td class="center">4.0</td>
+    <td class="center">2.5</td>
+    <td style="font-size:7.5pt;color:#444">FP = 0.93 (justo &gt; 0.92)<br>→ CRYPTO (no DATA_CENTER)<br>Si FP = 0.91 → DATA_CENTER</td>
+  </tr>
+  <tr>
+    <td class="center" style="font-weight:bold">TC-10<br><small>(negativo)</small></td>
+    <td>Rechazo: Lineal con ruido armónico</td>
+    <td class="center"><span class="badge" style="background:#1565C0">LINEAR</span></td>
+    <td class="center">80</td>
+    <td class="center bold">3.5</td>
+    <td class="center">0.900</td>
+    <td class="center">12.0</td>
+    <td class="center">1.0</td>
+    <td class="center bold">2.5</td>
+    <td class="center bold">1.5</td>
+    <td class="center">0.5</td>
+    <td class="center">0.5</td>
+    <td class="center">0.3</td>
+    <td style="font-size:7.5pt;color:#444">THDi &lt; 5%, H5/H1 &lt; 5%<br>→ debe clasificar LINEAR<br>aun con ruido de red</td>
+  </tr>
+</table>
+<p class="note">
+  * La linea naranja separa los casos de frontera y negativo (TC-08/09/10).
+  El CV se obtiene del historial de corriente (ventana de 60 muestras = 5 min @ 5 s/poll).
+</p>
+
+<!-- ═══════════════════════════════════════════════════
+     SECCION 4: Programacion del patron (PAGINA 3)
+═══════════════════════════════════════════════════ -->
+<div class="pagebreak"></div>
+
+<div class="header-band">
+  <h1>HarmonicMonitor v1.0 — Programacion del Patron de Energia</h1>
+  <div class="meta">Rev. 1.0 &nbsp;|&nbsp; 16/03/2026 &nbsp;|&nbsp; CONFIDENCIAL</div>
+</div>
+
+<h2>4. Programacion del Patron de Energia — Detalle por Caso</h2>
+<p class="note">
+  Parametros a ingresar en el patron para cada caso. Tension fija: V<sub>LL</sub> = 23 kV → V<sub>LN</sub> = 13 280 V.
+  Armonicos en % respecto al fundamental. Angulo I-V calculado como arccos(FP).
+</p>
+<table>
+  <tr>
+    <th class="navy" style="width:4.5%">ID</th>
+    <th class="navy" style="width:9%">Escenario</th>
+    <th class="navy" style="width:5%">V<sub>LN</sub> (V)</th>
+    <th class="navy" style="width:4.5%">I<sub>fund</sub> (A)</th>
+    <th class="navy" style="width:5%">Angulo I-V (°)</th>
+    <th class="navy" style="width:4.5%">THD<sub>i</sub> (%)</th>
+    <th class="navy" style="width:3.5%">H2 (%)</th>
+    <th class="navy" style="width:3.5%">H3 (%)</th>
+    <th class="navy" style="width:3.5%">H4 (%)</th>
+    <th class="navy" style="width:3.5%">H5 (%)</th>
+    <th class="navy" style="width:3.5%">H6 (%)</th>
+    <th class="navy" style="width:3.5%">H7 (%)</th>
+    <th class="navy" style="width:3.5%">H8 (%)</th>
+    <th class="navy" style="width:3.5%">H9 (%)</th>
+    <th class="navy" style="width:3.5%">H10 (%)</th>
+    <th class="navy" style="width:3.5%">H11 (%)</th>
+    <th class="navy" style="width:3.5%">H13 (%)</th>
+    <th class="navy" style="width:5%">P aprox (kW)</th>
+    <th class="navy" style="width:5%">Duracion (min)</th>
+  </tr>
+  <tr style="background:#E3F2FD">
+    <td class="center bold">TC-01</td>
+    <td>Lineal</td>
+    <td class="center">13 280</td>
+    <td class="center bold">90</td>
+    <td class="center">31.8</td>
+    <td class="center bold">4.0</td>
+    <td class="center">0</td>
+    <td class="center">1.0</td>
+    <td class="center">0</td>
+    <td class="center bold">3.0</td>
+    <td class="center">0</td>
+    <td class="center bold">2.0</td>
+    <td class="center">0</td>
+    <td class="center">0.5</td>
+    <td class="center">0</td>
+    <td class="center">1.0</td>
+    <td class="center">0.5</td>
+    <td class="center">1.8</td>
+    <td class="center">10</td>
+  </tr>
+  <tr style="background:#FFFDE7">
+    <td class="center bold">TC-02</td>
+    <td>Iluminacion</td>
+    <td class="center">13 280</td>
+    <td class="center bold">60</td>
+    <td class="center">31.8</td>
+    <td class="center bold">12.0</td>
+    <td class="center">0</td>
+    <td class="center">40.0</td>
+    <td class="center">0</td>
+    <td class="center bold">6.0</td>
+    <td class="center">0</td>
+    <td class="center bold">3.0</td>
+    <td class="center">0</td>
+    <td class="center">2.0</td>
+    <td class="center">0</td>
+    <td class="center">1.5</td>
+    <td class="center">1.0</td>
+    <td class="center">1.2</td>
+    <td class="center">10</td>
+  </tr>
+  <tr style="background:#FFEBEE">
+    <td class="center bold">TC-03</td>
+    <td>Cripto-Mining</td>
+    <td class="center">13 280</td>
+    <td class="center bold">170</td>
+    <td class="center">9.9</td>
+    <td class="center bold">42.0</td>
+    <td class="center">0</td>
+    <td class="center">3.0</td>
+    <td class="center">0</td>
+    <td class="center bold">35.0</td>
+    <td class="center">0</td>
+    <td class="center bold">22.0</td>
+    <td class="center">0</td>
+    <td class="center">8.0</td>
+    <td class="center">0</td>
+    <td class="center">7.0</td>
+    <td class="center">5.0</td>
+    <td class="center">3.9</td>
+    <td class="center">15</td>
+  </tr>
+  <tr style="background:#F3E5F5">
+    <td class="center bold">TC-04</td>
+    <td>Datacenter</td>
+    <td class="center">13 280</td>
+    <td class="center bold">150</td>
+    <td class="center">28.4</td>
+    <td class="center bold">20.0</td>
+    <td class="center">0</td>
+    <td class="center">5.0</td>
+    <td class="center">0</td>
+    <td class="center bold">28.0</td>
+    <td class="center">0</td>
+    <td class="center bold">18.0</td>
+    <td class="center">0</td>
+    <td class="center">6.0</td>
+    <td class="center">0</td>
+    <td class="center">4.0</td>
+    <td class="center">2.0</td>
+    <td class="center">3.0</td>
+    <td class="center">15</td>
+  </tr>
+  <tr style="background:#E8F5E9">
+    <td class="center bold">TC-05</td>
+    <td>VFD 6-pulsos</td>
+    <td class="center">13 280</td>
+    <td class="center bold">130</td>
+    <td class="center">21.6</td>
+    <td class="center bold">26.0</td>
+    <td class="center">0</td>
+    <td class="center">2.0</td>
+    <td class="center">0</td>
+    <td class="center bold">25.0</td>
+    <td class="center">0</td>
+    <td class="center bold">11.0</td>
+    <td class="center">0</td>
+    <td class="center">1.0</td>
+    <td class="center">0</td>
+    <td class="center">9.0</td>
+    <td class="center">8.0</td>
+    <td class="center">2.8</td>
+    <td class="center">15</td>
+  </tr>
+  <tr style="background:#FFF3E0">
+    <td class="center bold">TC-06</td>
+    <td>Electr. Ligera</td>
+    <td class="center">13 280</td>
+    <td class="center bold">80</td>
+    <td class="center">28.4</td>
+    <td class="center bold">10.0</td>
+    <td class="center">0</td>
+    <td class="center">15.0</td>
+    <td class="center">0</td>
+    <td class="center bold">10.0</td>
+    <td class="center">0</td>
+    <td class="center bold">4.0</td>
+    <td class="center">0</td>
+    <td class="center">2.0</td>
+    <td class="center">0</td>
+    <td class="center">1.0</td>
+    <td class="center">0.5</td>
+    <td class="center">1.6</td>
+    <td class="center">10</td>
+  </tr>
+  <tr style="background:#FBE9E7">
+    <td class="center bold">TC-07</td>
+    <td>Mixta Comerc.</td>
+    <td class="center">13 280</td>
+    <td class="center bold">100</td>
+    <td class="center">24.5</td>
+    <td class="center bold">7.0</td>
+    <td class="center">0</td>
+    <td class="center">12.0</td>
+    <td class="center">0</td>
+    <td class="center bold">6.0</td>
+    <td class="center">0</td>
+    <td class="center bold">4.0</td>
+    <td class="center">0</td>
+    <td class="center">1.5</td>
+    <td class="center">0</td>
+    <td class="center">1.0</td>
+    <td class="center">0.5</td>
+    <td class="center">2.1</td>
+    <td class="center">10</td>
+  </tr>
+  <tr class="sep-row" style="background:#FBE9E7">
+    <td class="center bold">TC-08</td>
+    <td>Front. Lin/Mix</td>
+    <td class="center">13 280</td>
+    <td class="center bold">80</td>
+    <td class="center">27.1</td>
+    <td class="center bold">5.2</td>
+    <td class="center">0</td>
+    <td class="center">4.0</td>
+    <td class="center">0</td>
+    <td class="center bold">3.5</td>
+    <td class="center">0</td>
+    <td class="center bold">2.0</td>
+    <td class="center">0</td>
+    <td class="center">1.0</td>
+    <td class="center">0</td>
+    <td class="center">0.5</td>
+    <td class="center">0.3</td>
+    <td class="center">1.6</td>
+    <td class="center">5</td>
+  </tr>
+  <tr style="background:#FFEBEE">
+    <td class="center bold">TC-09</td>
+    <td>Front. Cripto</td>
+    <td class="center">13 280</td>
+    <td class="center bold">160</td>
+    <td class="center">21.6</td>
+    <td class="center bold">22.0</td>
+    <td class="center">0</td>
+    <td class="center">4.0</td>
+    <td class="center">0</td>
+    <td class="center bold">22.0</td>
+    <td class="center">0</td>
+    <td class="center bold">14.0</td>
+    <td class="center">0</td>
+    <td class="center">6.0</td>
+    <td class="center">0</td>
+    <td class="center">4.0</td>
+    <td class="center">2.5</td>
+    <td class="center">3.4</td>
+    <td class="center">5</td>
+  </tr>
+  <tr style="background:#E3F2FD">
+    <td class="center bold">TC-10</td>
+    <td>Neg. Lineal</td>
+    <td class="center">13 280</td>
+    <td class="center bold">80</td>
+    <td class="center">25.8</td>
+    <td class="center bold">3.5</td>
+    <td class="center">0.5</td>
+    <td class="center">1.0</td>
+    <td class="center">0.3</td>
+    <td class="center bold">2.5</td>
+    <td class="center">0</td>
+    <td class="center bold">1.5</td>
+    <td class="center">0</td>
+    <td class="center">0.5</td>
+    <td class="center">0</td>
+    <td class="center">0.5</td>
+    <td class="center">0.3</td>
+    <td class="center">1.7</td>
+    <td class="center">5</td>
+  </tr>
+</table>
+
+<h2 class="grey">5. Procedimiento de Prueba</h2>
+<table>
+  <tr>
+    <th class="grey" style="width:4%">Paso</th>
+    <th class="grey" style="width:12%">Accion</th>
+    <th class="grey" style="width:54%">Detalle</th>
+    <th class="grey" style="width:30%">Criterio de exito</th>
+  </tr>
+  <tr>
+    <td class="center bold" style="color:#0D3B66;font-size:13pt">1</td>
+    <td><strong>Conectar equipo</strong></td>
+    <td>Patron → TC de corriente → entrada I del ION 7400.
+        Generador de tension → borneras V del ION 7400 (o usar tension de red si el patron lo soporta).</td>
+    <td>ION 7400 enciende y responde ping en 169.254.0.10</td>
+  </tr>
+  <tr>
+    <td class="center bold" style="color:#0D3B66;font-size:13pt">2</td>
+    <td><strong>Configurar app</strong></td>
+    <td>Abrir HarmonicMonitor → Gestion de Alimentadores → Boton 'ION 7400 Preset'.
+        Verificar: host=169.254.0.10, iedName=cbo2, mmxuPrefix=M03_, ldInst=LD0, V<sub>nom</sub>=23 kV.</td>
+    <td>Panel de alimentadores muestra el feeder configurado</td>
+  </tr>
+  <tr>
+    <td class="center bold" style="color:#0D3B66;font-size:13pt">3</td>
+    <td><strong>Conectar IEC 61850</strong></td>
+    <td>Boton 'Conectar'. Esperar confirmacion de conexion MMS.
+        Verificar que la app recibe lecturas (valores distintos de 0 en dashboard).</td>
+    <td>Indicador de estado = CONECTADO, datos validos en dashboard</td>
+  </tr>
+  <tr>
+    <td class="center bold" style="color:#0D3B66;font-size:13pt">4</td>
+    <td><strong>Ejecutar caso de prueba</strong></td>
+    <td>Programar el patron con los valores de la Seccion 4 para el TC correspondiente.
+        Inyectar señal durante al menos <strong>5 min</strong> (60 ciclos de poll × 5 s) para estabilizar CV.
+        Observar la etiqueta de clasificacion en el dashboard.</td>
+    <td>La clasificacion mostrada coincide con la columna 'Clasificacion esperada' de la Seccion 3</td>
+  </tr>
+  <tr>
+    <td class="center bold" style="color:#0D3B66;font-size:13pt">5</td>
+    <td><strong>Registrar resultado</strong></td>
+    <td>Anotar: LoadType mostrado, THD<sub>i</sub> leido, H5/H1, H7/H1, CV, FP, indice de electronica (0-100).
+        Comparar con umbrales de la Seccion 2. Exportar CSV si se requiere evidencia.</td>
+    <td>PASS: LoadType == esperado.<br>FAIL: LoadType difiere → revisar umbrales en FeederConfig.</td>
+  </tr>
+  <tr>
+    <td class="center bold" style="color:#0D3B66;font-size:13pt">6</td>
+    <td><strong>Prueba de alarmas</strong></td>
+    <td>Para TC-03 y TC-05: verificar alarma en panel de Alarmas (CRITICAL para CRYPTO_MINING, WARNING para INDUSTRIAL).
+        Para TC-09 frontera: ajustar FP a 0.91 y verificar cambio a DATA_CENTER.</td>
+    <td>Alarmas aparecen con nivel y timestamp correcto</td>
+  </tr>
+</table>
+
+<div class="footer">
+  Documento generado automaticamente | HADES v1.0 — Paraguay |
+  Emilio Medina, Diego Rojas, Enrique Paiva, Sergio Dominguez | 16/03/2026
+</div>
+
+</body>
+</html>

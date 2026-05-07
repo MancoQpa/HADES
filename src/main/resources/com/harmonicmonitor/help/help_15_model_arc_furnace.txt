@@ -1,0 +1,74 @@
+MODELO DE CARGA: HORNO DE ARCO ELÉCTRICO (EAF)
+SimProfile.ARC_FURNACE
+Revisado contra: CIGRE WG C4.109 (2014), IEC 61000-3-7, Baggini (2008)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. DESCRIPCIÓN FÍSICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El EAF (Electric Arc Furnace) funde chatarra metálica mediante arcos
+eléctricos entre electrodos de grafito y la carga (10-100 kA).
+
+El arco eléctrico tiene impedancia NO lineal y estocástica:
+  v_arco = f(i, longitud arco, temperatura del plasma)
+
+Esto produce armónicos tanto pares como impares, y perturbaciones
+que varían ciclo a ciclo de manera no determinista.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ARMÓNICOS PARES E IMPARES — CAUSA FÍSICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A diferencia de rectificadores (solo armónicos impares), el EAF produce
+PARES E IMPARES porque la característica V-I del arco no es antisimétrica:
+   f(−i) ≠ −f(i)    (asimetría entre semiciclo positivo y negativo)
+
+ESPECTRO SIMULADO (valores verificados, ejemplo de arco moderado):
+
+   THDi: ~22%  (variable entre 15-35% según fase del proceso)
+   H2/H1 = 11.3%  ← componente par (firma del EAF)
+   H3/H1 = 14.2%  ← dominante en muchos casos
+   H4/H1 =  6.6%  ← presente en EAF, ausente en rectificadores
+   H5/H1 =  9.4%
+   H7/H1 =  3.8%
+
+NOTA: H3 supera a H2 en el modelo simulado.
+En EAF reales el orden de dominancia H2 vs H3 depende de:
+  • Asimetría del arco entre semiciclos
+  • Control de electrodos (compensación de longitud)
+  • Fase del proceso: fusión inicial (H2 mayor) vs. refinado (H3 mayor)
+No puede afirmarse que H2 sea siempre la 'firma principal'.
+La presencia simultánea de H2 y armónicos pares SI es diagnóstica.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. FLICKER Y MODELO DE RANDOM WALK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Índices de flicker (IEC 61000-3-7):
+  P_st: índice de corto plazo (10 min),  límite MT: P_st <= 0.8
+  P_lt: índice de largo plazo (2 horas),  límite MT: P_lt <= 0.6
+
+Modelo de carga (paseo aleatorio — Brownian motion):
+   i_arco(t+Δt) = i_arco(t) + 0.15 · 𝒩(0, 0.5)
+   i_arco = clamp(i_arco, 0.2, 1.0)
+
+La tensión fluctúa por caída en la impedancia de red:
+   ΔV/V = (R_red · ΔP + X_red · ΔQ) / V²
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. FACTOR DE POTENCIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  FP = 0.70-0.85  (inductivo; compensado con SVC o STATCOM)
+  La compensación reactiva dinámica es imprescindible en EAF
+  para controlar flicker y mejorar el FP.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. NORMATIVA Y REFERENCIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  IEC 61000-3-7:2008     — Emisiones armónicas y flicker en MT/AT
+  IEC 61000-3-3/3-5      — Flicker para BT
+  CIGRE WG C4.109 (2014) — Harmonic characteristic parameters:
+    AC Arc Furnaces — mediciones en plantas reales
+  Baggini, A. (2008) 'Handbook of Power Quality', Wiley, cap. 14.

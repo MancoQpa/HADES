@@ -1,0 +1,26 @@
+GESTIÓN DE ALARMAS
+
+Sistema de alarmas de 4 niveles para monitoreo de calidad de energía.
+
+  NIVELES:
+  WARNING   — Advertencia: valor se acerca al límite (80% del umbral)
+  PQ_RISK   — Riesgo de calidad: supera límite IEC/IEEE de referencia
+  CRITICAL  — Condición crítica: resonancia, desbalance severo, sobrecorriente
+  DETECTION — Detección de carga: cripto/datacenter identificado
+
+  PARÁMETROS MONITOREADOS:
+  • THDv: distorsión de tensión (ref. IEC 61000-3-6)
+  • THDi: distorsión de corriente (ref. IEEE 519 / IEC 61000-3-4)
+  • Desbalance de tensión (ref. EN 50160 <= 2%)
+  • Desbalance de corriente
+  • Resonancia armónica
+  • Detección de carga electrónica
+  • Sobrecorriente
+  • Factor de potencia bajo
+
+  RECONOCIMIENTO:
+  • Reconocer Sel.: reconoce la alarma seleccionada
+  • Reconocer Todo: reconoce y limpia todas las alarmas activas
+
+  FILTROS:
+  • Por nivel, por feeder y por texto en el mensaje

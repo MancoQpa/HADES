@@ -1,0 +1,16 @@
+TENDENCIAS HISTÓRICAS
+
+Cuatro gráficas de área mostrando la evolución temporal de:
+
+  1. THDi (%) — Distorsión armónica de corriente
+  2. THDv (%) — Distorsión armónica de tensión
+  3. Tensión (kV) — Voltaje promedio trifásico
+  4. Corriente (A) — Corriente promedio trifásica
+
+  CONFIGURACIÓN:
+  • Máximo 120 puntos en memoria (buffer circular)
+  • Selector de alimentador: cada feeder tiene su propio historial
+  • Botón Limpiar: borra el buffer de datos del feeder activo
+
+  NOTA: Los datos no persisten entre reinicios de la aplicación.
+  Para almacenamiento persistente, use Exportar CSV.

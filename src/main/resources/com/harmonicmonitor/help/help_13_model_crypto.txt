@@ -1,0 +1,93 @@
+MODELO DE CARGA: SMPS SIN PFC (perfil cripto-miner legacy)
+SimProfile.CRYPTO_MINER
+Revisado contra: IEC 61000-3-2:2018, Lim et al. (2022)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NOTA SOBRE EL MODELO SIMULADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Este perfil simula SMPS (Switch-Mode Power Supply) de alta potencia
+SIN corrección de factor de potencia activa.
+
+HARDWARE MODERNO (Antminer S19, Whatsminer M50, post-2015):
+Usa PFC activo obligatorio por IEC 61000-3-2 Clase A.
+  THDi real: 10-20%,  FP real > 0.99
+
+HARDWARE LEGADO (fuentes ATX pre-2010, cargadores no regulados):
+Sin PFC, rectificador de diodos + capacitor bulk.
+  THDi medido: 65-130%  (pulsos de conducción 20-30°)
+  FP real: 0.55-0.70   (DPF ≈ 0.95-0.98, THD penaliza fuertemente)
+  ⚠ NOTA: Con THDi=65%: FP=0.97/√(1+0.65²)=0.79. Con THDi=130%: FP≈0.56.
+  La afirmación 'THDi=40-55%' es propia de fuentes con reactor de línea;
+  un bridge+bulk sin ningún filtrado tiene THDi ≥ 65%.
+
+El simulador usa el modelo legado para máximo contraste armónico
+en demostraciones. Los valores representan una instalación con
+equipamiento antiguo o fuentes industriales sin PFC.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANÁLISIS DE CIRCUITO: RECTIFICADOR MONOFÁSICO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Topología:
+  AC ─[Diode bridge]─[Bulk capacitor C]─[DC-DC]─> DC
+
+El puente conduce solo cuando v_red > V_condensador.
+Resultado: pulsos de corriente angostos (20-40° de conductión)
+que contienen todos los armónicos impares:
+
+   Armónicos presentes: H1, H3, H5, H7, H9, H11, H13 ...
+   (Para trifásico balanceado: solo H1, H5, H7, H11, H13... patrón 6k±1)
+
+DPF del rectificador sin PFC:
+   cos(φ₁) ≈ 0.95–0.98   (conducción discontinua; NO es 0.999)
+
+FP verdadero con THDᵢ = 45%:
+   FP = cos(φ₁) / √(1 + THDᵢ²) = 0.97 / √(1 + 0.45²) ≈ 0.88
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ESPECTRO SIMULADO (valores normalizados reales)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Los siguientes valores son el resultado del modelo de simulación
+tras normalización para que THD = 45% (verificado):
+
+   THDi: 45%  |  DPF: 0.985 (desplazamiento)  |  FP verdadero: ~0.88
+   H3/H1 =  3.1%   ← bajo: modelo asume carga 3φ con patrón 6k±1
+   H5/H1 = 36.5%  ← dominante
+   H7/H1 = 22.9%  ← dominante
+   H9/H1 =  8.3%
+  H11/H1 =  7.3%
+  H13/H1 =  5.2%
+  H15/H1 =  3.1%
+
+NOTA SOBRE H3: Un SMPS monofásico real genera H3=20-35%.
+H3 bajo (3.1%) es válido cuando las unidades individuales se distribuyen
+equilibradamente entre fases (resultado: cancelación trifásica de triplén).
+En instalaciones con desbalance de fases, H3 puede ser tan alto como H5.
+
+CV: < 1%  (carga muy estable — ASIC a frecuencia fija)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ESTABILIDAD DE CARGA (CV)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Los ASIC operan a frecuencia de clock fija y consumen potencia
+casi constante. El regulador interno mantiene Vout = constante:
+
+   CV = σ(I) / μ(I) · 100%  ≈  0.3–0.8%
+
+Esta estabilidad estadística es la principal firma diferenciadora.
+Sin embargo, NO es exclusiva de minería:
+  UPS, cargadores EV, rectificadores industriales también son estables.
+La detección combinada (CV + espectro + duración) mejora la precisión.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NORMATIVA APLICABLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  IEC 61000-3-2:2018  — Clase A: THDi para equipos >= 16A/fase
+  IEC 61000-3-12:2011 — Corrientes armónicas > 16A
+  IEEE 519-2022       — TDD en el PCC
+  Lim et al. (2022) 'Harmonic Signature of Cryptocurrency Mining
+    Facilities', IEEE Trans. Power Delivery, 37(4), 2812-2822.
