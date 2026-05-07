@@ -5,7 +5,7 @@
           toolID="HarmonicMonitor-SimGen"
           nameStructure="IEDName"/>
 
-  <IED name="SIM1" desc="ION 7400 Desktop Simulator" manufacturer="Schneider" type="ION7400">
+  <IED name="SIM1" desc="IEC 61850 Power Meter Simulator" manufacturer="HarmonicMonitor-Project" type="PowerMeter-Sim">
     <Services>
       <DynAssociation/>
       <GetDirectory/>

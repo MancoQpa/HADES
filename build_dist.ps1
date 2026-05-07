@@ -20,9 +20,9 @@ Copy-Item "$SRCAPP\HarmonicMonitor.exe"        "$STAGE\HarmonicMonitor.exe"
 Copy-Item "$SRCAPP\app\HarmonicMonitor.jar"    "$STAGE\app\HarmonicMonitor.jar"
 Copy-Item "$SRCAPP\app\HarmonicMonitor.cfg"    "$STAGE\app\HarmonicMonitor.cfg"
 
-# ── 3. Copiar runtime (sin legal/) ──────────────────────────────────────────
-Write-Host "[3/4] Copiando JRE embebido (sin legal/)..."
-foreach ($sub in @("bin","conf","lib","release")) {
+# ── 3. Copiar runtime (incluyendo legal/ por cumplimiento GPL v2+CPE) ───────
+Write-Host "[3/4] Copiando JRE embebido (con legal/)..."
+foreach ($sub in @("bin","conf","lib","legal","release")) {
     $src = "$SRCAPP\runtime\$sub"
     if (Test-Path $src) {
         Copy-Item -Recurse $src "$STAGE\runtime\$sub"
