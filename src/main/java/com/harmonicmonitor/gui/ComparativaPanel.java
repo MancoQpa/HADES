@@ -6,7 +6,7 @@ import javafx.scene.web.WebView;
 
 /**
  * Pestaña "¿Por qué HADES?" — Análisis técnico comparativo
- * frente a alternativas de código abierto (NILM-TK, GridLAB-D, PandaPower, OpenDSS).
+ * frente a categorías de herramientas de análisis de red y calidad de energía.
  *
  * Renderiza HTML con WebView de JavaFX para aprovechar encabezados,
  * tablas y código formateados visualmente.
@@ -181,7 +181,7 @@ public class ComparativaPanel {
         "</style></head><body>" +
 
         "<h1>&#127942; ¿Por qué HADES?</h1>" +
-        "<div class='subtitle'>Análisis técnico comparativo frente a alternativas de código abierto &nbsp;·&nbsp; v1.0 &nbsp;·&nbsp; Marzo 2026</div>" +
+        "<div class='subtitle'>Análisis técnico comparativo frente a categorías de herramientas de análisis eléctrico &nbsp;·&nbsp; v1.0 &nbsp;·&nbsp; Marzo 2026</div>" +
 
         // ── 1. Definición del problema ────────────────────────────────────────
         "<h2>1. Definición del problema</h2>" +
@@ -198,29 +198,29 @@ public class ComparativaPanel {
         "<div class='section-map'>" +
         "<span class='dim'>┌─────────────────────────────────────────────────────┐</span><br>" +
         "<span class='dim'>│</span>  SIMULACIÓN DE RED (offline, requieren modelo)      <span class='dim'>│</span><br>" +
-        "<span class='dim'>│</span>  GridLAB-D &nbsp; PandaPower &nbsp; OpenDSS               <span class='dim'>│</span><br>" +
+        "<span class='dim'>│</span>  Simuladores de flujo de potencia y distribución    <span class='dim'>│</span><br>" +
         "<span class='dim'>│</span>  <span style='color:#555E6E'>→ Calculan desde modelos matemáticos. Sin IEDs reales.</span> <span class='dim'>│</span><br>" +
         "<span class='dim'>└─────────────────────────────────────────────────────┘</span><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↕ <span style='color:#3A4560'>no se intersectan</span><br>" +
         "<span class='dim'>┌─────────────────────────────────────────────────────┐</span><br>" +
         "<span class='dim'>│</span>  DESAGREGACIÓN DE CARGA (medidor domiciliario BT)   <span class='dim'>│</span><br>" +
-        "<span class='dim'>│</span>  NILM-TK                                             <span class='dim'>│</span><br>" +
+        "<span class='dim'>│</span>  Herramientas NILM (Non-Intrusive Load Monitoring)  <span class='dim'>│</span><br>" +
         "<span class='dim'>│</span>  <span style='color:#555E6E'>→ Patrones ON/OFF desde un único medidor. Sin IEC 61850.</span> <span class='dim'>│</span><br>" +
         "<span class='dim'>└─────────────────────────────────────────────────────┘</span><br>" +
         "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↕ <span style='color:#3A4560'>no se intersectan</span><br>" +
         "<span class='dim'>┌─────────────────────────────────────────────────────┐</span><br>" +
         "<span class='dim'>│</span>  MONITOREO IEC&nbsp;61850 + ARMÓNICOS EN TIEMPO REAL  <span class='dim'>│</span><br>" +
         "<span class='dim'>│</span>  <span class='hl'>★ HADES</span>                                  <span class='dim'>│</span><br>" +
-        "<span class='dim'>│</span>  <span style='color:#107C10'>→ Único sistema gratuito en este cuadrante.</span>         <span class='dim'>│</span><br>" +
+        "<span class='dim'>│</span>  <span style='color:#107C10'>→ Único sistema libre en este cuadrante.</span>            <span class='dim'>│</span><br>" +
         "<span class='dim'>└─────────────────────────────────────────────────────┘</span>" +
         "</div>" +
-        "<p><strong>Diferencia estructural:</strong> los simuladores <em>calculan</em> valores a partir de modelos matemáticos. " +
+        "<p><strong>Diferencia estructural:</strong> los simuladores de red <em>calculan</em> valores a partir de modelos matemáticos. " +
         "HADES <em>lee</em> valores del equipo físico real mediante el protocolo estándar IEC&nbsp;61850.</p>" +
 
         // ── 3. Adquisición de datos ────────────────────────────────────────────
         "<h2>3. Adquisición de datos desde IEDs físicos</h2>" +
         "<table>" +
-        "<tr><th>Capacidad</th><th>HADES</th><th>NILM-TK</th><th>OpenDSS</th><th>PandaPower</th><th>GridLAB-D</th></tr>" +
+        "<tr><th>Capacidad</th><th>HADES</th><th>Herramienta NILM</th><th>Simulador armónico</th><th>Simulador flujo potencia</th><th>Simulador distribución</th></tr>" +
         "<tr><td>IEC 61850 MMS nativo</td><td><span class='check'>✓</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td></tr>" +
         "<tr><td>Auto-discovery de Logical Nodes</td><td><span class='check'>✓</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td></tr>" +
         "<tr><td>Polling en tiempo real</td><td><span class='check'>✓</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td></tr>" +
@@ -228,7 +228,7 @@ public class ComparativaPanel {
         "<tr><td>MHAI — THD, espectro H1..H50</td><td><span class='check'>✓ medido</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td></tr>" +
         "<tr><td>MSQI — componentes simétricas</td><td><span class='check'>✓ medido</span></td><td><span class='cross'>✗</span></td><td><span class='calc'>Calculado</span></td><td><span class='calc'>Calculado</span></td><td><span class='calc'>Calculado</span></td></tr>" +
         "<tr><td>MMTR — energía acumulada</td><td><span class='check'>✓</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td><td><span class='cross'>✗</span></td></tr>" +
-        "<tr><td>Compatible multi-fabricante</td><td><span class='check'>✓</span></td><td><span class='na'>N/A</span></td><td><span class='na'>N/A</span></td><td><span class='na'>N/A</span></td><td><span class='na'>N/A</span></td></tr>" +
+        "<tr><td>Compatible multi-fabricante IEC 61850</td><td><span class='check'>✓</span></td><td><span class='na'>N/A</span></td><td><span class='na'>N/A</span></td><td><span class='na'>N/A</span></td><td><span class='na'>N/A</span></td></tr>" +
         "</table>" +
 
         // ── 4. Detección de cargas ─────────────────────────────────────────────
@@ -250,18 +250,18 @@ public class ComparativaPanel {
         "  CV &lt; 5%  AND THDi &lt; 5%\n" +
         "    → CARGA LINEAL ESTABLE    (resistencias, iluminación)" +
         "</pre>" +
-        "<h3>Por qué NILM-TK no resuelve este problema</h3>" +
+        "<h3>Por qué las herramientas NILM no resuelven este problema</h3>" +
         "<ul>" +
-        "<li>NILM-TK usa transiciones ON/OFF — las granjas cripto operan 24/7 sin transiciones discretas.</li>" +
+        "<li>Las herramientas NILM usan transiciones ON/OFF — las granjas cripto operan 24/7 sin transiciones discretas.</li>" +
         "<li>La firma de identificación está en el <strong>espectro de frecuencias</strong>, no en la forma de onda temporal.</li>" +
-        "<li>Opera en MT a través de TP/TC, no en el tablero de baja tensión donde NILM-TK funciona.</li>" +
+        "<li>Operan en MT a través de TP/TC, no en el tablero de baja tensión donde NILM funciona.</li>" +
         "<li>Las cargas individuales son invisibles en el agregado del alimentador a escala MT.</li>" +
         "</ul>" +
 
         // ── 5. Análisis de armónicos ───────────────────────────────────────────
         "<h2>5. Análisis de armónicos</h2>" +
         "<table>" +
-        "<tr><th>Capacidad</th><th>HADES</th><th>OpenDSS</th><th>PandaPower</th></tr>" +
+        "<tr><th>Capacidad</th><th>HADES</th><th>Simulador armónico de red</th><th>Simulador de flujo de potencia</th></tr>" +
         "<tr><td>Fuente de datos</td><td><span class='check'>IED real (MHAI)</span></td><td><span class='calc'>Modelo matemático</span></td><td><span class='calc'>Modelo matemático</span></td></tr>" +
         "<tr><td>THD tensión / corriente</td><td>Medido</td><td>Calculado</td><td>No nativo</td></tr>" +
         "<tr><td>Espectro H1..H50</td><td>MHAI.HA del IED</td><td>Solver Harmonics</td><td>Plugin externo</td></tr>" +
@@ -270,8 +270,8 @@ public class ComparativaPanel {
         "<tr><td>Análisis de resonancia</td><td>f = 1/2π√LC</td><td>Barrido Z(f) completo</td><td>No</td></tr>" +
         "<tr><td><strong>Requiere modelo de red</strong></td><td><span class='check'><strong>NO</strong></span></td><td><span class='cross'><strong>SÍ</strong></span></td><td><span class='cross'><strong>SÍ</strong></span></td></tr>" +
         "</table>" +
-        "<p>OpenDSS puede calcular curvas Z(f) completas para la red — análisis más riguroso. " +
-        "Pero requiere construir el modelo topológico completo del alimentador: " +
+        "<p>Los simuladores armónicos de red pueden calcular curvas Z(f) completas — análisis más riguroso. " +
+        "Pero requieren construir el modelo topológico completo del alimentador: " +
         "semanas de trabajo por feeder que se desactualiza con cada reconfiguración. " +
         "HADES entrega el dato <strong>medido del equipo real</strong>, sin modelo previo.</p>" +
 
@@ -292,8 +292,8 @@ public class ComparativaPanel {
         "<li><strong>Resonancia potencial</strong>: h_res cercano a armónico dominante</li>" +
         "</ul>" +
         "<div class='callout-warn'>" +
-        "Ninguna alternativa gratuita tiene motor de alarmas en tiempo real. " +
-        "OpenDSS y PandaPower son herramientas <em>batch</em>: ejecutan un análisis y terminan. " +
+        "Ninguna alternativa libre tiene motor de alarmas en tiempo real. " +
+        "Los simuladores de flujo de potencia son herramientas <em>batch</em>: ejecutan un análisis y terminan. " +
         "No monitorean continuamente." +
         "</div>" +
 
@@ -301,7 +301,7 @@ public class ComparativaPanel {
         "<h2>7. Flujo de trabajo comparado</h2>" +
         "<p><em>Escenario:</em> <strong>¿Hay una granja de criptomonedas en el alimentador AL-05?</strong></p>" +
         "<div class='flow-box bad'>" +
-        "<h4>&#10060; Con OpenDSS</h4>" +
+        "<h4>&#10060; Con un simulador de red</h4>" +
         "<div class='flow-step'>1. Obtener modelo topológico completo ............. días</div>" +
         "<div class='flow-step'>2. Parametrizar todas las cargas ................. horas</div>" +
         "<div class='flow-step'>3. Configurar fuente armónica y correr análisis .. horas</div>" +
@@ -317,26 +317,26 @@ public class ComparativaPanel {
         "<div class='flow-result'>→ &lt; 5 minutos — datos medidos del IED real</div>" +
         "</div>" +
 
-        // ── 8. Donde los competidores son mejores ─────────────────────────────
+        // ── 8. Donde las alternativas son mejores ─────────────────────────────
         "<h2>8. Donde las alternativas son técnicamente superiores</h2>" +
-        "<p>Honestidad técnica — existen áreas donde los competidores ganan:</p>" +
-        "<h3>OpenDSS supera a HADES en:</h3>" +
+        "<p>Honestidad técnica — existen áreas donde otras categorías de herramientas ganan:</p>" +
+        "<h3>Los simuladores armónicos de red superan a HADES en:</h3>" +
         "<ul>" +
-        "<li>Propagación de armónicos en red — flujo entre nodos con impedancias de línea</li>" +
+        "<li>Propagación de armónicos entre nodos con impedancias de línea</li>" +
         "<li>Barrido de frecuencia completo — curva Z(f) para toda la red</li>" +
         "<li>Modelado de filtros de armónicos pasivos/activos y su efecto en la red</li>" +
         "<li>Análisis Monte Carlo con incertidumbre en parámetros de red</li>" +
         "</ul>" +
-        "<h3>PandaPower supera en:</h3>" +
+        "<h3>Los simuladores de flujo de potencia superan en:</h3>" +
         "<ul>" +
         "<li>Flujo de potencia óptimo (OPF) con restricciones de seguridad</li>" +
         "<li>Análisis de cortocircuito riguroso (IEC 60909 / ANSI)</li>" +
         "<li>Integración con GIS y modelos de red complejos</li>" +
         "</ul>" +
-        "<h3>NILM-TK supera en:</h3>" +
+        "<h3>Las herramientas NILM superan en:</h3>" +
         "<ul>" +
         "<li>Desagregación fina de cargas individuales dentro de una instalación domiciliaria</li>" +
-        "<li>Catálogo de algoritmos NILM publicados (Hart 1985, FHMM, CO, etc.)</li>" +
+        "<li>Catálogo de algoritmos publicados de desagregación no intrusiva</li>" +
         "</ul>" +
         "<div class='callout'>" +
         "La diferencia de fondo: esas capacidades son para <strong>planificación e ingeniería de red</strong>. " +
@@ -349,32 +349,33 @@ public class ComparativaPanel {
         "                    <span style='color:#0078D4'>PLANIFICACIÓN</span>              <span style='color:#107C10'>OPERACIÓN</span><br>" +
         "                    (offline / batch)          (tiempo real)<br>" +
         "                         │                         │<br>" +
-        "   NIVEL DE RED ─────────┤  OpenDSS                │<br>" +
-        "   (topología completa)   │  PandaPower             │  <span class='dim'>← vacío en gratuitos</span><br>" +
-        "                         │  GridLAB-D              │<br>" +
+        "   NIVEL DE RED ─────────┤  Simuladores de red     │<br>" +
+        "   (topología completa)   │  (flujo potencia,       │  <span class='dim'>← vacío en herramientas libres</span><br>" +
+        "                         │   armónicos, OPF)       │<br>" +
         "                         │                         │<br>" +
         "   NIVEL DE IED ─────────┤       <span class='dim'>(vacío)</span>           │  <span class='hl'>★ HADES</span><br>" +
         "   (IEC 61850)            │                         │  <span class='dim'>(único aquí)</span><br>" +
         "                         │                         │<br>" +
-        "   NIVEL DE CARGA ───────┤  NILM-TK                │<br>" +
+        "   NIVEL DE CARGA ───────┤  Herramientas NILM      │<br>" +
         "   (instalación BT)       │  (análisis histórico)   │<br>" +
         "</div>" +
 
         // ── 10. Conclusión ─────────────────────────────────────────────────────
         "<h2>10. Conclusión</h2>" +
-        "<p>HADES no compite con OpenDSS para análisis de propagación de armónicos en red compleja. " +
-        "No compite con PandaPower para estudios de flujo de potencia. " +
-        "No compite con NILM-TK para desagregación de cargas domiciliarias.</p>" +
-        "<p>Ocupa un espacio técnico que las herramientas gratuitas existentes no cubren:</p>" +
+        "<p>HADES no compite con los simuladores armónicos de red para análisis de propagación en topología compleja. " +
+        "No compite con los analizadores de flujo de potencia para estudios de OPF. " +
+        "No compite con las herramientas NILM para desagregación de cargas domiciliarias.</p>" +
+        "<p>Ocupa un espacio técnico que las herramientas libres existentes no cubren:</p>" +
         "<div class='callout'>" +
         "Adquirir, procesar, clasificar y alarmar en tiempo real sobre la calidad de energía " +
         "de un alimentador MT, conectándose directamente al IED vía IEC&nbsp;61850, sin requerir " +
         "modelo previo de la red, identificando automáticamente la presencia de cargas electrónicas " +
         "de alta potencia a partir de su firma armónica." +
         "</div>" +
-        "<p>Para ese problema específico, es la única herramienta gratuita disponible. " +
-        "Las alternativas comerciales equivalentes (OMICRON IEDScout, Elspec PQZIP, software " +
-        "propietario Schneider/ABB/GE) tienen costo significativo y no entregan el código fuente.</p>" +
+        "<p>Para ese problema específico, es la única herramienta libre disponible. " +
+        "Las alternativas comerciales equivalentes (analizadores IEC 61850 y sistemas de " +
+        "gestión de calidad de energía propietarios) tienen costo significativo y no " +
+        "entregan el código fuente.</p>" +
 
         // ── Referencias ────────────────────────────────────────────────────────
         "<hr>" +
@@ -387,8 +388,8 @@ public class ComparativaPanel {
         "<li>EN 50160:2010 — Voltage characteristics of electricity supplied by public networks</li>" +
         "<li>IEEE C37.111-2013 (COMTRADE) — Standard Common Format for Transient Data Exchange</li>" +
         "<li>Kelly, J. &amp; Knottenbelt, W. (2015). Neural NILM. ACM BuildSys.</li>" +
-        "<li>Dugan, R.C. (2012). OpenDSS Reference Guide. EPRI, Palo Alto CA.</li>" +
-        "<li>Thurner et al. (2018). pandapower. IEEE Trans. Power Systems, 33(6).</li>" +
+        "<li>Dugan, R.C. (2012). Reference Guide for Open-Source Distribution System Simulator. EPRI.</li>" +
+        "<li>Thurner et al. (2018). Open-source power system analysis tool. IEEE Trans. Power Systems, 33(6).</li>" +
         "</ul>" +
 
         "</body></html>";
