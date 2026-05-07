@@ -8,7 +8,7 @@ echo.
 echo  =====================================================
 echo   HADES v1.0
 echo   Harmonic Analysis for Detection of Electronic Signatures (IEC 61850)
-echo   Equipo: E. Medina, U. Fernandez, D. Rojas, E. Paiva, S. Dominguez - Paraguay
+echo   E. Medina, D. Rojas, E. Paiva, S. Dominguez - Paraguay
 echo  =====================================================
 echo.
 
