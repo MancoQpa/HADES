@@ -6,7 +6,7 @@ Herramienta de escritorio Java/JavaFX para **caracterización espectral de calid
 
 Registra el espectro armónico H1–H50, THD de tensión y corriente, secuencias simétricas y potencia activa/reactiva/aparente a través de medidores compatibles (ION 7400 y similares). Incluye un clasificador de firma espectral basado en umbrales bibliográficos (IEEE 519-2022, IEC 61000-3-6, IEC 61000-3-12) validados en laboratorio con patrones de energía replicados; la clasificación opera en pocos ciclos de red y fue exitosa para cargas individuales en condiciones de laboratorio.
 
-La caracterización espectral se realiza mediante capturas de espectro completo cada 60 segundos, acumuladas en una base de datos SQLite local. Esta colección continua está diseñada para alimentar en el futuro un modelo de aprendizaje automático capaz de identificar patrones de carga en condiciones de campo reales, incluyendo composiciones mixtas de usuarios.
+La caracterización espectral se realiza mediante capturas de espectro completo cada 60 segundos, acumuladas en una base de datos SQLite local. Esta colección continua está diseñada para alimentar en el futuro un modelo de aprendizaje automático que esperamos sea capaz de identificar patrones de carga en condiciones de campo reales, incluyendo composiciones mixtas de usuarios.
 
 > **Nota de alcance**: para cargas **solapadas** (varios usuarios en el mismo feeder), la firma espectral resultante es la superposición de todas ellas. La clasificación es confiable solo cuando la carga de interés representa ≥80% de la demanda total del alimentador. Los umbrales del clasificador fueron replicados en laboratorio con patrones controlados; no sustituyen una campaña de medición en campo bajo IEC 61000-4-30.
 
