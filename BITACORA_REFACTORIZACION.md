@@ -248,6 +248,10 @@ Sin shutdown ordenado al cerrar la app.
 | Fecha | Fase | Resultado | Notas |
 |-------|------|-----------|-------|
 | 2026-05-07 | F0-001 baseline | ✅ OK — 42 clases, exit 0 | Tag `refactor-baseline-v1.0` creado; 0 errores compilación |
+| 2026-05-07 | F1-001 HelpPanel | ✅ OK — 42 clases, exit 0 | HelpPanel 1408→204 líneas; 21 txt en resources/ |
+| 2026-05-07 | F2-001 MmsDataMapper | ✅ OK — 46 clases, exit 0 | IEC61850Communicator 1007→294; MmsDataMapper 789 líneas |
+| 2026-05-07 | F4-001 ComtradePanel split | ✅ OK — 46 clases, exit 0 | ComtradePanel 1390→1116; 3 builders (168+147+189 líneas) |
+| 2026-05-07 | Commit `8191b16` | ✅ 34 archivos, 46 clases | Refactor F1+F2+F4 completo |
 
 ---
 
