@@ -8,27 +8,37 @@ el patrón espectral predominante en el alimentador.
 LIMITACIONES Y CONDICIÓN DE USO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  DOMINANCIA DE CARGA (condición necesaria)
-  El clasificador opera sobre la firma AGREGADA del feeder.
-  Para que el resultado sea interpretable, la carga de interés debe
-  representar al menos el ~80% de la demanda total del alimentador.
-  Con cargas mixtas (múltiples usuarios heterogéneos), las firmas
-  espectrales se superponen y el clasificador pierde discriminación.
+  VALIDACIÓN EN LABORATORIO
+  Los umbrales del árbol de decisión fueron replicados con patrones de
+  energía sintéticos en condiciones de laboratorio. La clasificación fue
+  exitosa para cargas individuales bien definidas y opera en pocos ciclos
+  de red (~200 ms a 50 Hz). Esta velocidad de respuesta es adecuada para
+  monitoreo continuo, pero no equivale a una campaña de medición en campo
+  bajo condiciones de régimen normal según IEC 61000-4-30.
 
-  UMBRALES BIBLIOGRÁFICOS — NO VALIDADOS EN CAMPO
+  CARGAS SOLAPADAS — CONDICIÓN DE DOMINANCIA
+  El clasificador opera sobre la firma AGREGADA del feeder. Cuando existen
+  múltiples usuarios en el mismo alimentador, sus espectros se suman
+  vectorialmente. Para que la clasificación sea discriminante, la carga
+  de interés debe representar al menos el ~80% de la demanda total.
+  Por debajo de ese umbral, las firmas quedan "solapadas" y el árbol de
+  decisión puede producir resultados ambiguos (ej. MIXED_ELECTRONIC).
+
+  UMBRALES: ORIGEN Y TRAZABILIDAD
   Los umbrales del árbol de decisión provienen de:
     • Teoría de rectificadores (H5=1/5, H7=1/7 para 6-pulsos) — textbooks
     • IEC 61000-3-6:2008 (niveles de planificación armónicos MT)
     • IEEE 519-2022 (límites de TDD por nivel de cortocircuito)
     • IEC 61000-3-12:2011 (límites de armónicos de corriente)
   Los umbrales específicos de SMPS/cripto (FP > 0.92, CV < 5%) son
-  estimaciones de ingeniería sin validación contra campaña de campo.
-  No sustituyen un estudio de calidad de energía según IEC 61000-4-30.
+  estimaciones de ingeniería replicadas en laboratorio, sin validación
+  contra una campaña de campo en red MT 23 kV en régimen normal.
 
   RESULTADO SIEMPRE ORIENTATIVO
   Si el feeder es dedicado (un solo usuario), la tipología de carga
   generalmente se conoce por información operacional. El clasificador
-  agrega valor cuando la composición de la carga es desconocida o mixta.
+  agrega valor cuando la composición es desconocida y la carga dominante
+  supera el umbral de dominancia del ~80%.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ROL DEL THDv EN LA CLASIFICACIÓN

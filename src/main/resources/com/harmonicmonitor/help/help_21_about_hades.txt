@@ -8,15 +8,22 @@ alimentadores MT 23 kV mediante el protocolo IEC 61850.
 PROPÓSITO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Registrar el espectro armónico H1-H50, THD, secuencias simétricas y
-potencia en alimentadores de distribución MT 23 kV (ANDE, Paraguay)
-mediante IEDs IEC 61850. Apoya la evaluación de calidad de energía,
-la generación de registros COMTRADE y la identificación de patrones
-espectrales de carga con fines de caracterización técnica.
+Registrar el espectro armónico H1–H50, THD, secuencias simétricas y
+potencia en alimentadores de distribución MT 23 kV mediante IEDs IEC 61850,
+y construir una base de datos espectral continua orientada a la caracterización
+de carga y a la futura integración con modelos de aprendizaje automático.
 
-El módulo de clasificación de firma espectral aplica umbrales de
-referencia bibliográfica como apoyo a la interpretación técnica;
-no constituye un diagnóstico autónomo certificado bajo IEC 61000-4-30.
+HADES incluye un clasificador de firma espectral con umbrales bibliográficos
+replicados en laboratorio con patrones de energía controlados. La clasificación
+opera en pocos ciclos de red y fue exitosa para cargas individuales aisladas.
+Para cargas solapadas (feeders con múltiples usuarios), la carga de interés
+debe ser dominante (~80% de la demanda total) para discriminación confiable.
+
+El módulo no constituye un diagnóstico autónomo certificado bajo IEC 61000-4-30.
+Los registros espectrales acumulados en SQLite están diseñados para ser
+la base de un dataset de campo que en el futuro permita entrenar un modelo
+ML capaz de identificar y caracterizar patrones de carga en condiciones reales,
+incluyendo composiciones mixtas que hoy superan los límites del árbol de decisión.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EQUIPO

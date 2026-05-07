@@ -4,9 +4,11 @@
 
 Herramienta de escritorio Java/JavaFX para **caracterización espectral de calidad de energía** en alimentadores de media tensión (23 kV) mediante el protocolo **IEC 61850**.
 
-Registra el espectro armónico H1–H50, THD de tensión y corriente, secuencias simétricas y potencia activa/reactiva/aparente a través de medidores compatibles (ION 7400 y similares). Incluye un clasificador de firma espectral basado en umbrales de referencia bibliográfica (IEEE 519-2022, IEC 61000-3-6, IEC 61000-3-12) como apoyo a la interpretación técnica de la carga — no como diagnóstico autónomo.
+Registra el espectro armónico H1–H50, THD de tensión y corriente, secuencias simétricas y potencia activa/reactiva/aparente a través de medidores compatibles (ION 7400 y similares). Incluye un clasificador de firma espectral basado en umbrales bibliográficos (IEEE 519-2022, IEC 61000-3-6, IEC 61000-3-12) validados en laboratorio con patrones de energía replicados; la clasificación opera en pocos ciclos de red y fue exitosa para cargas individuales en condiciones de laboratorio.
 
-> **Nota de alcance**: la clasificación de firma espectral es orientativa. Requiere que la carga de interés sea dominante en el alimentador (>~80% de la demanda total) para que su firma no quede enmascarada por la mezcla de cargas. Los umbrales de clasificación provienen de referencias bibliográficas estándar y de la teoría de rectificadores; no han sido validados con una campaña de medición en campo en condiciones de régimen normal.
+La caracterización espectral se realiza mediante capturas de espectro completo cada 60 segundos, acumuladas en una base de datos SQLite local. Esta colección continua está diseñada para alimentar en el futuro un modelo de aprendizaje automático capaz de identificar patrones de carga en condiciones de campo reales, incluyendo composiciones mixtas de usuarios.
+
+> **Nota de alcance**: para cargas **solapadas** (varios usuarios en el mismo feeder), la firma espectral resultante es la superposición de todas ellas. La clasificación es confiable solo cuando la carga de interés representa ≥80% de la demanda total del alimentador. Los umbrales del clasificador fueron replicados en laboratorio con patrones controlados; no sustituyen una campaña de medición en campo bajo IEC 61000-4-30.
 
 De uso libre bajo licencia GPL v3.
 
@@ -27,11 +29,17 @@ Desarrollado por **Emilio Medina**.
 
 ### Clasificación de firma espectral
 - Árbol de decisión multivariable: CV = σ(I)/μ(I), THD_I, H5/H1, H7/H1, H11/H1, FP
-- Patrones de referencia (basados en bibliografía, no validados en campo):
-  - Carga lineal, iluminación electrónica, SMPS alta densidad (cripto/HPC), rectificador 6-pulsos
+- Patrones implementados: carga lineal, iluminación LED, SMPS alta densidad, rectificador 6-pulsos, electrónica ligera, mixta
+- Clasificación en pocos ciclos de red; validada en laboratorio con patrones de energía replicados
 - Índice de electrónica 0–100 (score compuesto)
-- Análisis de resonancia LC por feeder (frecuencia f = 1/2π√LC)
-- **Validez**: resultado confiable solo si la carga clasificada es dominante en el feeder
+- Análisis de resonancia LC por feeder
+- Requiere dominancia ≥80% en el feeder para cargas solapadas
+
+### Acumulación de datos para ML
+- Captura de espectro completo H1–H50 cada 60 segundos por alimentador
+- Registro continuo en SQLite: sesiones, mediciones, espectros, alarmas
+- Exportación CSV compatible con pipelines de aprendizaje automático
+- Diseñado para construir datasets de caracterización espectral en campo, como base de un modelo ML futuro de identificación de patrones de carga
 
 ### Multi-alimentador
 - Monitoreo simultáneo de hasta N alimentadores
