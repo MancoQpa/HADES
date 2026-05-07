@@ -48,11 +48,22 @@ apply_theme.ps1
 darken_text.ps1
 fix_brightness.ps1
 
-# Instaladores de salida
+# Instaladores de salida y staging
 installer_output/
+dist_package/
+
+# Documentación local — no subir a GitHub
+HADES_GUIA_DESARROLLADOR.md
+HADES_GUIA_USUARIO_COMPARATIVA.md
+
+# Logs de conexión
+log de coneccion*.txt
 
 # Librerias (se descargan con Maven)
 lib/
+
+# JREs y SDKs descargados localmente
+tools/
 
 # Claude AI internal
 .claude/

@@ -197,7 +197,7 @@ public class HarmonicsPanel {
 
         currentSeries = new XYChart.Series<>();
         currentSeries.setName("I %");
-        for (int i = 1; i <= 25; i++) {
+        for (int i = 1; i <= 15; i++) {
             currentSeries.getData().add(new XYChart.Data<>("H" + i, 0.0));
         }
         barChart.getData().add(currentSeries);
@@ -259,7 +259,7 @@ public class HarmonicsPanel {
             "-fx-border-radius: 6; -fx-background-radius: 6;");
         card.setPadding(new Insets(12));
 
-        Label title = new Label("TABLA ARMÓNICA  H1–H25");
+        Label title = new Label("TABLA ARMÓNICA  H1–H15");
         title.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
 
         table = new TableView<>();
@@ -297,7 +297,7 @@ public class HarmonicsPanel {
         table.getColumns().addAll(colOrder, colFreq, colIAmp, colIPct, colVVolt, colVPct, colNorm);
 
         tableData = FXCollections.observableArrayList();
-        for (int i = 1; i <= 25; i++) {
+        for (int i = 1; i <= 15; i++) {
             tableData.add(new HarmonicRow(i));
         }
         table.setItems(tableData);
@@ -345,7 +345,7 @@ public class HarmonicsPanel {
 
         // Update bar chart
         ObservableList<XYChart.Data<String, Number>> data = currentSeries.getData();
-        for (int i = 0; i < Math.min(25, data.size()); i++) {
+        for (int i = 0; i < Math.min(15, data.size()); i++) {
             double pct = (h1 > 1e-6) ? (iSpec[i] / h1 * 100.0) : 0.0;
             if (i == 0) pct = 100.0; // H1 is fundamental = 100%
             data.get(i).setYValue(pct);
@@ -384,7 +384,7 @@ public class HarmonicsPanel {
         }
 
         // Update table
-        for (int i = 0; i < Math.min(25, tableData.size()); i++) {
+        for (int i = 0; i < Math.min(15, tableData.size()); i++) {
             int order = i + 1;
             double iAmp = (i < iSpec.length) ? iSpec[i] : 0.0;
             double iPct = (h1 > 1e-6 && order > 1) ? (iAmp / h1 * 100.0) : (order == 1 ? 100.0 : 0.0);

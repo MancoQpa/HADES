@@ -233,11 +233,12 @@ public class DiscoveryPanel {
                 Platform.runLater(() -> setStatus("Descubriendo logical nodes..."));
                 ServerModel serverModel = association.retrieveModel();
 
-                // Fase 3: discovery
-                DiscoveryResult result = IEDModelDiscovery.discover(serverModel, baseConfig);
+                // Fase 3: discovery (pasa la association para detectar escala de potencia)
+                Platform.runLater(() -> setStatus("Detectando escalas de potencia..."));
+                DiscoveryResult result = IEDModelDiscovery.discover(serverModel, baseConfig, association);
                 lastResult = result;
 
-                // Fase 4: desconectar (solo necesitábamos el modelo)
+                // Fase 4: desconectar (solo necesitábamos el modelo y las escalas)
                 try { association.disconnect(); } catch (Exception ignored) {}
 
                 // Fase 5: actualizar UI

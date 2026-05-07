@@ -114,9 +114,13 @@ public class MeasurementPoller {
                 harmonicAnalyzer.calculateThd(m);
             }
 
-            // 2b. Si el IED provee THD pero no el espectro, estimarlo
-            //     (caso típico: ION 7400 reporta ThdA pero no phsAHar01..50)
-            harmonicAnalyzer.estimateMissingSpectrum(m);
+            // 2b. Si el IED provee THD pero no el espectro, estimarlo.
+            //     SOLO cuando el IED no tiene array de armónicos en su modelo;
+            //     si lo tiene (harmonicArrayInModel=true) los valores reales ya
+            //     vienen del IED y la estimación sobreescribiría datos correctos.
+            if (!comm.isHarmonicArrayInModel()) {
+                harmonicAnalyzer.estimateMissingSpectrum(m);
+            }
 
             // 3. Calcular ratios de armónicos (H5/H1, H7/H1, etc.)
             harmonicAnalyzer.calculateHarmonicRatios(m);

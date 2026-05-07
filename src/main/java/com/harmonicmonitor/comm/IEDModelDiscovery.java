@@ -80,6 +80,15 @@ public class IEDModelDiscovery {
      * @return             resultado con nodos encontrados y configuración sugerida
      */
     public static DiscoveryResult discover(ServerModel serverModel, FeederConfig baseConfig) {
+        return discover(serverModel, baseConfig, null);
+    }
+
+    /**
+     * Variante que acepta una ClientAssociation activa para detectar la escala
+     * de potencia (TotW.units.multiplier) durante el propio descubrimiento.
+     */
+    public static DiscoveryResult discover(ServerModel serverModel, FeederConfig baseConfig,
+                                           ClientAssociation association) {
         DiscoveryResult result = new DiscoveryResult();
         StringBuilder report = new StringBuilder();
 
@@ -155,6 +164,10 @@ public class IEDModelDiscovery {
 
         // ── Paso 5: Construir configuración sugerida ──────────────────────────
         FeederConfig suggested = buildSuggestedConfig(result, baseConfig, iedName);
+        // Detectar escala de potencia durante el descubrimiento (si tenemos association)
+        if (association != null) {
+            detectPowerScale(serverModel, association, suggested, report);
+        }
         result.setSuggestedConfig(suggested);
 
         // ── Paso 6: Resumen ───────────────────────────────────────────────────
@@ -355,6 +368,47 @@ public class IEDModelDiscovery {
         int i = 0;
         while (i < a.length() && i < b.length() && a.charAt(i) == b.charAt(i)) i++;
         return a.substring(0, i);
+    }
+
+    /**
+     * Detecta la escala de potencia leyendo TotW.units.multiplier del IED.
+     *   multiplier == 3  → IED reporta en kW  → powerScaleFactor = 1.0
+     *   multiplier == 0  → IED reporta en W   → powerScaleFactor = 0.001
+     *   no disponible    → deja el valor por defecto (0.001, estándar IEC 61850)
+     *
+     * También detecta analogScaleFactor y pfScaleFactor si hay info disponible.
+     */
+    private static void detectPowerScale(ServerModel model, ClientAssociation association,
+                                         FeederConfig cfg, StringBuilder report) {
+        report.append("\n=== Auto-detección de escalas ===\n");
+        String wRef = cfg.getIedName() + cfg.getLdInst() + "/" +
+                      cfg.getMmxuPrefix() + cfg.getMmxuLnRef() + ".TotW.units.multiplier";
+        for (Fc fc : new Fc[]{Fc.CF, Fc.EX, Fc.MX}) {
+            try {
+                ModelNode node = model.findModelNode(wRef, fc);
+                if (node instanceof FcModelNode) {
+                    association.getDataValues((FcModelNode) node);
+                    if (node instanceof BdaInt8) {
+                        byte mult = ((BdaInt8) node).getValue();
+                        report.append("  TotW.units.multiplier = ").append(mult)
+                              .append(" (FC=").append(fc).append(")\n");
+                        if (mult == 3) {
+                            cfg.setPowerScaleFactor(1.0);
+                            report.append("  → powerScaleFactor = 1.0 (IED reporta kW)\n");
+                        } else if (mult == 0) {
+                            cfg.setPowerScaleFactor(0.001);
+                            report.append("  → powerScaleFactor = 0.001 (IED reporta W)\n");
+                        } else {
+                            report.append("  → multiplier no reconocido, usando defecto 0.001\n");
+                        }
+                        return;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        // No se encontró multiplier: usar defecto 0.001 (W → kW, estándar IEC 61850)
+        cfg.setPowerScaleFactor(0.001);
+        report.append("  TotW.units.multiplier no disponible → powerScaleFactor = 0.001 (W→kW)\n");
     }
 
     private static String extractIedPrefix(String ldName) {

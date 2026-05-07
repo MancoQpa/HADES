@@ -35,13 +35,15 @@ public class SimulatorLauncher {
     static final Map<String, Process>      procs    = new ConcurrentHashMap<>();
     // IED-name → stdin del proceso (para enviar comandos en caliente)
     static final Map<String, OutputStream> stdinMap = new ConcurrentHashMap<>();
+    // IED-name → puerto MMS (para poder matar procesos huérfanos por puerto)
+    static final Map<String, Integer>      iedPorts = new ConcurrentHashMap<>();
     // IED-name → últimas N líneas de log
     static final Map<String, Deque<String>> logs = new ConcurrentHashMap<>();
     static final int MAX_LOG_LINES = 40;
 
     // Heartbeat: timestamp del último ping recibido del browser
     static volatile long lastPingMs = System.currentTimeMillis();
-    static final int PING_TIMEOUT_SEC = 20;  // si no hay ping en 20s, cerrar
+    static final int PING_TIMEOUT_SEC = 300;  // 5 min — browsers throttle background tabs
 
     public static void main(String[] args) throws Exception {
         // Logging a consola
@@ -51,6 +53,10 @@ public class SimulatorLauncher {
         ch.setFormatter(new SimpleFormatter());
         ch.setLevel(Level.INFO);
         root.addHandler(ch); root.setLevel(Level.INFO);
+
+        // Limpiar procesos huérfanos de sesiones anteriores en los puertos estándar
+        LOG.info("Limpiando procesos en puertos 10102-10105...");
+        for (int p = 10102; p <= 10105; p++) killProcessOnPort(p);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(HTTP_PORT), 16);
 
@@ -145,9 +151,11 @@ public class SimulatorLauncher {
         String noise    = jstr(body, "noise",    "0.03");
         int    interval = jint(body, "interval",  5000);
 
-        // Matar proceso existente con el mismo IED
+        // Matar proceso existente con el mismo IED (por mapa y por puerto)
         Process old = procs.get(ied);
         if (old != null && old.isAlive()) old.destroyForcibly();
+        // Matar cualquier proceso huérfano que ocupe el puerto (e.g. de sesión anterior)
+        killProcessOnPort(port);
         logs.put(ied, new ArrayDeque<>());
 
         // Detectar java ejecutable actual
@@ -157,6 +165,11 @@ public class SimulatorLauncher {
         String sep = File.pathSeparator;
         String cp  = "classes" + sep + "lib" + File.separator + "*";
 
+        // CID como ruta absoluta para que IonSimServer encuentre templates/
+        // independientemente del directorio de trabajo del subproceso
+        String cidAbsolute = new File(System.getProperty("user.dir"),
+                "simulator" + File.separator + "ion7400sim.cid").getAbsolutePath();
+
         ProcessBuilder pb = new ProcessBuilder(
             javaExe, "-cp", cp,
             "com.harmonicmonitor.simulator.SimulatorMain",
@@ -164,7 +177,8 @@ public class SimulatorLauncher {
             "--port",     String.valueOf(port),
             "--profile",  profile,
             "--noise",    noise,
-            "--interval", String.valueOf(interval)
+            "--interval", String.valueOf(interval),
+            "--cid",      cidAbsolute
         );
         pb.redirectErrorStream(true);
         pb.directory(new File(System.getProperty("user.dir")));
@@ -172,6 +186,7 @@ public class SimulatorLauncher {
         try {
             Process p = pb.start();
             procs.put(ied, p);
+            iedPorts.put(ied, port);
             stdinMap.put(ied, p.getOutputStream());
             // Hilo que drena stdout y acumula log
             Thread drain = new Thread(() -> drainOutput(ied, p));
@@ -232,9 +247,23 @@ public class SimulatorLauncher {
 
         String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         String ied = jstr(body, "ied", "");
+        boolean stopped = false;
+
+        // Matar por referencia directa
         Process p = procs.get(ied);
         if (p != null && p.isAlive()) {
             p.destroyForcibly();
+            stopped = true;
+        }
+
+        // Matar por puerto (captura procesos huérfanos de sesiones anteriores)
+        Integer iPort = iedPorts.get(ied);
+        if (iPort != null) {
+            killProcessOnPort(iPort);
+            stopped = true;
+        }
+
+        if (stopped) {
             appendLog(ied, "[ detenido por el usuario ]");
             LOG.info("Detenido simulador " + ied);
             respond(ex, 200, "application/json", "{\"ok\":true}");
@@ -244,6 +273,40 @@ public class SimulatorLauncher {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Mata cualquier proceso que esté usando el puerto TCP dado.
+     * Usa netstat + ProcessHandle para no depender de taskkill.
+     */
+    static void killProcessOnPort(int port) {
+        try {
+            Process netstat = new ProcessBuilder(
+                "cmd", "/c", "netstat -aon")
+                .redirectErrorStream(true)
+                .start();
+            String out = new String(netstat.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8);
+            netstat.waitFor(3, TimeUnit.SECONDS);
+
+            String target = ":" + port + " ";
+            for (String line : out.split("\r?\n")) {
+                if (!line.contains(target)) continue;
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length < 1) continue;
+                String pidStr = parts[parts.length - 1].trim();
+                try {
+                    long pid = Long.parseLong(pidStr);
+                    if (pid <= 0) continue;
+                    ProcessHandle.of(pid).ifPresent(ph -> {
+                        ph.destroyForcibly();
+                        LOG.info("Proceso huérfano PID=" + pid + " en puerto " + port + " eliminado");
+                    });
+                } catch (NumberFormatException ignored) {}
+            }
+        } catch (Exception e) {
+            LOG.warning("killProcessOnPort(" + port + "): " + e.getMessage());
+        }
+    }
 
     static void drainOutput(String ied, Process p) {
         try (var br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {

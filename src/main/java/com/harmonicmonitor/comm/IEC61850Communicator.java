@@ -7,7 +7,9 @@ import com.harmonicmonitor.model.FeederMeasurement;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,6 +55,7 @@ public class IEC61850Communicator implements ClientEventListener {
     private final AtomicInteger    reconnectAttempts = new AtomicInteger(0);
 
     // --- Referencias DO/DA del MMXU (con prefijo) ---
+
     private String phsAPhVRef;   // p.ej. "cbo2LD0/M03_MMXU1.PhV.phsA"
     private String phsBPhVRef;
     private String phsCPhVRef;
@@ -91,6 +94,20 @@ public class IEC61850Communicator implements ClientEventListener {
     private boolean powerScaleDetected    = false;  // true tras auto-detectar powerScaleFactor
     private final AtomicInteger pendingReconnects = new AtomicInteger(0); // evita tormenta de reconexiones
 
+    // ── Node cache (patrón IEDNavigator nodeMap) ─────────────────────────────
+    // Nodos descubiertos al conectar. Evita llamadas repetidas a findModelNode()
+    // en cada ciclo de polling (~60 búsquedas de árbol → O(1) por ciclo).
+    private static final class NodePair {
+        final FcModelNode parent; // nodo FC=MX para getDataValues() (actualiza todos los DA del DO)
+        final ModelNode   leaf;   // BDA hoja de la cual se extrae el valor float
+        NodePair(FcModelNode parent, ModelNode leaf) {
+            this.parent = parent;
+            this.leaf   = leaf;
+        }
+    }
+    private final Map<String, NodePair>  mxNodeCache = new HashMap<>();
+    private final Map<String, ModelNode> stNodeCache = new HashMap<>();
+
     // Lectura periodica del array HA: cada HARMONICS_READ_EVERY_N ciclos (~30s a 5s/ciclo)
     private static final int HARMONICS_READ_EVERY_N = 6;
     private int    harmonicsPollCounter = HARMONICS_READ_EVERY_N; // primer ciclo lee inmediatamente
@@ -110,6 +127,7 @@ public class IEC61850Communicator implements ClientEventListener {
     public boolean isConnected()               { return state == State.CONNECTED; }
     public FeederConfig getConfig()            { return config; }
     public ServerModel getServerModel()        { return serverModel; }
+    public boolean isHarmonicArrayInModel()    { return harmonicArrayInModel; }
 
     /** Inicia la conexión MMS en un hilo separado para no bloquear la GUI. */
     public void connectAsync() {
@@ -138,6 +156,8 @@ public class IEC61850Communicator implements ClientEventListener {
         }
         if (executor != null) executor.shutdown();
         serverModel = null;
+        mxNodeCache.clear();
+        stNodeCache.clear();
         powerScaleDetected = false;
         setState(State.DISCONNECTED);
         fireEvent(CommEvent.Type.DISCONNECTED, "Desconectado de " + config.getIedHost());
@@ -150,11 +170,8 @@ public class IEC61850Communicator implements ClientEventListener {
     public FeederMeasurement readMeasurement() {
         if (!isConnected() || association == null) return null;
 
-        // Primer ciclo: auto-detectar escala de potencia (conexión ya estable)
-        if (!powerScaleDetected) {
-            autoDetectPowerScale();
-            powerScaleDetected = true;
-        }
+        // Escala de potencia detectada durante Descubrimiento (IEDModelDiscovery).
+        // No se sobreescribe aquí para respetar lo detectado o configurado.
 
         FeederMeasurement m = new FeederMeasurement(config.getFeederId(), config.getIedName());
         final double as  = config.getAnalogScaleFactor(); // 1.0=estándar, 0.0001=ION 7400 (multiplier=-4)
@@ -171,7 +188,7 @@ public class IEC61850Communicator implements ClientEventListener {
             m.setActivePower(readMxFloat(wRef)   * ps);
             m.setReactivePower(readMxFloat(varRef) * ps);
             m.setApparentPower(readMxFloat(vaRef)  * ps);
-            m.setPowerFactor(readMxFloat(pfRef) * pfs);
+            m.setPowerFactor(Math.min(1.0, readMxFloat(pfRef) * pfs));
             m.setFrequency(readMxFloat(hzRef) * as);
             m.setDataValid(true);
             m.setQualityFlag("GOOD");
@@ -458,6 +475,39 @@ public class IEC61850Communicator implements ClientEventListener {
      *   mhaiLn = "MHAI1", msqiLn = "MSQI1", mmtrLn = "MMTR1", mstaLn = "MSTA1"
      */
     private void buildMmxuRefs() {
+        // Limpiar caché de armónicos: al conectar a un nuevo dispositivo los valores
+        // del dispositivo anterior no deben contaminar la lectura del nuevo.
+        cachedHarPhsA = null;
+        cachedHarPhsB = null;
+        cachedHarPhsC = null;
+        harmonicsPollCounter = HARMONICS_READ_EVERY_N; // primer ciclo lee inmediatamente
+        mxNodeCache.clear();
+        stNodeCache.clear();
+
+        // ── Auto-discovery (patrón IEDNavigator ConnectionManager) ────────────
+        // Si mmxuLnRef no está configurado, ejecutar IEDModelDiscovery para encontrar
+        // automáticamente los LN de medición disponibles en el IED conectado.
+        if ((config.getMmxuLnRef() == null || config.getMmxuLnRef().isEmpty()) && serverModel != null) {
+            LOG.info("[" + config.getFeederId() + "] LN refs vacíos — ejecutando auto-discovery...");
+            DiscoveryResult dr = IEDModelDiscovery.discover(serverModel, config);
+            FeederConfig suggested = dr.getSuggestedConfig();
+            if (suggested != null && suggested.getMmxuLnRef() != null && !suggested.getMmxuLnRef().isEmpty()) {
+                config.setLdInst(suggested.getLdInst() != null ? suggested.getLdInst() : config.getLdInst());
+                config.setMmxuPrefix(suggested.getMmxuPrefix() != null ? suggested.getMmxuPrefix() : "");
+                config.setMmxuLnRef(suggested.getMmxuLnRef());
+                config.setMhaiLnRef(suggested.getMhaiLnRef() != null ? suggested.getMhaiLnRef() : "");
+                config.setMsqiLnRef(suggested.getMsqiLnRef() != null ? suggested.getMsqiLnRef() : "");
+                config.setMmtrLnRef(suggested.getMmtrLnRef() != null ? suggested.getMmtrLnRef() : "");
+                config.setMstaLnRef(suggested.getMstaLnRef() != null ? suggested.getMstaLnRef() : "");
+                fireEvent(CommEvent.Type.INFO, "Auto-discovery: " +
+                    config.getMmxuPrefix() + config.getMmxuLnRef() + " @ " + config.getLdInst());
+                LOG.info("[" + config.getFeederId() + "] Auto-discovery OK: " +
+                    config.getMmxuPrefix() + config.getMmxuLnRef() + " @ " + config.getLdInst());
+            } else {
+                LOG.warning("[" + config.getFeederId() + "] Auto-discovery: no se encontró LN de medición");
+            }
+        }
+
         String ld      = config.getLdInst();       // "LD0"
         String iedName = config.getIedName();       // "cbo2"
 
@@ -530,46 +580,120 @@ public class IEC61850Communicator implements ClientEventListener {
         avgVArRef = mstaBase + ".AvVAr";
         avgVARef  = mstaBase + ".AvVA";
 
-        // Array de armonicos HA — ION 7400 usa convencion:
-        //   indice 0 = DC (H0, Float.MAX_VALUE = no aplicable)
-        //   indice 1 = H1 (fundamental, per-unit = 1.0)
-        //   indice 2 = H2 (per-unit respecto al fundamental)
-        //   ...
-        // Por eso mapeamos: haPhsAHarRef[n] -> phsAHar.(n+1), donde n=0 es H1
+        // Array de armonicos HA — indice 0=H1 (fundamental), 1=H2, etc.
+        // Formato por defecto: dot-index base 0 (simulador con count="50" en CID).
+        // Si el IED real usa base 1 (ION 7400), se corrige tras la deteccion.
         for (int h = 0; h < 50; h++) {
-            haPhsAHarRef[h] = mhaiBase + ".HA.phsAHar." + (h + 1);  // h=0 -> H1 (ion index 1)
-            haPhsBHarRef[h] = mhaiBase + ".HA.phsBHar." + (h + 1);
-            haPhsCHarRef[h] = mhaiBase + ".HA.phsCHar." + (h + 1);
+            haPhsAHarRef[h] = mhaiBase + ".HA.phsAHar." + h;
+            haPhsBHarRef[h] = mhaiBase + ".HA.phsBHar." + h;
+            haPhsCHarRef[h] = mhaiBase + ".HA.phsCHar." + h;
         }
 
         // Verificar disponibilidad de MHAI en el modelo
         harmonicsAvailable = (serverModel != null &&
             serverModel.findModelNode(thdAL1Ref, Fc.MX) != null);
 
-        // Verificar si el array HA existe en el modelo y descubrir su estructura real
+        // Verificar si el array de armónicos existe en el modelo y descubrir su estructura real.
+        // Orden de prueba:
+        //   1. HarA.h01  → simulador Android (HAR50_t con DAs únicos h01..h50) — nuevo
+        //   2. HA.phsAHar.0  → simulador antiguo (count="50", base 0)
+        //   3. HA.phsAHar.1  → ION 7400 real (array propietario, base 1)
+        //   4. HA.phsAHar01  → formato zero-padded legacy
         if (serverModel != null && harmonicsAvailable) {
-            // Probar variantes de ruta conocidas para el array de armonicos
             String[] harVariants = {
-                mhaiBase + ".HA.phsAHar.1.cVal.mag.f",    // ION 7400: H1 en indice 1 (0=DC)
-                mhaiBase + ".HA.phsAHar.0.cVal.mag.f",    // alternativa indice 0 directo
-                mhaiBase + ".HA.phsAHar01.cVal.mag.f",    // alternativa con sufijo 01
+                mhaiBase + ".HarA.h01.mag.f",              // HAR50_t con h01..h50 (simulador nuevo)
+                mhaiBase + ".HA.phsAHar.0.cVal.mag.f",    // dot-index base 0 (simulador antiguo)
+                mhaiBase + ".HA.phsAHar.1.cVal.mag.f",    // dot-index base 1 (ION 7400 real)
+                mhaiBase + ".HA.phsAHar01.cVal.mag.f",    // zero-padded legacy
             };
             String workingPattern = null;
             for (String variant : harVariants) {
-                if (serverModel.findModelNode(variant, Fc.MX) != null) {
+                // Try Fc.MX first; fall back to null because sub-BDAs in the
+                // client model (from retrieveModel) may carry no explicit FC.
+                if (serverModel.findModelNode(variant, Fc.MX) != null ||
+                    serverModel.findModelNode(variant, null) != null) {
                     workingPattern = variant;
                     break;
                 }
             }
             harmonicArrayInModel = (workingPattern != null);
-            LOG.info("HA array en modelo: " + harmonicArrayInModel +
+            LOG.info("Harmonicos en modelo: " + harmonicArrayInModel +
                      (workingPattern != null ? "  patron: " + workingPattern : "  (no encontrado)"));
+
+            // Reconstruir refs según el patrón detectado
+            if (workingPattern != null) {
+                if (workingPattern.contains(".HarA.h01.")) {
+                    // HAR50_t nuevo: DAs únicos h01..h50, rutas HarA/HarB/HarC
+                    for (int h = 0; h < 50; h++) {
+                        String hn = String.format(".h%02d", h + 1);
+                        haPhsAHarRef[h] = mhaiBase + ".HarA" + hn;
+                        haPhsBHarRef[h] = mhaiBase + ".HarB" + hn;
+                        haPhsCHarRef[h] = mhaiBase + ".HarC" + hn;
+                    }
+                    LOG.info("Refs HA: HAR50_t h01..h50 (simulador nuevo)");
+                } else if (workingPattern.contains(".phsAHar.1.")) {
+                    // ION 7400 real: base 1
+                    for (int h = 0; h < 50; h++) {
+                        haPhsAHarRef[h] = mhaiBase + ".HA.phsAHar." + (h + 1);
+                        haPhsBHarRef[h] = mhaiBase + ".HA.phsBHar." + (h + 1);
+                        haPhsCHarRef[h] = mhaiBase + ".HA.phsCHar." + (h + 1);
+                    }
+                    LOG.info("Refs HA: dot-index base 1 (ION 7400 real)");
+                } else if (workingPattern.contains(".phsAHar01.")) {
+                    // Legacy zero-padded
+                    for (int h = 0; h < 50; h++) {
+                        haPhsAHarRef[h] = mhaiBase + ".HA.phsAHar" + String.format("%02d", h + 1);
+                        haPhsBHarRef[h] = mhaiBase + ".HA.phsBHar" + String.format("%02d", h + 1);
+                        haPhsCHarRef[h] = mhaiBase + ".HA.phsCHar" + String.format("%02d", h + 1);
+                    }
+                    LOG.info("Refs HA: zero-padded legacy");
+                } else {
+                    // HA.phsAHar base 0 — ya configurado por defecto arriba
+                    LOG.info("Refs HA: dot-index base 0 (simulador antiguo)");
+                }
+            }
 
             // Si no se encontro con variantes conocidas, volcar los primeros DOs de MHAI para diagnostico
             if (!harmonicArrayInModel) {
                 dumpMhaiStructure(mhaiBase);
             }
         }
+
+        // Auto-detectar powerScaleFactor desde TotW.units.multiplier del IED.
+        // Siempre se ejecuta al conectar para no depender de la configuración manual.
+        if (!powerScaleDetected) {
+            autoDetectPowerScale();
+            powerScaleDetected = true;
+        }
+
+        // ── Poblar node cache (patrón IEDNavigator nodeMap) ──────────────────
+        // Construye Map<ref, NodePair> con los nodos del modelo descubiertos una vez,
+        // para evitar findModelNode() en cada ciclo de polling.
+        cacheNodePair(phsAPhVRef); cacheNodePair(phsBPhVRef); cacheNodePair(phsCPhVRef);
+        cacheNodePair(phsAARef);   cacheNodePair(phsBARef);   cacheNodePair(phsCARef);
+        cacheNodePair(wRef);       cacheNodePair(varRef);     cacheNodePair(vaRef);
+        cacheNodePair(pfRef);      cacheNodePair(hzRef);
+        if (harmonicsAvailable) {
+            cacheNodePair(thdAL1Ref);    cacheNodePair(thdAL2Ref);    cacheNodePair(thdAL3Ref);
+            cacheNodePair(thdPpvL12Ref); cacheNodePair(thdPpvL23Ref); cacheNodePair(thdPpvL31Ref);
+            cacheNodePair(kfL1Ref);      cacheNodePair(kfL2Ref);      cacheNodePair(kfL3Ref);
+            cacheNodePair(thdOddAL1Ref); cacheNodePair(thdEvenAL1Ref);
+            cacheNodePair(seqAposRef);   cacheNodePair(seqAnegRef);
+            cacheNodePair(seqVposRef);   cacheNodePair(seqVnegRef);
+            cacheNodePair(avgWRef);      cacheNodePair(maxWRef);      cacheNodePair(minWRef);
+            cacheNodePair(avgVArRef);    cacheNodePair(avgVARef);
+            if (harmonicArrayInModel) {
+                for (int h = 0; h < 50; h++) {
+                    cacheNodePair(haPhsAHarRef[h]);
+                    cacheNodePair(haPhsBHarRef[h]);
+                    cacheNodePair(haPhsCHarRef[h]);
+                }
+            }
+        }
+        cacheStNode(totWhRef);   cacheStNode(totVAhRef);  cacheStNode(totVArhRef);
+        cacheStNode(supWhRef);   cacheStNode(supVArhRef);
+        LOG.info("[" + config.getFeederId() + "] Node cache: " +
+                 mxNodeCache.size() + " nodos MX, " + stNodeCache.size() + " nodos ST");
 
         LOG.info("MMXU base: " + mmxuBase + "  MHAI: " + mhaiBase +
                  "  harmonics=" + harmonicsAvailable +
@@ -578,37 +702,106 @@ public class IEC61850Communicator implements ClientEventListener {
     }
 
     /**
-     * Lee TotW.units.multiplier del modelo para determinar automáticamente powerScaleFactor.
-     *   multiplier == 3  → IED reporta en kW  → ps = 1.0
-     *   multiplier == 0  → IED reporta en W   → ps = 0.001
-     *   otro valor       → deja el valor configurado sin cambios
+     * Descubre y cachea un nodo FC=MX en el modelo.
+     * Soporta WYE/DEL/SEQ (ref.cVal.mag.f) y scalar MV (ref.mag.f).
+     * Si el nodo no existe en el modelo, no se agrega al cache (fallback a slow path).
+     */
+    private void cacheNodePair(String ref) {
+        if (ref == null || serverModel == null) return;
+
+        // Intento 1: WYE/DEL/SEQ sub-element → ref.cVal.mag.f
+        String cValRef = ref + ".cVal.mag.f";
+        ModelNode leaf = serverModel.findModelNode(cValRef, Fc.MX);
+        if (leaf == null) leaf = serverModel.findModelNode(cValRef, null);
+        if (leaf != null) {
+            ModelNode parent = serverModel.findModelNode(ref, Fc.MX);
+            FcModelNode fcParent = (parent instanceof FcModelNode) ? (FcModelNode) parent
+                                 : (leaf   instanceof FcModelNode) ? (FcModelNode) leaf
+                                 : null;
+            if (fcParent != null) mxNodeCache.put(ref, new NodePair(fcParent, leaf));
+            return;
+        }
+
+        // Intento 2: scalar MV → ref.mag.f
+        String magRef = ref + ".mag.f";
+        leaf = serverModel.findModelNode(magRef, Fc.MX);
+        if (leaf == null) leaf = serverModel.findModelNode(magRef, null);
+        if (leaf != null) {
+            ModelNode parent = serverModel.findModelNode(ref, Fc.MX);
+            FcModelNode fcParent = (parent instanceof FcModelNode) ? (FcModelNode) parent
+                                 : (leaf   instanceof FcModelNode) ? (FcModelNode) leaf
+                                 : null;
+            if (fcParent != null) mxNodeCache.put(ref, new NodePair(fcParent, leaf));
+        }
+    }
+
+    /**
+     * Descubre y cachea el nodo actVal (FC=ST, INT64) de un BCR de energía.
+     */
+    private void cacheStNode(String ref) {
+        if (ref == null || serverModel == null) return;
+        ModelNode node = serverModel.findModelNode(ref + ".actVal", Fc.ST);
+        if (node != null) stNodeCache.put(ref, node);
+    }
+
+    /**
+     * Determina automáticamente powerScaleFactor comparando el valor raw de TotW
+     * contra la potencia aparente calculada desde V×I del propio IED.
+     *
+     * Lógica física:
+     *   Si  rawW / (3·V·I)  ≈ FP  (0.01 – 1.10)  → IED reporta en W  → ps = 0.001
+     *   Si  rawW·1000 / (3·V·I) ≈ FP (0.01 – 1.10) → IED reporta en kW → ps = 1.0
+     *
+     * Este método es inmune al valor de TotW.units.multiplier, que iec61850bean
+     * puede rellenar con el valor por defecto (3=kilo) aunque el CID no lo defina.
      */
     private void autoDetectPowerScale() {
-        if (serverModel == null || wRef == null) return;
-        String multRef = wRef + ".units.multiplier";
-        for (Fc fc : new Fc[]{Fc.CF, Fc.EX, Fc.MX}) {
-            try {
-                ModelNode multNode = serverModel.findModelNode(multRef, fc);
-                if (multNode instanceof FcModelNode) {
-                    association.getDataValues((FcModelNode) multNode);
-                    if (multNode instanceof BdaInt8) {
-                        byte mult = ((BdaInt8) multNode).getValue();
-                        LOG.info("[" + config.getFeederId() + "] TotW.units.multiplier=" + mult + " (FC=" + fc + ")");
-                        if (mult == 3) {
-                            config.setPowerScaleFactor(1.0);
-                            LOG.info("[" + config.getFeederId() + "] Auto-detect: powerScaleFactor=1.0 (IED reporta kW)");
-                        } else if (mult == 0) {
-                            config.setPowerScaleFactor(0.001);
-                            LOG.info("[" + config.getFeederId() + "] Auto-detect: powerScaleFactor=0.001 (IED reporta W)");
-                        } else {
-                            LOG.info("[" + config.getFeederId() + "] Auto-detect: multiplier=" + mult + " no reconocido, manteniendo ps=" + config.getPowerScaleFactor());
-                        }
-                        return;
-                    }
+        if (serverModel == null || wRef == null
+                || phsAPhVRef == null || phsAARef == null) return;
+        try {
+            float rawW = readMxFloat(wRef);
+            float vPhsA = readMxFloat(phsAPhVRef);
+            float iPhsA = readMxFloat(phsAARef);
+
+            if (rawW <= 0 || vPhsA <= 0 || iPhsA <= 0) {
+                config.setPowerScaleFactor(0.001);
+                LOG.info("[" + config.getFeederId() + "] Auto-detect: valores nulos → ps=0.001 (fallback)");
+                return;
+            }
+
+            double sApparent = 3.0 * vPhsA * iPhsA;   // VA estimados
+            double ratioIfW  = rawW / sApparent;        // ≈ FP si rawW está en W
+            double ratioIfKW = rawW * 1000.0 / sApparent; // ≈ FP si rawW está en kW
+
+            LOG.info(String.format("[%s] Auto-detect sanity: rawW=%.1f V=%.1f I=%.1f S=%.1f ratioW=%.4f ratioKW=%.4f",
+                    config.getFeederId(), rawW, vPhsA, iPhsA, sApparent, ratioIfW, ratioIfKW));
+
+            // FP razonable: [0.01, 1.10]
+            boolean wPlausible  = ratioIfW  >= 0.01 && ratioIfW  <= 1.10;
+            boolean kwPlausible = ratioIfKW >= 0.01 && ratioIfKW <= 1.10;
+
+            if (wPlausible && !kwPlausible) {
+                config.setPowerScaleFactor(0.001);
+                LOG.info("[" + config.getFeederId() + "] Auto-detect: IED reporta W → ps=0.001");
+            } else if (kwPlausible && !wPlausible) {
+                config.setPowerScaleFactor(1.0);
+                LOG.info("[" + config.getFeederId() + "] Auto-detect: IED reporta kW → ps=1.0");
+            } else {
+                // Ambiguo: elegir el ratio más cercano a un FP típico (0.85)
+                double diffW  = Math.abs(ratioIfW  - 0.85);
+                double diffKW = Math.abs(ratioIfKW - 0.85);
+                if (diffW <= diffKW) {
+                    config.setPowerScaleFactor(0.001);
+                    LOG.info("[" + config.getFeederId() + "] Auto-detect (ambiguo, mejor W): ps=0.001");
+                } else {
+                    config.setPowerScaleFactor(1.0);
+                    LOG.info("[" + config.getFeederId() + "] Auto-detect (ambiguo, mejor kW): ps=1.0");
                 }
-            } catch (Exception ignored) {}
+            }
+        } catch (Exception e) {
+            config.setPowerScaleFactor(0.001);
+            LOG.info("[" + config.getFeederId() + "] Auto-detect error: " + e.getMessage() + " → ps=0.001");
         }
-        LOG.info("[" + config.getFeederId() + "] TotW.units.multiplier no disponible, ps=" + config.getPowerScaleFactor());
     }
 
     /**
@@ -639,10 +832,27 @@ public class IEC61850Communicator implements ClientEventListener {
         if (association == null || serverModel == null)
             throw new IOException("Conexión cerrada durante la lectura");
 
+        // Fast path: nodo ya cacheado desde buildMmxuRefs() (patrón IEDNavigator nodeMap)
+        NodePair pair = mxNodeCache.get(ref);
+        if (pair != null) {
+            try {
+                association.getDataValues(pair.parent);
+            } catch (ServiceError se) {
+                // Fallback: leer hoja directamente si el padre falla
+                if (pair.leaf instanceof FcModelNode)
+                    association.getDataValues((FcModelNode) pair.leaf);
+            }
+            if (pair.leaf instanceof BdaFloat32) return ((BdaFloat32) pair.leaf).getFloat();
+            if (pair.leaf instanceof BdaFloat64) return (float)((double) ((BdaFloat64) pair.leaf).getDouble());
+            return 0.0f;
+        }
+
+        // Slow path: nodo no cacheado (primera lectura o ref dinámica)
         // Caso 1: WYE/DEL/SEQ sub-element → ref = "...LN.DO.phsX"
         // Detectar si existe cVal.mag.f bajo este nodo
         String cValMagFRef = ref + ".cVal.mag.f";
         ModelNode cValMagF = serverModel.findModelNode(cValMagFRef, Fc.MX);
+        if (cValMagF == null) cValMagF = serverModel.findModelNode(cValMagFRef, null);
         if (cValMagF != null) {
             // Leer al nivel del nodo CMV/SEQ (ref = phsX) para actualizar cVal, q, t a la vez
             ModelNode phsNode = serverModel.findModelNode(ref, Fc.MX);
@@ -664,9 +874,10 @@ public class IEC61850Communicator implements ClientEventListener {
         }
 
         // Caso 2: Scalar MV → ref = "...LN.DO" (Hz, TotW, TotPF, AvW, etc.)
-        // Detectar si existe mag.f bajo este nodo
+        // Also handles HAR50_t DAs: HarA.h01 → h01 has fc=MX but BDA f has no explicit FC.
         String magFRef = ref + ".mag.f";
         ModelNode magF = serverModel.findModelNode(magFRef, Fc.MX);
+        if (magF == null) magF = serverModel.findModelNode(magFRef, null);
         if (magF != null) {
             // Leer al nivel del DO MV para actualizar mag, q, t a la vez
             ModelNode mvNode = serverModel.findModelNode(ref, Fc.MX);
@@ -695,6 +906,17 @@ public class IEC61850Communicator implements ClientEventListener {
      */
     private long readStInt64(String ref) throws ServiceError, IOException {
         if (ref == null || association == null || serverModel == null) return 0L;
+
+        // Fast path: nodo ya cacheado desde buildMmxuRefs()
+        ModelNode cached = stNodeCache.get(ref);
+        if (cached instanceof FcModelNode) {
+            association.getDataValues((FcModelNode) cached);
+            if (cached instanceof BdaInt64) return ((BdaInt64) cached).getValue();
+            if (cached instanceof BdaInt32) return ((BdaInt32) cached).getValue();
+            return 0L;
+        }
+
+        // Slow path: buscar en modelo (ref no cacheada)
         String actValRef = ref + ".actVal";
         ModelNode node = serverModel.findModelNode(actValRef, Fc.ST);
         if (node instanceof FcModelNode) {

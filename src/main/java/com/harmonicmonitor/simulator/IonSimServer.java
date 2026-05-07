@@ -31,6 +31,8 @@ public class IonSimServer {
     private float  noiseFactor;   // e.g. 0.03 = ±3 %
     private String cidPath;       // guardado para recargar perfil en caliente
 
+    private volatile boolean setValuesWarnedOnce = false; // evitar spam en log
+
     // Perfil cargado (volatile para cambio desde hilo stdin)
     private volatile Profile profile;
 
@@ -195,15 +197,17 @@ public class IonSimServer {
         setMx(mhai + "ThdOddA.phsA.cVal.mag.f", n(profile.thdOddA), changed);
         setMx(mhai + "ThdEvnA.phsA.cVal.mag.f", n(profile.thdEvnA), changed);
 
-        // ── MHAI: espectro armónico ───────────────────────────────────────
+        // ── MHAI: espectro armónico HarA/HarB/HarC (HAR50_t, DAs únicos h01..h50) ─
+        // h01=H1 (fundamental), h02=H2, ..., h50=H50
+        // Ruta: MHAI1.HarA.h03.mag.f  (H3 fase A)
         for (int k = 1; k <= 50; k++) {
-            String suf = String.format("%02d", k);
+            String hn = String.format("h%02d", k);
             float ha = k <= profile.harA.length ? profile.harA[k - 1] : 0f;
             float hb = k <= profile.harB.length ? profile.harB[k - 1] : 0f;
             float hc = k <= profile.harC.length ? profile.harC[k - 1] : 0f;
-            setMx(mhai + "HA.phsAHar" + suf + ".cVal.mag.f", n(ha), changed);
-            setMx(mhai + "HA.phsBHar" + suf + ".cVal.mag.f", n(hb), changed);
-            setMx(mhai + "HA.phsCHar" + suf + ".cVal.mag.f", n(hc), changed);
+            setMx(mhai + "HarA." + hn + ".mag.f", n(ha), changed);
+            setMx(mhai + "HarB." + hn + ".mag.f", n(hb), changed);
+            setMx(mhai + "HarC." + hn + ".mag.f", n(hc), changed);
         }
 
         // ── MSQI: componentes simétricas ──────────────────────────────────
@@ -244,7 +248,14 @@ public class IonSimServer {
             try {
                 serverSap.setValues(changed);
             } catch (Exception e) {
-                LOG.warning("setValues error: " + e.getMessage());
+                // En CIDs sin ReportControl, bdaMirror=null causa esta excepcion.
+                // Los valores escritos con setFloat() siguen siendo servidos a clientes
+                // MMS en respuesta a GetDataValues (iec61850bean lee del modelo directamente).
+                if (!setValuesWarnedOnce) {
+                    LOG.warning("setValues: " + e.getMessage() +
+                        " — sin ReportControl en CID; valores siguen siendo legibles por polling");
+                    setValuesWarnedOnce = true;
+                }
             }
         }
     }
@@ -305,10 +316,15 @@ public class IonSimServer {
     private Profile loadProfile(String cidPath, String profileName) throws IOException {
         String fileName = profileName + ".json";
 
-        // Candidatos de ruta
+        // Candidatos de ruta (de más a menos específico)
         List<Path> candidates = new ArrayList<>();
+        // 1. Relativo al cwd estándar: HarmonicMonitor/simulator/templates/
         candidates.add(Path.of("simulator", "templates", fileName));
-        candidates.add(Path.of(cidPath).getParent().resolve("templates").resolve(fileName));
+        // 2. Relativo al directorio del CID (funciona cuando cidPath es absoluto)
+        candidates.add(Path.of(cidPath).toAbsolutePath().getParent().resolve("templates").resolve(fileName));
+        // 3. Relativo al directorio de trabajo del proceso (explícito)
+        candidates.add(Path.of(System.getProperty("user.dir"),
+                "simulator", "templates", fileName));
 
         String json = null;
         for (Path p : candidates) {
@@ -320,8 +336,13 @@ public class IonSimServer {
         }
 
         if (json == null) {
-            LOG.warning("No se encontró " + fileName + " — usando perfil crypto_mining embebido");
-            json = FALLBACK_CRYPTO_JSON;
+            // Fallback: usar perfil embebido en el código (no depende del sistema de archivos)
+            json = EMBEDDED_PROFILES.getOrDefault(profileName, FALLBACK_CRYPTO_JSON);
+            if (EMBEDDED_PROFILES.containsKey(profileName)) {
+                LOG.info("Archivo no encontrado — usando perfil embebido: " + profileName);
+            } else {
+                LOG.warning("No se encontró perfil '" + profileName + "' (ni archivo ni embebido) — usando crypto_mining");
+            }
         }
 
         return parseProfileJson(json);
@@ -436,4 +457,119 @@ public class IonSimServer {
         "\"seqAPos\":170.0,\"seqANeg\":1.0,\"seqAZero\":0.2,\"seqVPos\":13280.0,\"seqVNeg\":55.0," +
         "\"totWh\":35000000,\"totVAh\":35540000,\"totVArh\":6100000,\"supWh\":31500000,\"supVArh\":5500000," +
         "\"avW\":6671208.0,\"maxW\":7000000.0,\"minW\":6400000.0,\"avVAr\":1167124.0,\"avVA\":6772800.0}";
+
+    // Sufijo de 37 ceros para arrays armónicos de 50 elementos
+    private static final String H0 =
+        ",0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0" +
+        ",0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0" +
+        ",0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]";
+
+    /** Todos los perfiles embebidos — sin dependencia del sistema de archivos. */
+    private static final Map<String, String> EMBEDDED_PROFILES;
+    static {
+        Map<String, String> m = new HashMap<>();
+
+        // normal_load: I=10A, FP=0.98, THD=5%
+        String h_normal = "[1.0,0.005,0.030,0.004,0.040,0.003,0.020,0.002,0.010,0.002,0.008,0.002,0.006" + H0;
+        m.put("normal_load",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":10.0,\"aL2\":10.0,\"aL3\":10.0," +
+            "\"totW\":390432.0,\"totVAr\":79282.0,\"totVA\":398400.0,\"totPF\":0.98,\"hz\":50.0," +
+            "\"thdAL1\":5.0,\"thdAL2\":5.0,\"thdAL3\":5.0," +
+            "\"thdPpvL12\":2.5,\"thdPpvL23\":2.5,\"thdPpvL31\":2.5," +
+            "\"hKfL1\":1.2,\"hKfL2\":1.2,\"hKfL3\":1.2,\"thdOddA\":4.8,\"thdEvnA\":0.8," +
+            "\"harA\":" + h_normal + ",\"harB\":" + h_normal + ",\"harC\":" + h_normal + "," +
+            "\"seqAPos\":10.0,\"seqANeg\":0.1,\"seqAZero\":0.05,\"seqVPos\":13280.0,\"seqVNeg\":40.0," +
+            "\"totWh\":1000000,\"totVAh\":1020000,\"totVArh\":160000,\"supWh\":900000,\"supVArh\":145000," +
+            "\"avW\":390432.0,\"maxW\":410000.0,\"minW\":370000.0,\"avVAr\":79282.0,\"avVA\":398400.0}");
+
+        // linear_load: I=90A, FP=0.85, THD=4%
+        String h_linear = "[1.0,0.0,0.010,0.0,0.030,0.0,0.020,0.0,0.005,0.0,0.010,0.0,0.005" + H0;
+        m.put("linear_load",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":90.0,\"aL2\":90.0,\"aL3\":90.0," +
+            "\"totW\":3047760.0,\"totVAr\":1888661.0,\"totVA\":3585600.0,\"totPF\":0.85,\"hz\":50.0," +
+            "\"thdAL1\":4.0,\"thdAL2\":4.0,\"thdAL3\":4.0," +
+            "\"thdPpvL12\":2.0,\"thdPpvL23\":2.0,\"thdPpvL31\":2.0," +
+            "\"hKfL1\":1.1,\"hKfL2\":1.1,\"hKfL3\":1.1,\"thdOddA\":3.8,\"thdEvnA\":0.5," +
+            "\"harA\":" + h_linear + ",\"harB\":" + h_linear + ",\"harC\":" + h_linear + "," +
+            "\"seqAPos\":90.0,\"seqANeg\":0.9,\"seqAZero\":0.2,\"seqVPos\":13280.0,\"seqVNeg\":45.0," +
+            "\"totWh\":10000000,\"totVAh\":11760000,\"totVArh\":6200000,\"supWh\":9000000,\"supVArh\":5600000," +
+            "\"avW\":3047760.0,\"maxW\":3200000.0,\"minW\":2900000.0,\"avVAr\":1888661.0,\"avVA\":3585600.0}");
+
+        // lighting: I=60A, FP=0.85, THD=12% (LED masiva, H3 dominante)
+        String h_light = "[1.0,0.0,0.400,0.0,0.060,0.0,0.030,0.0,0.020,0.0,0.015,0.0,0.010" + H0;
+        m.put("lighting",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":60.0,\"aL2\":60.0,\"aL3\":60.0," +
+            "\"totW\":2031840.0,\"totVAr\":1259031.0,\"totVA\":2390400.0,\"totPF\":0.85,\"hz\":50.0," +
+            "\"thdAL1\":12.0,\"thdAL2\":12.0,\"thdAL3\":12.0," +
+            "\"thdPpvL12\":2.5,\"thdPpvL23\":2.5,\"thdPpvL31\":2.5," +
+            "\"hKfL1\":1.5,\"hKfL2\":1.5,\"hKfL3\":1.5,\"thdOddA\":11.8,\"thdEvnA\":0.8," +
+            "\"harA\":" + h_light + ",\"harB\":" + h_light + ",\"harC\":" + h_light + "," +
+            "\"seqAPos\":60.0,\"seqANeg\":0.6,\"seqAZero\":3.5,\"seqVPos\":13280.0,\"seqVNeg\":45.0," +
+            "\"totWh\":6000000,\"totVAh\":7060000,\"totVArh\":4130000,\"supWh\":5400000,\"supVArh\":3720000," +
+            "\"avW\":2031840.0,\"maxW\":2200000.0,\"minW\":1900000.0,\"avVAr\":1259031.0,\"avVA\":2390400.0}");
+
+        // electronic_light: I=80A, FP=0.88, THD=10% (UPS/cargadores)
+        String h_elec = "[1.0,0.0,0.150,0.0,0.100,0.0,0.040,0.0,0.020,0.0,0.010,0.0,0.005" + H0;
+        m.put("electronic_light",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":80.0,\"aL2\":80.0,\"aL3\":80.0," +
+            "\"totW\":2804736.0,\"totVAr\":1513920.0,\"totVA\":3187200.0,\"totPF\":0.88,\"hz\":50.0," +
+            "\"thdAL1\":10.0,\"thdAL2\":10.0,\"thdAL3\":10.0," +
+            "\"thdPpvL12\":2.8,\"thdPpvL23\":2.8,\"thdPpvL31\":2.8," +
+            "\"hKfL1\":1.5,\"hKfL2\":1.5,\"hKfL3\":1.5,\"thdOddA\":9.8,\"thdEvnA\":0.9," +
+            "\"harA\":" + h_elec + ",\"harB\":" + h_elec + ",\"harC\":" + h_elec + "," +
+            "\"seqAPos\":80.0,\"seqANeg\":0.8,\"seqAZero\":1.2,\"seqVPos\":13280.0,\"seqVNeg\":50.0," +
+            "\"totWh\":8000000,\"totVAh\":9090000,\"totVArh\":4320000,\"supWh\":7200000,\"supVArh\":3890000," +
+            "\"avW\":2804736.0,\"maxW\":2950000.0,\"minW\":2650000.0,\"avVAr\":1513920.0,\"avVA\":3187200.0}");
+
+        // industrial: I=130A, FP=0.93, THD=26% (VFD 6 pulsos)
+        String h_ind = "[1.0,0.0,0.020,0.0,0.250,0.0,0.110,0.0,0.010,0.0,0.090,0.0,0.080" + H0;
+        m.put("industrial",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":130.0,\"aL2\":130.0,\"aL3\":130.0," +
+            "\"totW\":4816656.0,\"totVAr\":1903356.0,\"totVA\":5179200.0,\"totPF\":0.93,\"hz\":50.0," +
+            "\"thdAL1\":26.0,\"thdAL2\":26.0,\"thdAL3\":26.0," +
+            "\"thdPpvL12\":4.2,\"thdPpvL23\":4.2,\"thdPpvL31\":4.2," +
+            "\"hKfL1\":4.8,\"hKfL2\":4.8,\"hKfL3\":4.8,\"thdOddA\":25.5,\"thdEvnA\":1.8," +
+            "\"harA\":" + h_ind + ",\"harB\":" + h_ind + ",\"harC\":" + h_ind + "," +
+            "\"seqAPos\":130.0,\"seqANeg\":1.3,\"seqAZero\":0.4,\"seqVPos\":13280.0,\"seqVNeg\":80.0," +
+            "\"totWh\":20000000,\"totVAh\":21500000,\"totVArh\":7900000,\"supWh\":18000000,\"supVArh\":7100000," +
+            "\"avW\":4816656.0,\"maxW\":5100000.0,\"minW\":4500000.0,\"avVAr\":1903356.0,\"avVA\":5179200.0}");
+
+        // data_center: I=150A, FP=0.88, THD=20% (PFC parcial)
+        String h_dc = "[1.0,0.0,0.050,0.0,0.280,0.0,0.180,0.0,0.060,0.0,0.040,0.0,0.020" + H0;
+        m.put("data_center",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":150.0,\"aL2\":150.0,\"aL3\":150.0," +
+            "\"totW\":5258880.0,\"totVAr\":2838600.0,\"totVA\":5976000.0,\"totPF\":0.88,\"hz\":50.0," +
+            "\"thdAL1\":20.0,\"thdAL2\":20.0,\"thdAL3\":20.0," +
+            "\"thdPpvL12\":3.8,\"thdPpvL23\":3.8,\"thdPpvL31\":3.8," +
+            "\"hKfL1\":4.6,\"hKfL2\":4.6,\"hKfL3\":4.6,\"thdOddA\":19.5,\"thdEvnA\":1.5," +
+            "\"harA\":" + h_dc + ",\"harB\":" + h_dc + ",\"harC\":" + h_dc + "," +
+            "\"seqAPos\":150.0,\"seqANeg\":0.8,\"seqAZero\":0.2,\"seqVPos\":13280.0,\"seqVNeg\":45.0," +
+            "\"totWh\":25000000,\"totVAh\":28400000,\"totVArh\":13500000,\"supWh\":22500000,\"supVArh\":12000000," +
+            "\"avW\":5258880.0,\"maxW\":5500000.0,\"minW\":5000000.0,\"avVAr\":2838600.0,\"avVA\":5976000.0}");
+
+        // mixed_electronic: I=100A, FP=0.91, THD=7% (comercial)
+        String h_mix = "[1.0,0.0,0.120,0.0,0.060,0.0,0.040,0.0,0.015,0.0,0.010,0.0,0.005" + H0;
+        m.put("mixed_electronic",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":100.0,\"aL2\":100.0,\"aL3\":100.0," +
+            "\"totW\":3625440.0,\"totVAr\":1651598.0,\"totVA\":3984000.0,\"totPF\":0.91,\"hz\":50.0," +
+            "\"thdAL1\":7.0,\"thdAL2\":7.0,\"thdAL3\":7.0," +
+            "\"thdPpvL12\":2.2,\"thdPpvL23\":2.2,\"thdPpvL31\":2.2," +
+            "\"hKfL1\":1.3,\"hKfL2\":1.3,\"hKfL3\":1.3,\"thdOddA\":6.8,\"thdEvnA\":0.7," +
+            "\"harA\":" + h_mix + ",\"harB\":" + h_mix + ",\"harC\":" + h_mix + "," +
+            "\"seqAPos\":100.0,\"seqANeg\":1.0,\"seqAZero\":0.8,\"seqVPos\":13280.0,\"seqVNeg\":50.0," +
+            "\"totWh\":12000000,\"totVAh\":13190000,\"totVArh\":5460000,\"supWh\":10800000,\"supVArh\":4910000," +
+            "\"avW\":3625440.0,\"maxW\":3800000.0,\"minW\":3400000.0,\"avVAr\":1651598.0,\"avVA\":3984000.0}");
+
+        // crypto_mining apunta al fallback existente
+        m.put("crypto_mining", FALLBACK_CRYPTO_JSON);
+
+        EMBEDDED_PROFILES = Collections.unmodifiableMap(m);
+    }
 }

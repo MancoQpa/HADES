@@ -327,6 +327,9 @@ public class MultiFeederMonitorPanel {
             default:           led = "DISCONNECTED"; break;
         }
         row.setConnLed(led);
+        if (state == IEC61850Communicator.State.DISCONNECTED || state == IEC61850Communicator.State.ERROR) {
+            row.clear();
+        }
         table.refresh();
     }
 
@@ -375,12 +378,24 @@ public class MultiFeederMonitorPanel {
             this.alarmCount = 0;
         }
 
+        public void clear() {
+            this.voltageKv     = "—";
+            this.currentA      = "—";
+            this.activePower   = "—";
+            this.reactivePower = "—";
+            this.powerFactor   = "—";
+            this.thdi          = "—";
+            this.thdv          = "—";
+            this.loadType      = "—";
+            this.status        = "● ESPERANDO";
+        }
+
         public void update(FeederMeasurement m, int alarms) {
             this.voltageKv      = String.format("%.3f", m.getVoltageAvg() / 1000.0);
             this.currentA       = String.format("%.1f", m.getCurrentAvg());
             this.activePower    = String.format("%.0f", m.getActivePower());
             this.reactivePower  = String.format("%.0f", m.getReactivePower());
-            this.powerFactor    = String.format("%.3f", m.getPowerFactor());
+            this.powerFactor    = String.format("%.3f", Math.min(1.0, Math.max(-1.0, m.getPowerFactor())));
             this.thdi           = String.format("%.1f", m.getThdCurrentAvg());
             this.thdv           = String.format("%.1f", m.getThdVoltageAvg());
             this.loadType       = m.getDetectedLoadType().getDisplayName();

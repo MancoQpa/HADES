@@ -155,159 +155,65 @@
 
     <!-- DPL: device name plate (not used, replaced by SPS placeholder) -->
 
-    <!-- HA: harmonic array — ION 7400 vendor extension
-         phsAHar01..50, phsBHar01..50, phsCHar01..50 -->
-    <DOType id="HA_t" cdc="WYE">
-      <DA name="phsAHar01" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar02" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar03" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar04" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar05" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar06" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar07" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar08" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar09" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar10" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar11" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar12" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar13" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar14" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar15" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar16" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar17" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar18" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar19" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar20" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar21" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar22" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar23" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar24" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar25" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar26" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar27" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar28" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar29" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar30" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar31" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar32" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar33" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar34" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar35" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar36" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar37" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar38" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar39" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar40" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar41" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar42" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar43" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar44" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar45" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar46" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar47" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar48" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar49" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsAHar50" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar01" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar02" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar03" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar04" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar05" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar06" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar07" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar08" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar09" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar10" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar11" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar12" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar13" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar14" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar15" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar16" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar17" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar18" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar19" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar20" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar21" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar22" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar23" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar24" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar25" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar26" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar27" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar28" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar29" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar30" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar31" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar32" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar33" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar34" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar35" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar36" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar37" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar38" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar39" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar40" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar41" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar42" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar43" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar44" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar45" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar46" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar47" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar48" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar49" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsBHar50" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar01" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar02" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar03" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar04" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar05" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar06" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar07" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar08" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar09" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar10" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar11" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar12" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar13" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar14" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar15" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar16" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar17" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar18" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar19" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar20" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar21" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar22" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar23" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar24" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar25" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar26" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar27" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar28" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar29" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar30" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar31" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar32" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar33" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar34" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar35" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar36" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar37" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar38" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar39" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar40" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar41" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar42" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar43" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar44" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar45" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar46" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar47" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar48" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar49" bType="Struct" type="CMV_t" fc="MX"/>
-      <DA name="phsCHar50" bType="Struct" type="CMV_t" fc="MX"/>
+    <!-- MagF: magnitud escalar (sin ángulo) — para espectro armónico -->
+    <DAType id="MagF_t">
+      <BDA name="mag" bType="Struct" type="AnVal_t"/>
+    </DAType>
+
+    <!-- HAR50: espectro armónico con 50 componentes de nombre único h01..h50.
+         Ruta de acceso: MHAI1.HarA.h03.mag.f (H3 fase A), etc.
+         Índice: h01=H1 (fundamental), h02=H2, ..., h50=H50. -->
+    <DOType id="HAR50_t" cdc="MV">
+      <DA name="h01" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h02" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h03" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h04" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h05" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h06" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h07" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h08" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h09" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h10" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h11" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h12" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h13" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h14" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h15" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h16" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h17" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h18" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h19" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h20" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h21" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h22" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h23" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h24" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h25" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h26" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h27" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h28" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h29" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h30" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h31" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h32" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h33" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h34" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h35" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h36" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h37" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h38" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h39" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h40" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h41" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h42" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h43" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h44" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h45" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h46" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h47" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h48" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h49" bType="Struct" type="MagF_t" fc="MX"/>
+      <DA name="h50" bType="Struct" type="MagF_t" fc="MX"/>
     </DOType>
 
     <!-- ═══════════════════════════════════════════════════════════════
@@ -343,7 +249,9 @@
       <DO name="HKf"     type="WYE_t"/>
       <DO name="ThdOddA" type="WYE_t"/>
       <DO name="ThdEvnA" type="WYE_t"/>
-      <DO name="HA"      type="HA_t"/>
+      <DO name="HarA"    type="HAR50_t"/>
+      <DO name="HarB"    type="HAR50_t"/>
+      <DO name="HarC"    type="HAR50_t"/>
     </LNodeType>
 
     <!-- MSQI: symmetrical components -->

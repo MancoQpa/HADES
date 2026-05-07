@@ -17,16 +17,41 @@ if defined JAVA_HOME set JAVA_CMD="%JAVA_HOME%\bin\java"
 pushd %~dp0\..
 
 if not exist classes\com\harmonicmonitor\simulator\SimulatorLauncher.class (
-    echo [ERROR] Clases no encontradas. Ejecute primero:
-    echo         powershell -ExecutionPolicy Bypass -File compile_ps2.ps1
+    echo.
+    echo [ERROR] Clases no encontradas. Ejecute primero compile_ci.bat
+    echo.
     popd
     pause
     exit /b 1
 )
 
-echo HADES - Simulador ION 7400
-echo Iniciando Dashboard Launcher en http://localhost:8765 ...
+:: Verificar si el puerto 8765 ya esta en uso
+netstat -ano | findstr ":8765 " >nul 2>&1
+if %errorlevel% equ 0 (
+    echo.
+    echo [AVISO] El puerto 8765 ya esta en uso. Abriendo dashboard existente...
+    start "" "http://localhost:8765"
+    popd
+    pause
+    exit /b 0
+)
+
+echo.
+echo  HADES - Simulador ION 7400
+echo  Iniciando Dashboard Launcher en http://localhost:8765 ...
+echo  Cierre esta ventana para detener todos los simuladores.
+echo.
+
 %JAVA_CMD% -cp "classes;lib/*" com.harmonicmonitor.simulator.SimulatorLauncher
+set EXIT_CODE=%errorlevel%
+
+echo.
+if %EXIT_CODE% neq 0 (
+    echo [ERROR] El servidor termino con codigo %EXIT_CODE%
+) else (
+    echo [INFO] Servidor detenido correctamente.
+)
 
 popd
 endlocal
+pause
