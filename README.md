@@ -2,8 +2,11 @@
 
 **H**armonic **A**nalysis for **D**etection of **E**lectronic **S**ignatures
 
-Herramienta de escritorio Java/JavaFX para monitoreo de calidad de energía en alimentadores de media tensión (23 kV) mediante el protocolo **IEC 61850**.
-Detecta automáticamente cargas electrónicas no lineales (cripto-minería, centros de datos, variadores de velocidad) a partir del análisis espectral de armónicos de corriente.
+Herramienta de escritorio Java/JavaFX para **caracterización espectral de calidad de energía** en alimentadores de media tensión (23 kV) mediante el protocolo **IEC 61850**.
+
+Registra el espectro armónico H1–H50, THD de tensión y corriente, secuencias simétricas y potencia activa/reactiva/aparente a través de medidores compatibles (ION 7400 y similares). Incluye un clasificador de firma espectral basado en umbrales de referencia bibliográfica (IEEE 519-2022, IEC 61000-3-6, IEC 61000-3-12) como apoyo a la interpretación técnica de la carga — no como diagnóstico autónomo.
+
+> **Nota de alcance**: la clasificación de firma espectral es orientativa. Requiere que la carga de interés sea dominante en el alimentador (>~80% de la demanda total) para que su firma no quede enmascarada por la mezcla de cargas. Los umbrales de clasificación provienen de referencias bibliográficas estándar y de la teoría de rectificadores; no han sido validados con una campaña de medición en campo en condiciones de régimen normal.
 
 De uso libre bajo licencia GPL v3.
 
@@ -22,11 +25,13 @@ Desarrollado por **Emilio Medina**.
 - Energía activa, reactiva y aparente (BCR, FC=ST)
 - Demanda máxima y factor de potencia
 
-### Detección de carga electrónica
-- Árbol de decisión basado en: coeficiente de variación de corriente (CV = σ/μ), THD_I, H5/H1, H7/H1
-- Perfiles identificados: cripto-minería, centro de datos, variador de velocidad, iluminación electrónica, carga lineal
-- Nivel de confianza por clasificación
-- Análisis de resonancia (frecuencia de resonancia LC)
+### Clasificación de firma espectral
+- Árbol de decisión multivariable: CV = σ(I)/μ(I), THD_I, H5/H1, H7/H1, H11/H1, FP
+- Patrones de referencia (basados en bibliografía, no validados en campo):
+  - Carga lineal, iluminación electrónica, SMPS alta densidad (cripto/HPC), rectificador 6-pulsos
+- Índice de electrónica 0–100 (score compuesto)
+- Análisis de resonancia LC por feeder (frecuencia f = 1/2π√LC)
+- **Validez**: resultado confiable solo si la carga clasificada es dominante en el feeder
 
 ### Multi-alimentador
 - Monitoreo simultáneo de hasta N alimentadores

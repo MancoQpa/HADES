@@ -1,17 +1,22 @@
 HADES v1.0
 Harmonic Analysis for Detection of Electronic Signatures
 
-Monitoreo en tiempo real de feeders de 23 kV mediante análisis de firmas
-de energía y comunicaciones IEC 61850 para detección de cargas electrointensivas.
+Herramienta de caracterización espectral de calidad de energía en
+alimentadores MT 23 kV mediante el protocolo IEC 61850.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PROPÓSITO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Detectar y cuantificar la presencia de cargas electrointensivas no lineales
-en redes de distribución MT 23 kV (ANDE — Administración Nacional
-de Electricidad, Paraguay), evaluando el impacto en la calidad de energía
-y generando registros normativos de perturbaciones.
+Registrar el espectro armónico H1-H50, THD, secuencias simétricas y
+potencia en alimentadores de distribución MT 23 kV (ANDE, Paraguay)
+mediante IEDs IEC 61850. Apoya la evaluación de calidad de energía,
+la generación de registros COMTRADE y la identificación de patrones
+espectrales de carga con fines de caracterización técnica.
+
+El módulo de clasificación de firma espectral aplica umbrales de
+referencia bibliográfica como apoyo a la interpretación técnica;
+no constituye un diagnóstico autónomo certificado bajo IEC 61000-4-30.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EQUIPO
@@ -30,7 +35,7 @@ CARACTERÍSTICAS PRINCIPALES
 
   • Monitoreo en tiempo real vía IEC 61850 MMS (ION 7400 y otros IEDs)
   • Análisis armónico H1-H50 con espectro completo por fase
-  • Detección automática de 6 tipos de carga electrointensiva
+  • Clasificación de firma espectral (6 patrones de referencia bibliográfica)
   • Motor de alarmas de 4 niveles (WARNING/PQ_RISK/CRITICAL/DETECTION)
   • Análisis de resonancia LC por feeder
   • Evaluación de cumplimiento normativo (IEC 61000, IEEE 519, EN 50160)

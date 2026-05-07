@@ -1,7 +1,34 @@
-DETECCIÓN DE CARGAS ELECTRÓNICAS
+CLASIFICACIÓN DE FIRMA ESPECTRAL DE CARGA
 
-El módulo ElectronicLoadDetector clasifica automáticamente el tipo de carga
-usando análisis multivariable de señales armónicas: CV, THDi, THDv, H5/H1, H7/H1, FP.
+El módulo ElectronicLoadDetector aplica un árbol de decisión multivariable
+sobre señales armónicas (CV, THDi, THDv, H5/H1, H7/H1, FP) para identificar
+el patrón espectral predominante en el alimentador.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LIMITACIONES Y CONDICIÓN DE USO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  DOMINANCIA DE CARGA (condición necesaria)
+  El clasificador opera sobre la firma AGREGADA del feeder.
+  Para que el resultado sea interpretable, la carga de interés debe
+  representar al menos el ~80% de la demanda total del alimentador.
+  Con cargas mixtas (múltiples usuarios heterogéneos), las firmas
+  espectrales se superponen y el clasificador pierde discriminación.
+
+  UMBRALES BIBLIOGRÁFICOS — NO VALIDADOS EN CAMPO
+  Los umbrales del árbol de decisión provienen de:
+    • Teoría de rectificadores (H5=1/5, H7=1/7 para 6-pulsos) — textbooks
+    • IEC 61000-3-6:2008 (niveles de planificación armónicos MT)
+    • IEEE 519-2022 (límites de TDD por nivel de cortocircuito)
+    • IEC 61000-3-12:2011 (límites de armónicos de corriente)
+  Los umbrales específicos de SMPS/cripto (FP > 0.92, CV < 5%) son
+  estimaciones de ingeniería sin validación contra campaña de campo.
+  No sustituyen un estudio de calidad de energía según IEC 61000-4-30.
+
+  RESULTADO SIEMPRE ORIENTATIVO
+  Si el feeder es dedicado (un solo usuario), la tipología de carga
+  generalmente se conoce por información operacional. El clasificador
+  agrega valor cuando la composición de la carga es desconocida o mixta.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ROL DEL THDv EN LA CLASIFICACIÓN
@@ -87,5 +114,15 @@ PARÁMETROS CLAVE
   H₅/H₁, H₇/H₁: ratios armónicos de 5° y 7° orden
   H₁₁/H₁, H₁₃/H₁: ratios de 11° y 13° orden (firma 6-pulsos)
 
-  Refs: IEEE 1459-2010, IEC 61000-3-12, IEC 61000-3-6 §5,
-  papers de caracterización de data centers y granjas de minería.
+  REFERENCIAS NORMATIVAS (umbrales con respaldo formal):
+    IEEE 519-2022     — Límites TDD por nivel de Scc (TABLA 2)
+    IEC 61000-3-6:2008 — Niveles de planificación MT (§5, Tabla 2)
+    EN 50160:2010     — THDv ≤ 8% en MT, percentil 95% (§4.3.4)
+    IEEE 1459-2010    — Definiciones de potencia y THD
+    IEC 61000-3-12:2011 — Armónicos de corriente >16A/fase
+
+  UMBRALES DE ESTIMACIÓN (sin respaldo de campo):
+    CV < 5%            — Juicio de ingeniería (SMPS regulado típico)
+    THDi > 15% cripto  — Estimación bibliográfica genérica
+    FP > 0.92 cripto   — Criterio empírico sin validación formal
+    (Fuente: literatura general de SMPS y UPS industriales)
