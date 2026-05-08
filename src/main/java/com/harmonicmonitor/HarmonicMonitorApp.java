@@ -13,6 +13,7 @@ import com.harmonicmonitor.storage.DataStorage;
 import com.harmonicmonitor.storage.MLDataExporter;
 
 import java.io.File;
+import java.util.Optional;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -444,6 +445,37 @@ public class HarmonicMonitorApp extends Application {
                 dataStorage.storeAlarm(connOk);
             }
             if (ev.type == IEC61850Communicator.CommEvent.Type.MODEL_LOADED) {
+                // Advertir al usuario si el IED no expone el array de armónicos
+                // y operará en modo degradado (espectro estimado, clasificación con validez reducida).
+                if (!comm.isHarmonicArrayInModel()) {
+                    Alert warn = new Alert(Alert.AlertType.WARNING);
+                    warn.setTitle("Modo degradado — armónicos no disponibles");
+                    warn.setHeaderText("El IED \"" + cfg.getIedName() + "\" no expone el array de armónicos (MHAI.HA)");
+                    warn.setContentText(
+                        "Sin el array H1–H13, las dimensiones espectrales del clasificador\n" +
+                        "(H5/H1, H7/H1, H11/H1) serán ESTIMADAS con un perfil SMPS genérico,\n" +
+                        "no medidas desde el IED.\n\n" +
+                        "En modo degradado solo THD_I, CV y FP son observables reales.\n" +
+                        "Los resultados de clasificación de tipo de carga tienen validez reducida\n" +
+                        "y el espectro mostrado NO proviene del instrumento.\n\n" +
+                        "¿Desea continuar de todas formas?");
+                    ButtonType btnContinuar = new ButtonType("Continuar en modo degradado", ButtonBar.ButtonData.OK_DONE);
+                    ButtonType btnCancelar  = new ButtonType("Cancelar conexión",           ButtonBar.ButtonData.CANCEL_CLOSE);
+                    warn.getButtonTypes().setAll(btnContinuar, btnCancelar);
+                    Optional<ButtonType> res = warn.showAndWait();
+                    if (res.isEmpty() || res.get().getButtonData() == ButtonBar.ButtonData.CANCEL_CLOSE) {
+                        comm.disconnect();
+                        communicators.remove(comm);
+                        feederConfigs.remove(cfg);
+                        setStatusMessage(cfg.getFeederId() + ": conexión cancelada — el IED no provee armónicos");
+                        if (multiFeederPanel != null) {
+                            multiFeederPanel.updateConnectionState(cfg.getFeederId(), IEC61850Communicator.State.DISCONNECTED);
+                            multiFeederPanel.refreshFeeders();
+                        }
+                        updateFeedersIndicator();
+                        return;
+                    }
+                }
                 startPoller(comm, cfg);
                 updateFeedersIndicator();
                 if (multiFeederPanel != null) multiFeederPanel.refreshFeeders();

@@ -1,0 +1,110 @@
+# HADES: Caracterización Probabilística para Detección de Cargas en Feeders
+
+## Punto de partida: HADES es un monitor de calidad de energía
+
+HADES nació como un **monitor de calidad de energía sobre IEC 61850**que:
+
+- Se conecta a medidores compatibles (ION 7400 y similares) vía MMS/ACSE
+- Lee nodos lógicos MMXU, MHAI, MSQI en tiempo real
+- Registra espectro armónico H1–H50, THD de tensión/corriente, secuencias simétricas y potencia
+- Acumula todo en SQLite cada 60 segundos, de forma continua
+
+A partir de esa base, el proyecto plantea una hipótesis: **creemos que la acumulación continua de espectro armónico, combinada con análisis temporal, puede contribuir a identificar patrones de carga no lineal** — en particular cargas del tipo SMPS de alta densidad como miners de criptomonedas.  una herramienta de detección de cargas específicas. Y es asi que HADES se convierte en herramienta de detección de cargas específicas
+
+**Validación actual**: probado en laboratorio con cargas controladas y con simuladores IEC 61850 internos (modo Demo con 8 perfiles de carga). Los resultados son satisfactorios en esas condiciones. La validación en campo real, con feeders bajo condiciones de carga mixta real, aún no se ha realizado — es el paso siguiente del roadmap.
+
+---
+
+## El problema que se intenta resolver
+
+Un feeder con múltiples usuarios presenta en su punto de medición la **superposición de todas las corrientes**:
+
+```
+i_total(t) = i_miner(t) + i_iluminación(t) + i_residencial(t) + ...
+```
+
+La FFT del total no puede separar contribuciones por fuente con un solo sensor — es un sistema de ecuaciones subdeterminado. Sin embargo, las cargas residenciales y comerciales **varían naturalmente** a lo largo del día, mientras que un miner opera a carga cuasi-constante las 24 horas. Esa diferencia de comportamiento temporal es el fundamento del enfoque de HADES.
+
+---
+
+## El vector de caracterización y el árbol de decisión
+
+HADES no usa un único indicador como el THD. Calcula un **vector de 6 features** por cada muestra:
+
+### Las 6 dimensiones del vector
+
+```
+v = [ CV,  THD_I,  H5/H1,  H7/H1,  H11/H1,  FP ]
+```
+
+| Feature | Qué mide | Por qué importa |
+|---|---|---|
+| **CV** = σ(I)/μ(I) | Coeficiente de variación de la corriente en el tiempo | Una carga constante tiene CV ≈ 0. Un miner tiene CV muy bajo; cargas residenciales tienen CV alto |
+| **THD\_I** | Distorsión armónica total de corriente | Indica presencia de cargas no lineales en general |
+| **H5/H1** | Ratio 5ª armónica vs. fundamental | Característica del tipo de rectificador; SMPS monofásico ≠ rectificador 6 pulsos |
+| **H7/H1** | Ratio 7ª armónica vs. fundamental | Combinado con H5 permite distinguir perfiles que comparten THD similar |
+| **H11/H1** | Ratio 11ª armónica vs. fundamental | Presente en rectificadores de mayor pulso; ausente o débil en SMPS simple |
+| **FP** | Factor de potencia | SMPS sin corrección activa (PFC) tienen FP bajo (~0.6–0.7); cargas lineales FP ≈ 1 |
+
+Cada perfil de carga genera una **región distinta** en ese espacio de 6 dimensiones. Por ejemplo:
+
+```
+Carga lineal:        THD_I bajo,  FP ≈ 1,    CV variable,  H5/H1 ≈ 0
+LED iluminación:     THD_I medio, FP ~0.8,   CV bajo,      H3 dominante
+SMPS alta densidad:  THD_I alto,  FP ~0.65,  CV muy bajo,  H5/H1 alto, H7/H1 notable
+Rectificador 6P:     THD_I alto,  FP ~0.85,  H5/H1 alto,   H11/H1 presente
+```
+
+### El árbol de decisión
+
+El árbol navega ese vector en secuencia, usando umbrales bibliográficos de IEEE 519-2022, IEC 61000-3-6 e IEC 61000-3-12:
+
+```
+                    ┌─ THD_I < 8% ──────────────→ [Carga lineal]
+                    │
+              ┌─ FP > 0.9 ─┤
+              │             └─ THD_I 8-15% ──────→ [Electrónica ligera]
+              │
+CV bajo? ─────┤
+(carga        │             ┌─ H5/H1 > 0.35 ─────→ [SMPS alta densidad]  ← miner candidato
+constante)    └─ FP < 0.85 ─┤
+                             │   ┌─ H11/H1 > 0.1 → [Rectificador 6P]
+                             └───┤
+                                 └─ H11/H1 ≤ 0.1 → [Mixta electrónica]
+
+CV alto? ──────────────────────────────────────────→ [Residencial/variable]
+```
+
+El resultado no es binario. HADES calcula un **índice de electrónica 0–100** — un score compuesto que pondera cada feature contra los umbrales. Un valor alto y sostenido en el tiempo, combinado con CV bajo, es la señal de interés.
+
+---
+
+## Por qué este enfoque supera a alternativas más simples
+
+### Frente a alarma por umbral de THD
+
+Un umbral único (`THD_I > 15% → alarma`) dispara igual para un VFD industrial, un banco de LEDs y un miner. El vector de 6 features separa esos casos porque aunque el THD sea similar, las **relaciones entre armónicas específicas son distintas** para cada tipo de carga.
+
+### Frente a analizadores portátiles de calidad de energía
+
+Son el gold standard técnico, pero realizan mediciones puntuales. Si la carga se apaga durante la medición, no hay evidencia. HADES opera sobre el medidor ya instalado en la subestación, sin intervención, 24/7. La acumulación continua convierte una firma débil en evidencia estadística.
+
+### Frente a modelos ML de caja negra
+
+Un modelo ML necesita un dataset de entrenamiento etiquetado en condiciones de campo reales — que actualmente no existe para este tipo de problema. HADES **está construyendo ese dataset** (SQLite, H1–H50 cada 60 s, exportable a CSV). La caracterización probabilística de hoy es la tubería de datos que habilita el ML de mañana.
+
+---
+
+## Alcance real y limitaciones honestas
+
+| Aspecto | Estado actual |
+|---|---|
+| Monitor de calidad de energía vía IEC 61850 | **Implementado y funcional** |
+| Clasificador multivariable con árbol de decisión | **Implementado**, validado en laboratorio y simulador |
+| Acumulación SQLite + exportación CSV | **Implementado** |
+| Multi-feeder simultáneo | **Implementado** |
+| Validación en campo real con cargas mixtas | **Pendiente** — es el paso crítico siguiente |
+| Separación de fuentes en feeder con solapamiento >= 20% | **No resuelto** — el clasificador requiere dominancia >= 80% de la carga de interés para ser confiable |
+| Modelo ML de desagregación | **Roadmap futuro**, condicionado a acumulación de datos en campo |
+
+La hipótesis central — que la **caracterización temporal continua** puede revelar la firma de una carga persistente incluso en presencia de otras cargas variables — es técnicamente sólida y está respaldada por el campo de NILM (Non-Intrusive Load Monitoring). Su validación en condiciones reales de campo es trabajo que aún está por hacerse.

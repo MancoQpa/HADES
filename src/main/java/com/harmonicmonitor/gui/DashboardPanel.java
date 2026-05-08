@@ -566,7 +566,9 @@ public class DashboardPanel {
         kpiLoadVal.setText(lt.getDisplayName());
         kpiLoadVal.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + lt.getColorHex() + ";");
         double conf = computeConfidence(m);
-        kpiLoadConf.setText(String.format("%.0f%% confianza", conf));
+        String confTxt = String.format("%.0f%% confianza", conf);
+        if (m.isSpectrumEstimated()) confTxt += "  ~ espectro estimado";
+        kpiLoadConf.setText(confTxt);
         kpiLoadConf.setStyle("-fx-font-size: 11px; -fx-text-fill: " + lt.getColorHex() + ";");
     }
 
