@@ -16,31 +16,38 @@ import com.harmonicmonitor.model.LoadType;
  *
  * <h3>Indicadores utilizados</h3>
  * <ol>
- *   <li><b>CV = σ(I)/μ(I)</b> — Coeficiente de variación de corriente.
- *       Umbral CV &lt; 5%: estimación de ingeniería para SMPS regulado.
- *       <em>Sin respaldo de estándar formal.</em></li>
+ *   <li><b>CV = \u03C3(I)/\u03BC(I)</b> — Coeficiente de variaci\u00F3n de corriente.
+ *       Umbral CV &lt; 5%: estimaci\u00F3n de ingenier\u00EDa para SMPS regulado.
+ *       <em>Sin respaldo de est\u00E1ndar formal.</em></li>
  *
  *   <li><b>THDi</b> — THD de corriente.
  *       Umbral 5%: alineado con IEEE 519-2022 (TDD, tabla 2).
- *       Umbral 15% para SMPS/cripto: estimación bibliográfica genérica,
- *       no validada con campaña de campo en MT 23 kV.</li>
+ *       Umbral 15% para SMPS/cripto: estimaci\u00F3n bibliogr\u00E1fica gen\u00E9rica,
+ *       no validada con campa\u00F1a de campo en MT 23 kV.</li>
  *
- *   <li><b>THDv</b> — THD de tensión.
- *       Umbral 5% (UPSTREAM): IEC 61000-3-6:2008 §5, nivel de planif. MT.
- *       Umbral 8% (EN 50160): EN 50160:2010 §4.3.4, percentil 95% MT.</li>
+ *   <li><b>THDv</b> — THD de tensi\u00F3n.
+ *       Umbral 5% (UPSTREAM): IEC 61000-3-6:2008 \u00A75, nivel de planif. MT.
+ *       Umbral 8% (EN 50160): EN 50160:2010 \u00A74.3.4, percentil 95% MT.</li>
  *
- *   <li><b>H5/H1, H7/H1</b> — Ratios de armónicos de rectificador 6-pulsos.
- *       Valores teóricos: H5 = 1/5 = 20%, H7 = 1/7 ≈ 14.3% (Fourier ideal).
- *       Fuente: teoría estándar de convertidores (Mohan, Undeland, Robbins,
- *       "Power Electronics", §3; Chapman, "Electric Machinery Fundamentals").
+ *   <li><b>H5/H1, H7/H1</b> — Ratios de arm\u00F3nicos de rectificador 6-pulsos.
+ *       Valores te\u00F3ricos: H5 = 1/5 = 20%, H7 = 1/7 \u2248 14.3% (Fourier ideal).
+ *       Fuente: teor\u00EDa est\u00E1ndar de convertidores (Mohan, Undeland, Robbins,
+ *       "Power Electronics", \u00A73; Chapman, "Electric Machinery Fundamentals").
  *       Umbrales conservadores (15%, 10%) para tolerar filtrado parcial.</li>
  *
  *   <li><b>H11/H1, H13/H1</b> — Firma extendida 6-pulsos.
- *       Valores teóricos: H11 = 1/11 ≈ 9.1%, H13 = 1/13 ≈ 7.7%.</li>
+ *       Valores te\u00F3ricos: H11 = 1/11 \u2248 9.1%, H13 = 1/13 \u2248 7.7%.</li>
  *
- *   <li><b>FP</b> — Factor de potencia (|cos φ|).
+ *   <li><b>FP</b> — Factor de potencia (|cos \u03C6|).
  *       Umbral 0.92 para distinguir CRYPTO vs DATA_CENTER:
- *       <em>criterio empírico sin validación formal.</em></li>
+ *       <em>criterio emp\u00EDrico sin validaci\u00F3n formal.</em></li>
+ *
+ *   <li><b>Flatness = (H5+H7)/(H11+H13)</b> — Forma espectral del espectro arm\u00F3nico.
+ *       &gt; 2.0: espectro frontal (SMPS/cripto — arm\u00F3nicos bajos dominan).
+ *       1.3\u20132.0: 6-pulsos cl\u00E1sico equilibrado (drives industriales, UPS).
+ *       &lt; 1.2: arm\u00F3nicos altos dominan \u2192 rectificador 12-pulsos (VFDs de alta pot.).
+ *       Ref: Chapman, "Electric Machinery Fundamentals", cap. rectificadores
+ *       de 12 pulsos; Mohan "Power Electronics" \u00A73.3.</li>
  * </ol>
  *
  * <h3>Referencias normativas (umbrales con respaldo formal)</h3>
@@ -88,10 +95,19 @@ public class ElectronicLoadDetector {
         double h5Thresh   = cfg.getMinH5h1CryptoThreshold();    // 0.15
         double h7Thresh   = cfg.getMinH7h1CryptoThreshold();    // 0.10
 
-        // ── Distorsión de tensión elevada con corriente limpia ──────────────────
-        // THDv alto pero THDi bajo y sin firma espectral notable → la distorsión
+        // ── Flatness espectral: (H5+H7) / (H11+H13) ────────────────────────────
+        // Discrimina la forma del espectro arm\u00F3nico:
+        //   > 2.0 : espectro frontal (SMPS 6-pulsos, cripto, datacenter)
+        //   1.3\u20132.0: 6-pulsos cl\u00E1sico equilibrado (drives industriales)
+        //   < 1.2 : H11/H13 dominantes \u2192 rectificador 12-pulsos (VFDs industriales)
+        // Guarda: si H11+H13 < 0.5% se asume espectro muy frontal (flatness = 10);
+        //         si adem\u00E1s H5+H7 < 2%, carga pr\u00E1cticamente lineal (flatness = 1).
+        double flatness = computeFlatness(h5h1, h7h1, h11h1, h13h1);
+
+        // ── Distorsi\u00F3n de tensi\u00F3n elevada con corriente limpia ──────────────────
+        // THDv alto pero THDi bajo y sin firma espectral notable → la distorsi\u00F3n
         // no se origina en este alimentador; proviene de aguas arriba (otra rama,
-        // otro feeder, o la propia subestación).  Referencia: IEC 61000-3-6 §5.
+        // otro feeder, o la propia subestaci\u00F3n).  Referencia: IEC 61000-3-6 \u00A75.
         if (thdV > 5.0 && thdI < 8.0 && h5h1 < 0.08) {
             return LoadType.UPSTREAM_DISTORTION;
         }
@@ -101,7 +117,7 @@ public class ElectronicLoadDetector {
             return LoadType.LINEAR;
         }
 
-        // ── Iluminación (lámparas LED masivas) ──────────────────────────────────
+        // ── Iluminaci\u00F3n (l\u00E1mparas LED masivas) ──────────────────────────────────
         // H3 dominante, H5/H1 < 10%, factor de potencia medio
         if (thdI > 10.0 && h5h1 < 0.08 && pf > 0.75 && pf < 0.95) {
             return LoadType.LIGHTING;
@@ -109,16 +125,23 @@ public class ElectronicLoadDetector {
 
         // ── Firma cripto/datacenter ─────────────────────────────────────────────
         // CV muy bajo (consumo estable) + THDi alto + H5 y H7 dominantes.
-        // THDv elevado (>2%) confirma que la distorsión se propaga a la tensión
-        // y afecta la red.  THDv bajo indica red rígida (Scc alta): la carga
-        // existe igual, pero la red absorbe la distorsión sin elevar la tensión.
+        // THDv elevado (>2%) confirma que la distorsi\u00F3n se propaga a la tensi\u00F3n
+        // y afecta la red.  THDv bajo indica red r\u00EDgida (Scc alta): la carga
+        // existe igual, pero la red absorbe la distorsi\u00F3n sin elevar la tensi\u00F3n.
         boolean stableLoad = cv < cvThresh;
         boolean highTHD    = thdI > thdThresh;
         boolean h5Dominant = h5h1 > h5Thresh;
         boolean h7Present  = h7h1 > h7Thresh;
         boolean highPF     = pf > 0.92;
 
+        // Criterio principal: igual que antes (sin cambio de comportamiento).
         if (stableLoad && highTHD && h5Dominant && h7Present && highPF) {
+            return LoadType.CRYPTO_MINING;
+        }
+        // Criterio extendido: flatness muy alto (>3.0) relaja el requisito de FP.
+        // Un espectro fuertemente frontal (H5/H7 >> H11/H13) con carga estable
+        // es firma inequ\u00EDvoca de SMPS de alta densidad aunque FP < 0.92.
+        if (stableLoad && highTHD && h5Dominant && h7Present && flatness > 3.0) {
             return LoadType.CRYPTO_MINING;
         }
 
@@ -126,19 +149,33 @@ public class ElectronicLoadDetector {
             return LoadType.DATA_CENTER;
         }
 
+        // ── Rectificador 12-pulsos (VFDs industriales de alta potencia) ─────────
+        // En el puente de 12 pulsos, dos rectificadores de 6 pulsos operan con
+        // 30\u00B0 de desfase. Los arm\u00F3nicos H5 y H7 se cancelan mutuamente; H11 y H13
+        // emergen como los dominantes (orden 12k\u00B11).  La flatness se invierte.
+        // Ref: Chapman "Electric Machinery Fundamentals", rectificadores 12-pulsos.
+        // Antes de esta mejora estos casos quedaban clasificados como MIXED_ELECTRONIC.
+        boolean twelvePulseSignature = h11h1 > 0.07 && h13h1 > 0.06 && flatness < 1.2;
+        if (thdI > 8.0 && twelvePulseSignature) {
+            return LoadType.INDUSTRIAL;
+        }
+
         // ── Rectificador industrial 6-pulsos ────────────────────────────────────
-        // H5 y H7 dominantes + H11 y H13 significativos + CV variable
-        boolean sixPulseSignature = h5h1 > 0.12 && h7h1 > 0.08 && h11h1 > 0.05 && h13h1 > 0.04;
+        // H5 y H7 dominantes + H11 y H13 significativos + CV variable.
+        // La flatness en rango 1.3\u20136.0 confirma topolog\u00EDa 6-pulsos cl\u00E1sica.
+        boolean sixPulseSignature = h5h1 > 0.12 && h7h1 > 0.08
+            && h11h1 > 0.05 && h13h1 > 0.04
+            && flatness >= 1.3 && flatness <= 6.0;
         if (thdI > 8.0 && sixPulseSignature) {
             return LoadType.INDUSTRIAL;
         }
 
-        // ── Carga electrónica ligera ────────────────────────────────────────────
+        // ── Carga electr\u00F3nica ligera ────────────────────────────────────────────
         if (thdI > 8.0 && (h5h1 > 0.08 || h7h1 > 0.05)) {
             return LoadType.ELECTRONIC_LIGHT;
         }
 
-        // ── Mixta electrónica ───────────────────────────────────────────────────
+        // ── Mixta electr\u00F3nica ───────────────────────────────────────────────────
         if (thdI > 5.0) {
             return LoadType.MIXED_ELECTRONIC;
         }
@@ -147,38 +184,62 @@ public class ElectronicLoadDetector {
     }
 
     /**
-     * Calcula un "índice de electrónica" de 0-100 para visualización en gauge.
-     * Combina CV, THDi, THDv y ratios de armónicos en un score único.
+     * Calcula el ratio de forma espectral (H5+H7)/(H11+H13).
+     * <ul>
+     *   <li>&gt; 2.0 \u2192 espectro frontal (SMPS, cripto, datacenter)</li>
+     *   <li>1.3\u20132.0 \u2192 6-pulsos equilibrado (industrial)</li>
+     *   <li>&lt; 1.2 \u2192 12-pulsos (H11/H13 dominantes)</li>
+     * </ul>
+     * Guarda de divisi\u00F3n por cero: si H11+H13 &lt; 0.5% se devuelve 10.0
+     * (espectro muy frontal) si H5+H7 es medible, o 1.0 (neutro) si todo es bajo.
+     */
+    private static double computeFlatness(double h5h1, double h7h1,
+                                          double h11h1, double h13h1) {
+        double denom = h11h1 + h13h1;
+        if (denom > 0.005) return (h5h1 + h7h1) / denom;
+        return (h5h1 + h7h1 > 0.02) ? 10.0 : 1.0;
+    }
+
+    /**
+     * Calcula un "\u00EDndice de electr\u00F3nica" de 0-100 para visualizaci\u00F3n en gauge.
+     * Combina CV, THDi, THDv, ratios de arm\u00F3nicos y flatness espectral.
      *
-     * Pesos (suma máx = 100):
-     *   25 pts — CV inverso:    carga estable → electrónica densa
-     *   35 pts — THDi:          corriente distorsionada → no lineal
-     *   25 pts — Ratios H5+H7:  firma espectral característica
-     *   15 pts — THDv:          distorsión propagada a la tensión (confirma impacto en red;
-     *                           bajo en redes rígidas sin penalizar la detección)
+     * Pesos (suma m\u00E1x = 100):
+     *   25 pts \u2014 CV inverso:       carga estable \u2192 electr\u00F3nica densa
+     *   35 pts \u2014 THDi:             corriente distorsionada \u2192 no lineal
+     *   20 pts \u2014 Ratios H5+H7:     firma espectral de arm\u00F3nicos bajos
+     *    5 pts \u2014 Flatness bonus:   espectro frontal (H5+H7 >> H11+H13) confirma SMPS
+     *   15 pts \u2014 THDv:             distorsi\u00F3n propagada a la tensi\u00F3n (confirma impacto
+     *                             en red; bajo en redes r\u00EDgidas sin penalizar)
      */
     public double calculateElectronicIndex(FeederMeasurement m, FeederConfig cfg) {
         double cvThresh = cfg.getMaxCvElectronicThreshold();
 
-        // Componente 1: inversa del CV normalizado → max 25 pts
+        // Componente 1: inversa del CV normalizado \u2192 max 25 pts
         double cvComponent = 0.0;
         if (m.getCvCurrent() < cvThresh * 5) {
             cvComponent = Math.max(0, (cvThresh * 5 - m.getCvCurrent()) / (cvThresh * 5)) * 25;
         }
 
-        // Componente 2: THDi normalizado a 40% → max 35 pts
+        // Componente 2: THDi normalizado a 40% \u2192 max 35 pts
         double thdComponent = Math.min(m.getThdCurrentAvg() / 40.0, 1.0) * 35;
 
-        // Componente 3: ratios H5+H7 (suma normalizada a 0.5) → max 25 pts
+        // Componente 3a: ratios H5+H7 (suma normalizada a 0.5) \u2192 max 20 pts
         double ratioComponent = Math.min(
-            (m.getH5h1Ratio() + m.getH7h1Ratio()) / 0.5, 1.0) * 25;
+            (m.getH5h1Ratio() + m.getH7h1Ratio()) / 0.5, 1.0) * 20;
 
-        // Componente 4: THDv normalizado al límite EN 50160 (8%) → max 15 pts
-        // Confirma que la distorsión se propaga a la tensión.
-        // En redes rígidas (Scc alta) este componente es bajo aunque la carga sea real,
-        // por lo que NO cancela la detección — solo añade certeza cuando está presente.
+        // Componente 3b: bonus de flatness \u2192 max 5 pts
+        // Espectro frontal (flatness > 1) indica que H5+H7 dominan sobre H11+H13,
+        // firma t\u00EDpica de SMPS.  Se normaliza al rango flatness 1\u20136 (linealmente).
+        double flatness = computeFlatness(
+            m.getH5h1Ratio(), m.getH7h1Ratio(),
+            m.getH11h1Ratio(), m.getH13h1Ratio());
+        double flatnessBonus = Math.min(Math.max(flatness - 1.0, 0.0) / 5.0, 1.0) * 5;
+
+        // Componente 4: THDv normalizado al l\u00EDmite EN 50160 (8%) \u2192 max 15 pts
         double thdvComponent = Math.min(m.getThdVoltageAvg() / 8.0, 1.0) * 15;
 
-        return Math.min(cvComponent + thdComponent + ratioComponent + thdvComponent, 100.0);
+        return Math.min(cvComponent + thdComponent + ratioComponent
+                        + flatnessBonus + thdvComponent, 100.0);
     }
 }
