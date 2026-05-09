@@ -43,7 +43,7 @@ class HarmonicsDisplayUpdater {
 
         updateBarChart(iSpec, h1);
         updateSummaryCards(iSpec, vSpec, h1, v1);
-        updateTable(iSpec, vSpec, h1, v1);
+        updateTable(iSpec, vSpec, h1, v1, m.getFrequency());
         panel.table.refresh();
     }
 
@@ -82,7 +82,7 @@ class HarmonicsDisplayUpdater {
 
             panel.summaryCurrentPct[idx].setText(String.format("%.1f%%", iPct));
             panel.summaryCurrentAmp[idx].setText(String.format("%.2f A", iAmp));
-            panel.summaryVoltagePct[idx].setText(String.format("%.1f V%%", vPct));
+            panel.summaryVoltagePct[idx].setText(String.format("%.1f%%", vPct));
 
             String color;
             if      (iPct > 15) color = "#C42B1C";
@@ -95,7 +95,7 @@ class HarmonicsDisplayUpdater {
 
     // ── Data table ────────────────────────────────────────────────────────────
 
-    private void updateTable(double[] iSpec, double[] vSpec, double h1, double v1) {
+    private void updateTable(double[] iSpec, double[] vSpec, double h1, double v1, double frequency) {
         for (int i = 0; i < Math.min(15, panel.tableData.size()); i++) {
             int order = i + 1;
             double iAmp = (i < iSpec.length) ? iSpec[i] : 0.0;
@@ -112,7 +112,7 @@ class HarmonicsDisplayUpdater {
             else                 status = "\u2713 OK";
 
             panel.tableData.get(i).update(
-                String.format("%.1f",  order * 50.0),
+                String.format("%.1f",  order * frequency),
                 String.format("%.3f",  iAmp),
                 String.format("%.2f",  iPct),
                 String.format("%.3f",  vAmp),

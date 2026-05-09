@@ -7,6 +7,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.sql.*;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -142,7 +143,9 @@ public class DataStorage {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 FeederMeasurement m = new FeederMeasurement(feederId, feederId,
-                    Instant.parse(rs.getString("timestamp").replace(" ", "T") + "Z"));
+                    LocalDateTime.parse(rs.getString("timestamp"),
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                        .atZone(ZoneId.systemDefault()).toInstant());
                 m.setVoltageL1(rs.getDouble("v_l1"));
                 m.setVoltageL2(rs.getDouble("v_l2"));
                 m.setVoltageL3(rs.getDouble("v_l3"));
