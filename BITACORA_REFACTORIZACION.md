@@ -390,6 +390,7 @@ Extraer DSP puro y cálculos de análisis (Fortescue + potencia) para desacoplar
 | 2026-05-08 | F21-001 HarmonicRefDetector + PowerScaleDetector | ✅ 73 fuentes, exit 0 | MmsDataMapper 465→360 (−23%); HarmonicRefDetector 90 líneas; PowerScaleDetector 75 líneas; 2 bloques de lógica pura extraídos |
 | 2026-05-09 | F22-001 ComtradeHeaderBuilder | ✅ 74 fuentes, exit 0 | ComtradePanel 556→465 (−16%); ComtradeHeaderBuilder 115 líneas; buildHeader+buildSidebar+buildStatusBar extraídos |
 | 2026-05-09 | F23-001 MultiFeederTableBuilder | ✅ 75 fuentes, exit 0 | MultiFeederMonitorPanel 346→215 (−38%); MultiFeederTableBuilder 170 líneas; buildTable+3 cell factories+row factory+colStr+colInt extraídos |
+| 2026-05-09 | F24-001 ComtradeCaptureAction + ComtradeCsvExporter | ✅ 77 fuentes, exit 0 | ComtradePanel 465→370 (−20%); ComtradeCaptureAction 95 líneas; ComtradeCsvExporter 70 líneas; captureNow+findNewestCfgFile+exportCsv extraídos |
 
 ---
 

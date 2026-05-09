@@ -3,10 +3,6 @@ package com.harmonicmonitor.gui;
 import com.harmonicmonitor.HarmonicMonitorApp;
 import com.harmonicmonitor.comtrade.ComtradeReader;
 import com.harmonicmonitor.comtrade.ComtradeReader.ComtradeRecord;
-import com.harmonicmonitor.model.FeederConfig;
-import com.harmonicmonitor.model.FeederMeasurement;
-
-import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
@@ -16,10 +12,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 
-import java.io.*;
+import java.io.File;
 import java.util.*;
-import java.util.Arrays;
-import com.harmonicmonitor.AppExecutors;
 
 /**
  * ComtradePanel — Visor avanzado de archivos COMTRADE (IEEE C37.111 / IEC 60255-24).
@@ -162,71 +156,9 @@ public class ComtradePanel {
 
     // ── File operations ───────────────────────────────────────────────────────
 
-    /**
-     * Disparo manual de COMTRADE: graba un registro con el estado actual de todos los feeders
-     * activos y lo carga automáticamente en el visor.
-     * No tiene cooldown (triggerManual bypasses it).
-     */
     /** Called by {@link ComtradeHeaderBuilder} capture button handler. */
     void captureNow() {
-        List<FeederConfig> configs = app.getFeederConfigs();
-        if (configs.isEmpty()) {
-            status("Sin feeders activos — no se puede capturar");
-            return;
-        }
-
-        status("Disparando captura COMTRADE...");
-
-        // Disparo para todos los feeders activos con datos recientes
-        int triggered = 0;
-        for (FeederConfig cfg : configs) {
-            FeederMeasurement m = app.getLatestMeasurements().get(cfg.getFeederId());
-            if (m != null) {
-                app.getComtradeTrigger().triggerManual(m, cfg);
-                triggered++;
-            }
-        }
-
-        if (triggered == 0) {
-            status("Sin mediciones disponibles — conecte un feeder primero");
-            return;
-        }
-
-        final int count = triggered;
-        // Esperar a que el escritor termine (~500ms) y luego cargar el archivo más reciente
-        AppExecutors.ioPool().execute(() -> {
-            try { Thread.sleep(800); } catch (InterruptedException ignored) {}
-            File newestCfg = findNewestCfgFile(new File("records"));
-            Platform.runLater(() -> {
-                if (newestCfg != null) {
-                    loadFile(newestCfg);
-                    status("Captura completada (" + count + " feeder(s)) — " + newestCfg.getName());
-                } else {
-                    status("Captura disparada pero no se encontró archivo .cfg en records/");
-                }
-            });
-        });
-    }
-
-    /** Devuelve el archivo .cfg más reciente dentro de dir (recursivo 1 nivel) */
-    private File findNewestCfgFile(File dir) {
-        if (dir == null || !dir.exists()) return null;
-        File[] cfgFiles = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".cfg"));
-        if (cfgFiles == null || cfgFiles.length == 0) {
-            // Buscar en subdirectorios de primer nivel
-            File[] subdirs = dir.listFiles(File::isDirectory);
-            if (subdirs == null) return null;
-            File newest = null;
-            for (File sub : subdirs) {
-                File candidate = findNewestCfgFile(sub);
-                if (candidate != null && (newest == null || candidate.lastModified() > newest.lastModified())) {
-                    newest = candidate;
-                }
-            }
-            return newest;
-        }
-        Arrays.sort(cfgFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-        return cfgFiles[0];
+        new ComtradeCaptureAction(app, this::status, this::loadFile).execute();
     }
 
     /** Called by {@link ComtradeHeaderBuilder} open button handler. */
@@ -395,38 +327,7 @@ public class ComtradePanel {
 
     /** Called by {@link ComtradeHeaderBuilder} CSV button handler. */
     void exportCsv() {
-        if (currentRecord == null || currentRecord.analogData == null) {
-            status("Sin datos para exportar");
-            return;
-        }
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Exportar COMTRADE a CSV");
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV", "*.csv"));
-        String base = currentRecord.cfgFile != null
-            ? currentRecord.cfgFile.getName().replaceAll("(?i)\\.cfg$", "") : "comtrade";
-        fc.setInitialFileName(base + "_export.csv");
-        File out = fc.showSaveDialog(app.getPrimaryStage());
-        if (out == null) return;
-
-        try (PrintWriter pw = new PrintWriter(new FileWriter(out))) {
-            StringBuilder hdr = new StringBuilder("timestamp_us");
-            for (String name : currentRecord.analogChannelNames) hdr.append(",").append(name.replace(",", ";"));
-            pw.println(hdr);
-            for (int s = 0; s < currentRecord.numSamples; s++) {
-                StringBuilder row = new StringBuilder();
-                row.append(currentRecord.timestamps != null && s < currentRecord.timestamps.length
-                    ? currentRecord.timestamps[s] : s);
-                for (int ch = 0; ch < currentRecord.numAnalogChannels; ch++) {
-                    row.append(",");
-                    if (ch < currentRecord.analogData.length && s < currentRecord.analogData[ch].length)
-                        row.append(currentRecord.analogData[ch][s]);
-                }
-                pw.println(row);
-            }
-            status("CSV exportado: " + out.getAbsolutePath());
-        } catch (Exception ex) {
-            status("Error exportando: " + ex.getMessage());
-        }
+        ComtradeCsvExporter.export(currentRecord, app.getPrimaryStage(), this::status);
     }
 
     // ── Utilities ─────────────────────────────────────────────────────────────
