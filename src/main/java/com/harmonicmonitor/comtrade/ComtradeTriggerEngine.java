@@ -286,12 +286,16 @@ public class ComtradeTriggerEngine {
     }
 
     private void checkVoltageUnbalance(FeederMeasurement m) {
-        double avg = m.getVoltageAvg();
-        if (avg < 1.0) return;
-        double dev = Math.max(
-            Math.max(Math.abs(m.getVoltageL1() - avg), Math.abs(m.getVoltageL2() - avg)),
-            Math.abs(m.getVoltageL3() - avg));
-        double pct = 100.0 * dev / avg;
+        // Usar valor pre-calculado (Fortescue desde MSQI si disponible); fallback a max-desviación.
+        double pct = m.getVoltageUnbalancePct();
+        if (pct < 1e-6) {
+            double avg = m.getVoltageAvg();
+            if (avg < 1.0) return;
+            double dev = Math.max(
+                Math.max(Math.abs(m.getVoltageL1() - avg), Math.abs(m.getVoltageL2() - avg)),
+                Math.abs(m.getVoltageL3() - avg));
+            pct = 100.0 * dev / avg;
+        }
 
         if (pct > UNBAL_CRITICAL) {
             triggerRecord(m, findCfgStub(m), "UNBAL_CRIT",

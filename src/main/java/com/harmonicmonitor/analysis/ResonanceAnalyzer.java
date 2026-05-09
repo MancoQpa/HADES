@@ -85,10 +85,10 @@ public class ResonanceAnalyzer {
         if (hr <= 0) return "Sin datos suficientes para evaluar resonancia";
 
         double[] spec = m.getHarmonicCurrentL1();
-        if (spec == null || spec.length <= hr) return "Orden de resonancia H" + hr + " fuera del espectro medido";
+        if (spec == null || spec.length < hr) return "Orden de resonancia H" + hr + " fuera del espectro medido";
 
         double h1     = spec[0];
-        double hResAmp = (hr < spec.length) ? spec[hr - 1] : 0.0;
+        double hResAmp = (hr <= spec.length) ? spec[hr - 1] : 0.0;
         double ratio   = (h1 > 0) ? hResAmp / h1 : 0.0;
 
         double maxRatio = (cfg != null) ? cfg.getResonanceAmplificationMax() : 3.0;
