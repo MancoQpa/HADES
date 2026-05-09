@@ -168,7 +168,12 @@ class KpiRow {
         LoadType lt = m.getDetectedLoadType();
         if (lt == LoadType.UNKNOWN) return 0;
         if (lt == LoadType.CRYPTO_MINING || lt == LoadType.DATA_CENTER)
+            // H5/H1 dominante + THDi elevado = espectro SMPS claro
             return Math.min(98, 55 + m.getH5h1Ratio() * 200 + m.getThdCurrentAvg() * 0.4);
+        if (lt == LoadType.INDUSTRIAL)
+            // Firma 6-pulsos: H5+H7+H11+H13 presentes; mayor certeza si H11/H13 también son altos
+            return Math.min(95, 50 + m.getH5h1Ratio() * 150 + m.getH7h1Ratio() * 100
+                               + m.getH11h1Ratio() * 80 + m.getH13h1Ratio() * 60);
         return Math.min(92, 45 + m.getThdCurrentAvg() * 1.5);
     }
 }

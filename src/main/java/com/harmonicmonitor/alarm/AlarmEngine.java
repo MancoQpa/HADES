@@ -7,7 +7,9 @@ import com.harmonicmonitor.model.FeederMeasurement;
 import com.harmonicmonitor.model.LoadType;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -28,9 +30,14 @@ public class AlarmEngine {
     private final List<AlarmEvent>     activeAlarms = new CopyOnWriteArrayList<>();
     private final List<AlarmEvent>     alarmHistory = new ArrayList<>();
 
-    private static final int MAX_HISTORY = 1000;
+    private static final int  MAX_HISTORY        = 1000;
+    // Histeresis: evitar que condiciones persistentes inunden el historial.
+    // Una misma alarma (feederId+param+level) no se re-añade al historial hasta
+    // que hayan pasado al menos REFIRE_INTERVAL_MS ms desde la última emisión.
+    private static final long REFIRE_INTERVAL_MS = 60_000L; // 1 minuto
+    private final Map<String, Long> lastFiredTime = new HashMap<>();
 
-    // Estado de supresión por histeresis
+    // Estado de supresión por histeresis (load type y resonancia)
     private LoadType lastDetectedLoadType = LoadType.UNKNOWN;
     private boolean  resonanceAlarmActive = false;
 
@@ -246,9 +253,21 @@ public class AlarmEngine {
                       String message, double value, double threshold) {
         AlarmEvent event = new AlarmEvent(level, feederId, param, message, value, threshold);
         addToActive(event);
-        addToHistory(event);
-        for (AlarmListener l : listeners) {
-            try { l.onAlarm(event); } catch (Exception ignored) {}
+
+        // Histeresis para el historial: solo agregar si pasó el intervalo de re-disparo.
+        // Esto evita que condiciones persistentes (THD alto, FP bajo) llenen el historial
+        // con entradas idénticas en cada ciclo de polling. El panel "activas" siempre
+        // refleja el estado actual; el historial registra la primera ocurrencia y las
+        // recurrencias separadas por al menos REFIRE_INTERVAL_MS.
+        String key = feederId + "|" + param + "|" + level.name();
+        long now   = System.currentTimeMillis();
+        Long last  = lastFiredTime.get(key);
+        if (last == null || (now - last) >= REFIRE_INTERVAL_MS) {
+            lastFiredTime.put(key, now);
+            addToHistory(event);
+            for (AlarmListener l : listeners) {
+                try { l.onAlarm(event); } catch (Exception ignored) {}
+            }
         }
     }
 

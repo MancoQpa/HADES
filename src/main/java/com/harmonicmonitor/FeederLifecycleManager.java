@@ -153,8 +153,9 @@ class FeederLifecycleManager {
                 dataStorage.storeAlarm(connAlarm);
                 if (app.alarmsPanel != null) app.alarmsPanel.onAlarm(connAlarm);
             } else if (ev.type == IEC61850Communicator.CommEvent.Type.MODEL_LOADED) {
+                // DETECTION: conexion exitosa — no es una condicion de fallo, nivel informativo
                 AlarmEvent connOk = new AlarmEvent(
-                    AlarmEvent.Level.WARNING, cfg.getFeederId(),
+                    AlarmEvent.Level.DETECTION, cfg.getFeederId(),
                     "Conexion",
                     "Conexion establecida/restablecida [" + cfg.getFeederId() + "]: " + ev.message,
                     1.0, 1.0);

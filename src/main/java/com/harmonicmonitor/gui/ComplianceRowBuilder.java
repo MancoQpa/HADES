@@ -50,13 +50,17 @@ final class ComplianceRowBuilder {
         double h11vPct = (v1 > 1e-6 && vSpec != null && vSpec.length > 11) ? (vSpec[10] / v1 * 100) : 0;
         double h13vPct = (v1 > 1e-6 && vSpec != null && vSpec.length > 13) ? (vSpec[12] / v1 * 100) : 0;
 
-        double voltAvg = m.getVoltageAvg();
-        double unbal   = 0;
-        if (voltAvg > 1e-6) {
-            double maxDev = Math.max(
-                Math.max(Math.abs(m.getVoltageL1() - voltAvg), Math.abs(m.getVoltageL2() - voltAvg)),
-                Math.abs(m.getVoltageL3() - voltAvg));
-            unbal = 100.0 * maxDev / voltAvg;
+        // Preferir valor pre-calculado (Fortescue si hay MSQI, o máx-desviación del poller).
+        // Fallback inline solo si el IED no proveyó el dato.
+        double unbal = m.getVoltageUnbalancePct();
+        if (unbal < 1e-6) {
+            double voltAvg = m.getVoltageAvg();
+            if (voltAvg > 1e-6) {
+                double maxDev = Math.max(
+                    Math.max(Math.abs(m.getVoltageL1() - voltAvg), Math.abs(m.getVoltageL2() - voltAvg)),
+                    Math.abs(m.getVoltageL3() - voltAvg));
+                unbal = 100.0 * maxDev / voltAvg;
+            }
         }
 
         List<CompRow> rows = new ArrayList<>();
@@ -118,8 +122,10 @@ final class ComplianceRowBuilder {
                       String fmt, String limitStr, String notes) {
         String measStr = String.format(fmt, measured);
         String status;
-        if      (measured > limit * 1.2)  status = "\u2717 INCUMPLE";
-        else if (measured > limit)        status = "\u26A0 L\u00CDMITE";
+        // > limit       → incumplimiento normativo (cualquier exceso es violación)
+        // (limit*0.85, limit] → zona de advertencia (acercándose al límite)
+        // <= limit*0.85 → cumple con margen suficiente
+        if      (measured > limit)        status = "\u2717 INCUMPLE";
         else if (measured > limit * 0.85) status = "\u26A0 L\u00CDMITE";
         else                              status = "\u2713 CUMPLE";
         return new CompRow(feeder, std, param, measStr, limitStr, status, notes);
