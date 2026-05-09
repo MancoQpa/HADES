@@ -1,6 +1,7 @@
 package com.harmonicmonitor.comm;
 
 import com.beanit.iec61850bean.*;
+import com.harmonicmonitor.AppExecutors;
 import com.harmonicmonitor.model.FeederConfig;
 import com.harmonicmonitor.model.FeederMeasurement;
 
@@ -79,11 +80,7 @@ public class IEC61850Communicator implements ClientEventListener {
         reconnectAttempts.set(0);
         pendingReconnects.set(0);
         setState(State.CONNECTING);
-        executor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "IEC61850-" + config.getFeederId());
-            t.setDaemon(true);
-            return t;
-        });
+        executor = AppExecutors.newDaemonExecutor("IEC61850-" + config.getFeederId());
         executor.submit(this::connectInternal);
     }
 
@@ -155,11 +152,7 @@ public class IEC61850Communicator implements ClientEventListener {
         fireEvent(CommEvent.Type.INFO, "Reconectando en " + delaySec + "s (intento " + attempt + ")...");
 
         if (reconnectScheduler == null || reconnectScheduler.isShutdown()) {
-            reconnectScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "Reconnect-" + config.getFeederId());
-                t.setDaemon(true);
-                return t;
-            });
+            reconnectScheduler = AppExecutors.newDaemonScheduler("Reconnect-" + config.getFeederId());
         }
         pendingReconnects.incrementAndGet();
         reconnectScheduler.schedule(() -> {
@@ -168,11 +161,7 @@ public class IEC61850Communicator implements ClientEventListener {
             // Doble-check: no conectar si ya hay una conexión activa o en curso
             if (state == State.CONNECTING || state == State.CONNECTED) return;
             setState(State.CONNECTING);
-            executor = Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "IEC61850-" + config.getFeederId());
-                t.setDaemon(true);
-                return t;
-            });
+            executor = AppExecutors.newDaemonExecutor("IEC61850-" + config.getFeederId());
             executor.submit(this::connectInternal);
         }, delaySec, TimeUnit.SECONDS);
     }

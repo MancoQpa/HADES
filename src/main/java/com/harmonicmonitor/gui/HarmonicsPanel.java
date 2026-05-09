@@ -32,28 +32,33 @@ public class HarmonicsPanel {
 
     // Controls
     private ComboBox<String> feederCombo;
-    private ToggleGroup phaseGroup;
-    private RadioButton rbL1, rbL2, rbL3, rbAvg;
+    // Package-private: accessed by HarmonicsDisplayUpdater for phase selection.
+    ToggleGroup phaseGroup;
+    RadioButton rbL1, rbL2, rbL3, rbAvg;
 
     private String selectedFeederId;
     private FeederMeasurement lastMeasurement;
 
     // Harmonic bar chart
     private BarChart<String, Number> barChart;
-    private XYChart.Series<String, Number> currentSeries;
+    // Package-private: updated by HarmonicsDisplayUpdater each polling cycle.
+    XYChart.Series<String, Number> currentSeries;
 
     // Summary cards (H2,H3,H5,H7,H9,H11,H13,H15)
-    private static final int[] SUMMARY_ORDERS = {2, 3, 5, 7, 9, 11, 13, 15};
-    private final Label[] summaryCurrentPct  = new Label[8];
-    private final Label[] summaryCurrentAmp  = new Label[8];
-    private final Label[] summaryVoltagePct  = new Label[8];
+    // Package-private: read by HarmonicsDisplayUpdater.
+    static final int[] SUMMARY_ORDERS = {2, 3, 5, 7, 9, 11, 13, 15};
+    final Label[] summaryCurrentPct  = new Label[8];
+    final Label[] summaryCurrentAmp  = new Label[8];
+    final Label[] summaryVoltagePct  = new Label[8];
 
-    // Table
-    private TableView<HarmonicRow> table;
-    private ObservableList<HarmonicRow> tableData;
+    // Table — package-private: updated by HarmonicsDisplayUpdater.
+    TableView<HarmonicRow> table;
+    ObservableList<HarmonicRow> tableData;
 
-    // Indicator shown when spectrum is estimated (IED doesn't provide harmonic array)
-    private Label estimatedLabel;
+    // Package-private: toggled by HarmonicsDisplayUpdater.
+    Label estimatedLabel;
+
+    private final HarmonicsDisplayUpdater updater = new HarmonicsDisplayUpdater(this);
 
     public HarmonicsPanel(HarmonicMonitorApp app) {
         this.app = app;
@@ -329,117 +334,7 @@ public class HarmonicsPanel {
 
     private void refreshDisplay() {
         if (lastMeasurement == null) return;
-        FeederMeasurement m = lastMeasurement;
-
-        // Show warning when spectrum is estimated (IED doesn't provide harmonic array)
-        if (estimatedLabel != null) {
-            estimatedLabel.setVisible(m.isSpectrumEstimated());
-        }
-
-        double[] iSpec = getSelectedCurrentSpectrum(m);
-        double[] vSpec = getSelectedVoltageSpectrum(m);
-        if (iSpec == null) return;
-
-        double h1 = iSpec[0];
-        double v1 = (vSpec != null && vSpec.length > 0) ? vSpec[0] : 1.0;
-
-        // Update bar chart
-        ObservableList<XYChart.Data<String, Number>> data = currentSeries.getData();
-        for (int i = 0; i < Math.min(15, data.size()); i++) {
-            double pct = (h1 > 1e-6) ? (iSpec[i] / h1 * 100.0) : 0.0;
-            if (i == 0) pct = 100.0; // H1 is fundamental = 100%
-            data.get(i).setYValue(pct);
-        }
-
-        // Color bar chart nodes
-        for (int i = 0; i < data.size(); i++) {
-            XYChart.Data<String, Number> d = data.get(i);
-            if (d.getNode() != null) {
-                double pct = d.getYValue().doubleValue();
-                if (pct > 15)      d.getNode().setStyle("-fx-bar-fill: #C42B1C;");
-                else if (pct > 8)  d.getNode().setStyle("-fx-bar-fill: #CA5010;");
-                else               d.getNode().setStyle("-fx-bar-fill: #0078D4;");
-            }
-        }
-
-        // Update summary cards
-        for (int idx = 0; idx < SUMMARY_ORDERS.length; idx++) {
-            int order = SUMMARY_ORDERS[idx];
-            if (order <= iSpec.length) {
-                double iAmp = iSpec[order - 1];
-                double iPct = (h1 > 1e-6) ? (iAmp / h1 * 100.0) : 0.0;
-                double vAmp = (vSpec != null && order <= vSpec.length) ? vSpec[order - 1] : 0.0;
-                double vPct = (v1 > 1e-6 && vSpec != null) ? (vAmp / v1 * 100.0) : 0.0;
-
-                summaryCurrentPct[idx].setText(String.format("%.1f%%", iPct));
-                summaryCurrentAmp[idx].setText(String.format("%.2f A", iAmp));
-                summaryVoltagePct[idx].setText(String.format("%.1f V%%", vPct));
-
-                String color;
-                if (iPct > 15)     color = "#C42B1C";
-                else if (iPct > 8) color = "#CA5010";
-                else               color = "#107C10";
-                summaryCurrentPct[idx].setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
-            }
-        }
-
-        // Update table
-        for (int i = 0; i < Math.min(15, tableData.size()); i++) {
-            int order = i + 1;
-            double iAmp = (i < iSpec.length) ? iSpec[i] : 0.0;
-            double iPct = (h1 > 1e-6 && order > 1) ? (iAmp / h1 * 100.0) : (order == 1 ? 100.0 : 0.0);
-            double vAmp = (vSpec != null && i < vSpec.length) ? vSpec[i] : 0.0;
-            double vPct = (v1 > 1e-6 && vSpec != null && order > 1) ? (vAmp / v1 * 100.0) : (order == 1 ? 100.0 : 0.0);
-
-            String status;
-            if (order == 1)       status = "—";
-            else if (iPct > 15)   status = "⛔ CRÍTICO";
-            else if (iPct > 8)    status = "⚠ ELEVADO";
-            else                  status = "✓ OK";
-
-            tableData.get(i).update(
-                String.format("%.1f", order * 50.0),
-                String.format("%.3f", iAmp),
-                String.format("%.2f", iPct),
-                String.format("%.3f", vAmp),
-                String.format("%.2f", vPct),
-                status
-            );
-        }
-        table.refresh();
-    }
-
-    private double[] getSelectedCurrentSpectrum(FeederMeasurement m) {
-        RadioButton sel = (RadioButton) phaseGroup.getSelectedToggle();
-        if (sel == rbL1 || sel == null) return m.getHarmonicCurrentL1();
-        if (sel == rbL2) return m.getHarmonicCurrentL2();
-        if (sel == rbL3) return m.getHarmonicCurrentL3();
-        // Average
-        double[] l1 = m.getHarmonicCurrentL1();
-        double[] l2 = m.getHarmonicCurrentL2();
-        double[] l3 = m.getHarmonicCurrentL3();
-        if (l1 == null) return null;
-        double[] avg = new double[l1.length];
-        for (int i = 0; i < l1.length; i++) {
-            avg[i] = (l1[i] + (l2 != null ? l2[i] : 0) + (l3 != null ? l3[i] : 0)) / 3.0;
-        }
-        return avg;
-    }
-
-    private double[] getSelectedVoltageSpectrum(FeederMeasurement m) {
-        RadioButton sel = (RadioButton) phaseGroup.getSelectedToggle();
-        if (sel == rbL1 || sel == null) return m.getHarmonicVoltageL1();
-        if (sel == rbL2) return m.getHarmonicVoltageL2();
-        if (sel == rbL3) return m.getHarmonicVoltageL3();
-        double[] l1 = m.getHarmonicVoltageL1();
-        double[] l2 = m.getHarmonicVoltageL2();
-        double[] l3 = m.getHarmonicVoltageL3();
-        if (l1 == null) return null;
-        double[] avg = new double[l1.length];
-        for (int i = 0; i < l1.length; i++) {
-            avg[i] = (l1[i] + (l2 != null ? l2[i] : 0) + (l3 != null ? l3[i] : 0)) / 3.0;
-        }
-        return avg;
+        updater.refresh(lastMeasurement);
     }
 
     // ── Update from poller ────────────────────────────────────────────────────
@@ -460,42 +355,4 @@ public class HarmonicsPanel {
         refreshDisplay();
     }
 
-    // ── HarmonicRow data class ─────────────────────────────────────────────────
-
-    public static class HarmonicRow {
-        private int    order;
-        private String frequency;
-        private String currentAmp;
-        private String currentPct;
-        private String voltageVolt;
-        private String voltagePct;
-        private String status;
-
-        public HarmonicRow(int order) {
-            this.order = order;
-            this.frequency   = String.format("%.1f", order * 50.0);
-            this.currentAmp  = "—";
-            this.currentPct  = "—";
-            this.voltageVolt = "—";
-            this.voltagePct  = "—";
-            this.status      = "—";
-        }
-
-        public void update(String freq, String iAmp, String iPct, String vVolt, String vPct, String stat) {
-            this.frequency   = freq;
-            this.currentAmp  = iAmp;
-            this.currentPct  = iPct;
-            this.voltageVolt = vVolt;
-            this.voltagePct  = vPct;
-            this.status      = stat;
-        }
-
-        public int    getOrder()       { return order; }
-        public String getFrequency()   { return frequency; }
-        public String getCurrentAmp()  { return currentAmp; }
-        public String getCurrentPct()  { return currentPct; }
-        public String getVoltageVolt() { return voltageVolt; }
-        public String getVoltagePct()  { return voltagePct; }
-        public String getStatus()      { return status; }
-    }
 }

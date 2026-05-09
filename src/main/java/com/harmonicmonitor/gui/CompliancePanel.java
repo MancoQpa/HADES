@@ -228,24 +228,7 @@ public class CompliancePanel {
 
     private void buildDefaultRows() {
         tableData.clear();
-        String f = "—";
-        tableData.addAll(
-            new CompRow(f, "IEC 61000-3-6",  "THDv total (%)",          "—", "5.0%", "— Sin datos", "Valor promedio 3 fases"),
-            new CompRow(f, "IEC 61000-3-6",  "H5 Tensión (%)",          "—", "4.0%", "— Sin datos", "Componente de 5° orden"),
-            new CompRow(f, "IEC 61000-3-6",  "H7 Tensión (%)",          "—", "4.0%", "— Sin datos", "Componente de 7° orden"),
-            new CompRow(f, "IEC 61000-3-6",  "H11 Tensión (%)",         "—", "3.0%", "— Sin datos", "Componente de 11° orden"),
-            new CompRow(f, "IEC 61000-3-6",  "H13 Tensión (%)",         "—", "3.0%", "— Sin datos", "Componente de 13° orden"),
-            new CompRow(f, "IEEE 519-2022",  "THDi corriente (%)",      "—", "8.0%", "— Sin datos", "TDD máximo admisible"),
-            new CompRow(f, "IEEE 519-2022",  "THDv tensión (%)",        "—", "5.0%", "— Sin datos", "Distorsión total tensión"),
-            new CompRow(f, "IEEE 519-2022",  "H5/H1 corriente (%)",     "—", "4.0%", "— Sin datos", "5° orden armónico"),
-            new CompRow(f, "IEEE 519-2022",  "H7/H1 corriente (%)",     "—", "4.0%", "— Sin datos", "7° orden armónico"),
-            new CompRow(f, "IEEE 519-2022",  "Factor de Potencia",      "—", ">0.85","— Sin datos", "Mínimo recomendado"),
-            new CompRow(f, "EN 50160",       "Desbalance tensión (%)",  "—", "2.0%", "— Sin datos", "Promedio 10 minutos"),
-            new CompRow(f, "EN 50160",       "THDv total (%)",          "—", "8.0%", "— Sin datos", "Límite EN 50160 semanal"),
-            new CompRow(f, "EN 50160",       "Frecuencia (Hz)",         "—", "50±1Hz","— Sin datos","Límite nominal ±2%"),
-            new CompRow(f, "IEC 61000-2-12", "Nivel compatib. THDv",   "—", "6.0%", "— Sin datos", "Nivel de planif. MT"),
-            new CompRow(f, "IEC 61000-2-12", "H5 nivel compat. (%)",   "—", "5.0%", "— Sin datos", "5° orden, nivel MT")
-        );
+        tableData.addAll(ComplianceRowBuilder.buildDefaultRows());
     }
 
     // ── Update (called from polling thread via Platform.runLater in app) ───────
@@ -321,91 +304,7 @@ public class CompliancePanel {
 
     /** Builds the 15 compliance rows for one feeder measurement. */
     private List<CompRow> buildRows(FeederMeasurement m, FeederConfig cfg) {
-        String feederLabel = m.getFeederId();
-
-        double thdi   = m.getThdCurrentAvg();
-        double thdv   = m.getThdVoltageAvg();
-        double pf     = Math.abs(m.getPowerFactor());
-        double freq   = m.getFrequency();
-        double h5iPct = m.getH5h1Ratio() * 100.0;
-        double h7iPct = m.getH7h1Ratio() * 100.0;
-
-        double[] vSpec = m.getHarmonicVoltageL1();
-        double v1      = (vSpec != null && vSpec.length > 0) ? vSpec[0] : 0;
-        double h5vPct  = (v1 > 1e-6 && vSpec != null && vSpec.length >  5) ? (vSpec[4]  / v1 * 100) : 0;
-        double h7vPct  = (v1 > 1e-6 && vSpec != null && vSpec.length >  7) ? (vSpec[6]  / v1 * 100) : 0;
-        double h11vPct = (v1 > 1e-6 && vSpec != null && vSpec.length > 11) ? (vSpec[10] / v1 * 100) : 0;
-        double h13vPct = (v1 > 1e-6 && vSpec != null && vSpec.length > 13) ? (vSpec[12] / v1 * 100) : 0;
-
-        double voltAvg = m.getVoltageAvg();
-        double unbal   = 0;
-        if (voltAvg > 1e-6) {
-            double maxDev = Math.max(
-                Math.max(Math.abs(m.getVoltageL1() - voltAvg), Math.abs(m.getVoltageL2() - voltAvg)),
-                Math.abs(m.getVoltageL3() - voltAvg));
-            unbal = 100.0 * maxDev / voltAvg;
-        }
-
-        List<CompRow> rows = new ArrayList<>();
-
-        // IEC 61000-3-6
-        rows.add(ev(feederLabel, "IEC 61000-3-6",  "THDv total (%)",         thdv,  5.0, "%.2f%%", "5.0%",  "Promedio trifásico"));
-        rows.add(ev(feederLabel, "IEC 61000-3-6",  "H5 Tensión (%)",         h5vPct,4.0, "%.2f%%", "4.0%",  "5° orden tensión L1"));
-        rows.add(ev(feederLabel, "IEC 61000-3-6",  "H7 Tensión (%)",         h7vPct,4.0, "%.2f%%", "4.0%",  "7° orden tensión L1"));
-        rows.add(ev(feederLabel, "IEC 61000-3-6",  "H11 Tensión (%)",       h11vPct,3.0, "%.2f%%", "3.0%",  "11° orden tensión L1"));
-        rows.add(ev(feederLabel, "IEC 61000-3-6",  "H13 Tensión (%)",       h13vPct,3.0, "%.2f%%", "3.0%",  "13° orden tensión L1"));
-
-        // IEEE 519-2022
-        rows.add(ev(feederLabel, "IEEE 519-2022", "THDi corriente (%)",      thdi,  8.0, "%.2f%%", "8.0%",  "TDD promedio trifásico"));
-        rows.add(ev(feederLabel, "IEEE 519-2022", "THDv tensión (%)",        thdv,  5.0, "%.2f%%", "5.0%",  "Distorsión total tensión"));
-        rows.add(ev(feederLabel, "IEEE 519-2022", "H5/H1 corriente (%)",   h5iPct,  4.0, "%.2f%%", "4.0%",  "5° orden corriente"));
-        rows.add(ev(feederLabel, "IEEE 519-2022", "H7/H1 corriente (%)",   h7iPct,  4.0, "%.2f%%", "4.0%",  "7° orden corriente"));
-        rows.add(evPF(feederLabel, pf));
-
-        // EN 50160
-        rows.add(ev(feederLabel, "EN 50160",       "Desbalance tensión (%)", unbal, 2.0, "%.2f%%", "2.0%",  "Desequilibrio trifásico"));
-        rows.add(ev(feederLabel, "EN 50160",       "THDv total (%)",         thdv,  8.0, "%.2f%%", "8.0%",  "Límite semanal EN 50160"));
-        rows.add(evFreq(feederLabel, freq));
-
-        // IEC 61000-2-12
-        rows.add(ev(feederLabel, "IEC 61000-2-12", "Nivel compatib. THDv",   thdv,  6.0, "%.2f%%", "6.0%",  "Nivel planificación MT"));
-        rows.add(ev(feederLabel, "IEC 61000-2-12", "H5 nivel compat. (%)",  h5vPct, 5.0, "%.2f%%", "5.0%",  "5° orden tensión MT"));
-
-        return rows;
-    }
-
-    // ── Row factories ─────────────────────────────────────────────────────────
-
-    private CompRow ev(String feeder, String std, String param,
-                       double measured, double limit,
-                       String fmt, String limitStr, String notes) {
-        String measStr = String.format(fmt, measured);
-        String status;
-        if      (measured > limit * 1.2)  status = "✗ INCUMPLE";
-        else if (measured > limit)        status = "⚠ LÍMITE";
-        else if (measured > limit * 0.85) status = "⚠ LÍMITE";
-        else                              status = "✓ CUMPLE";
-        return new CompRow(feeder, std, param, measStr, limitStr, status, notes);
-    }
-
-    private CompRow evPF(String feeder, double pf) {
-        String measStr = String.format("%.3f", pf);
-        String status;
-        if      (pf < 0.85 * 0.9) status = "✗ INCUMPLE";
-        else if (pf < 0.85)       status = "⚠ LÍMITE";
-        else                      status = "✓ CUMPLE";
-        return new CompRow(feeder, "IEEE 519-2022", "Factor de Potencia",
-                           measStr, ">0.85", status, "Factor de potencia desplazamiento");
-    }
-
-    private CompRow evFreq(String feeder, double freq) {
-        String measStr = String.format("%.3f Hz", freq);
-        String status;
-        if      (freq < 49.0 || freq > 51.0) status = "✗ INCUMPLE";
-        else if (freq < 49.5 || freq > 50.5) status = "⚠ LÍMITE";
-        else                                  status = "✓ CUMPLE";
-        return new CompRow(feeder, "EN 50160", "Frecuencia (Hz)",
-                           measStr, "50 ± 1 Hz", status, "Frecuencia nominal 50 Hz");
+        return ComplianceRowBuilder.buildRows(m, cfg);
     }
 
     // ── Dropdown helpers ──────────────────────────────────────────────────────
@@ -443,34 +342,4 @@ public class CompliancePanel {
         return null;
     }
 
-    // ── CompRow ───────────────────────────────────────────────────────────────
-
-    public static class CompRow {
-        private final String feeder;
-        private final String standard;
-        private final String parameter;
-        private final String measured;
-        private final String limit;
-        private final String status;
-        private final String notes;
-
-        public CompRow(String feeder, String standard, String parameter, String measured,
-                       String limit, String status, String notes) {
-            this.feeder    = feeder;
-            this.standard  = standard;
-            this.parameter = parameter;
-            this.measured  = measured;
-            this.limit     = limit;
-            this.status    = status;
-            this.notes     = notes;
-        }
-
-        public String getFeeder()    { return feeder; }
-        public String getStandard()  { return standard; }
-        public String getParameter() { return parameter; }
-        public String getMeasured()  { return measured; }
-        public String getLimit()     { return limit; }
-        public String getStatus()    { return status; }
-        public String getNotes()     { return notes; }
-    }
 }

@@ -1,5 +1,6 @@
 package com.harmonicmonitor.comm;
 
+import com.harmonicmonitor.AppExecutors;
 import com.harmonicmonitor.analysis.*;
 import com.harmonicmonitor.model.FeederConfig;
 import com.harmonicmonitor.model.FeederMeasurement;
@@ -58,11 +59,7 @@ public class MeasurementPoller {
     public void start() {
         if (running) return;
         running   = true;
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "Poller-" + config.getFeederId());
-            t.setDaemon(true);
-            return t;
-        });
+        scheduler = AppExecutors.newDaemonScheduler("Poller-" + config.getFeederId());
         long intervalMs = config.getPollIntervalMs();
         pollTask = scheduler.scheduleAtFixedRate(this::poll, 0, intervalMs, TimeUnit.MILLISECONDS);
         LOG.info("Poller iniciado para " + config.getFeederId() + " cada " + intervalMs + " ms");

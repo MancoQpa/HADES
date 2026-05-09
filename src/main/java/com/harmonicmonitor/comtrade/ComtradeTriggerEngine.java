@@ -6,9 +6,11 @@ import com.harmonicmonitor.model.FeederConfig;
 import com.harmonicmonitor.model.FeederMeasurement;
 import com.harmonicmonitor.model.LoadType;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.time.*;
+import java.io.File;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -56,11 +58,7 @@ public class ComtradeTriggerEngine {
 
     private static final Logger LOG = Logger.getLogger(ComtradeTriggerEngine.class.getName());
 
-    // ── Límites normativos ────────────────────────────────────────────────────
-
-    // IEC 61000-3-6 Tabla 1 — planning levels de tensión para 1kV–36kV
-    private static final int[]    V_HARM_ORDERS = { 3,   5,   7,   9,   11,  13,  15,  17,  19,  21,  23,  25  };
-    private static final double[] V_HARM_LIMITS = { 4.0, 5.0, 4.0, 1.2, 3.0, 2.5, 0.3, 1.6, 1.2, 0.2, 1.2, 0.8 };
+    // ── Límites normativos (constantes en ComtradeReportWriter) ──────────────
 
     // THD tensión
     private static final double THD_V_WARN     = 5.0;   // 80% del planning level
@@ -239,9 +237,9 @@ public class ComtradeTriggerEngine {
         if (spec == null || spec.length == 0 || spec[0] < 1.0) return;
         double v1 = spec[0];
 
-        for (int k = 0; k < V_HARM_ORDERS.length; k++) {
-            int    h     = V_HARM_ORDERS[k];
-            double limit = V_HARM_LIMITS[k];
+        for (int k = 0; k < ComtradeReportWriter.V_HARM_ORDERS.length; k++) {
+            int    h     = ComtradeReportWriter.V_HARM_ORDERS[k];
+            double limit = ComtradeReportWriter.V_HARM_LIMITS[k];
             if (h - 1 >= spec.length) continue;
             double pct = 100.0 * spec[h - 1] / v1;
             if (pct > limit) {
@@ -261,7 +259,7 @@ public class ComtradeTriggerEngine {
         double il = spec[0];   // H1 ≈ corriente de demanda fundamental
 
         for (int h = 3; h <= Math.min(25, spec.length); h++) {
-            double limit = ieee519CurrentLimit(h);
+            double limit = ComtradeReportWriter.ieee519CurrentLimit(h);
             double pct   = 100.0 * spec[h - 1] / il;
             if (pct > limit) {
                 triggerRecord(m, findCfgStub(m), "Ih" + h + "_PQ",
@@ -365,112 +363,15 @@ public class ComtradeTriggerEngine {
         }
     }
 
-    // ── Reporte de texto ─────────────────────────────────────────────────────
+    // ── Reporte de texto (delegado a ComtradeReportWriter) ────────────────────
 
     private File writeReport(FeederMeasurement m, FeederConfig cfg,
                               String cause, String reason, TriggerLevel level,
                               File cfgFile) throws IOException {
-
-        String base = cfgFile.getName().replaceAll("(?i)\\.cfg$", "");
-        File rpt    = new File(cfgFile.getParentFile(), base + "_report.txt");
-
-        DateTimeFormatter ts = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-        LocalDateTime dt     = LocalDateTime.ofInstant(m.getTimestamp(), ZoneId.systemDefault());
-
-        try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(
-                new FileOutputStream(rpt), StandardCharsets.UTF_8))) {
-
-            pw.println("==========================================================");
-            pw.println("  REPORTE DE EVENTO — HADES v1.0");
-            pw.println("==========================================================");
-            pw.println("Fecha/Hora    : " + dt.format(ts));
-            pw.println("Feeder ID     : " + m.getFeederId());
-            pw.println("Feeder Nombre : " + cfg.getFeederName());
-            pw.println("Nivel         : " + level);
-            pw.println("Causa         : " + cause);
-            pw.println("Descripción   : " + reason.replace("\n", "\n               "));
-            pw.println("Archivo COMTRADE: " + cfgFile.getName());
-            pw.println();
-
-            pw.println("── MEDICIÓN EN EL INSTANTE DEL EVENTO ──────────────────");
-            pw.printf("  Tensión      L1 / L2 / L3  : %9.2f / %9.2f / %9.2f  V%n",
-                m.getVoltageL1(), m.getVoltageL2(), m.getVoltageL3());
-            pw.printf("  Corriente    L1 / L2 / L3  : %9.3f / %9.3f / %9.3f  A%n",
-                m.getCurrentL1(), m.getCurrentL2(), m.getCurrentL3());
-            pw.printf("  Potencia act / react / apa : %9.1f / %9.1f / %9.1f  kW/kVAR/kVA%n",
-                m.getActivePower(), m.getReactivePower(), m.getApparentPower());
-            pw.printf("  Factor de potencia         : %9.4f%n", m.getPowerFactor());
-            pw.printf("  Frecuencia                 : %9.3f  Hz%n", m.getFrequency());
-            pw.printf("  THD_V L1/L2/L3             : %6.2f%% / %6.2f%% / %6.2f%%%n",
-                m.getThdVoltageL1(), m.getThdVoltageL2(), m.getThdVoltageL3());
-            pw.printf("  THD_I L1/L2/L3             : %6.2f%% / %6.2f%% / %6.2f%%%n",
-                m.getThdCurrentL1(), m.getThdCurrentL2(), m.getThdCurrentL3());
-            pw.printf("  Carga detectada            : %s%n", m.getDetectedLoadType().getDisplayName());
-            pw.printf("  K-Factor                   : %6.2f%n", m.getKFactorL1());
-            pw.println();
-
-            // Espectro armónico de corriente L1
-            double[] spec = m.getHarmonicCurrentL1();
-            if (spec != null && spec.length > 1 && spec[0] > 1e-6) {
-                pw.println("── ESPECTRO ARMÓNICO CORRIENTE L1 (% del fundamental) ──");
-                double h1 = spec[0];
-                pw.printf("  H1  = %8.3f A  (referencia, 100%%)%n", h1);
-                for (int h = 1; h < Math.min(spec.length, 25); h++) {
-                    if (spec[h] > 1e-6) {
-                        double pct = 100.0 * spec[h] / h1;
-                        double lim = ieee519CurrentLimit(h + 1);
-                        String flag = (pct > lim) ? "  ← SUPERA IEEE 519" : "";
-                        pw.printf("  H%-2d = %8.3f A  (%5.1f%%)  [límite %.1f%%]%s%n",
-                            h + 1, spec[h], pct, lim, flag);
-                    }
-                }
-                pw.println();
-            }
-
-            // Espectro armónico de tensión L1
-            double[] vspec = m.getHarmonicVoltageL1();
-            if (vspec != null && vspec.length > 1 && vspec[0] > 1.0) {
-                pw.println("── ESPECTRO ARMÓNICO TENSIÓN L1 (% del fundamental) ────");
-                double v1 = vspec[0];
-                pw.printf("  H1  = %9.2f V  (referencia, 100%%)%n", v1);
-                for (int k = 0; k < V_HARM_ORDERS.length; k++) {
-                    int h = V_HARM_ORDERS[k];
-                    if (h - 1 < vspec.length && vspec[h - 1] > 0.1) {
-                        double pct = 100.0 * vspec[h - 1] / v1;
-                        double lim = V_HARM_LIMITS[k];
-                        String flag = (pct > lim) ? "  ← SUPERA IEC 61000-3-6" : "";
-                        pw.printf("  H%-2d = %9.2f V  (%5.2f%%)  [planning level %.1f%%]%s%n",
-                            h, vspec[h - 1], pct, lim, flag);
-                    }
-                }
-                pw.println();
-            }
-
-            pw.println("── NORMAS DE REFERENCIA ─────────────────────────────────");
-            pw.println("  IEC 61000-3-6:2008   Planning levels armónicos de tensión, red MT (1kV-36kV)");
-            pw.println("  EN 50160:2010        Características de tensión en redes públicas");
-            pw.println("  IEEE 519-2022        Límites de armónicos de corriente (1kV-69kV)");
-            pw.println("  IEC 61000-4-30:2015  Métodos de medición de calidad de energía (Clase A)");
-            pw.println("  IEEE C37.111-1999    Formato COMTRADE para registros de perturbaciones");
-            pw.println("==========================================================");
-        }
-
-        return rpt;
+        return ComtradeReportWriter.write(m, cfg, cause, reason, level, cfgFile);
     }
 
     // ── Utilidades ────────────────────────────────────────────────────────────
-
-    /**
-     * Límite de armónico individual de corriente IEEE 519-2022 Tabla 2
-     * (% de IL, para Isc/IL = 20–50, 1kV–69kV)
-     */
-    private static double ieee519CurrentLimit(int h) {
-        if (h < 11)  return 4.0;
-        if (h <= 16) return 2.0;
-        if (h <= 22) return 1.5;
-        if (h <= 34) return 0.6;
-        return 0.3;
-    }
 
     /** Stub de FeederConfig mínimo para métodos que solo necesitan el ID */
     private FeederConfig findCfgStub(FeederMeasurement m) {

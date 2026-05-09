@@ -1,5 +1,6 @@
 package com.harmonicmonitor.comm;
 
+import com.harmonicmonitor.AppExecutors;
 import com.harmonicmonitor.model.FeederConfig;
 import com.harmonicmonitor.model.FeederMeasurement;
 import com.harmonicmonitor.model.SimProfile;
@@ -59,11 +60,7 @@ public class SimulatedPoller extends MeasurementPoller {
     @Override public void start() {
         if (running) return;
         running   = true;
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "SimPoller-" + cfg.getFeederId());
-            t.setDaemon(true);
-            return t;
-        });
+        scheduler = AppExecutors.newDaemonScheduler("SimPoller-" + cfg.getFeederId());
         task = scheduler.scheduleAtFixedRate(this::simulatePoll, 0, cfg.getPollIntervalMs(), TimeUnit.MILLISECONDS);
     }
     @Override public void stop() {

@@ -1,5 +1,6 @@
 package com.harmonicmonitor.gui;
 
+import com.harmonicmonitor.comtrade.ComtradeDsp;
 import com.harmonicmonitor.comtrade.ComtradeReader.ComtradeRecord;
 
 import javafx.beans.property.SimpleStringProperty;
@@ -70,8 +71,8 @@ class FftChartBuilder {
         for (int idx : sel) {
             if (idx >= record.numAnalogChannels) continue;
             chNames.add(WaveformChartBuilder.chNameWithUnit(record, idx));
-            mags.add(ComtradePanel.calculateFFTMagnitude(
-                ComtradePanel.extractWindow(record.analogData[idx], winStartSample, winEndSample),
+            mags.add(ComtradeDsp.calculateFFTMagnitude(
+                ComtradeDsp.extractWindow(record.analogData[idx], winStartSample, winEndSample),
                 fs, f0, maxOrder));
             units.add(idx < record.analogChannelUnits.size()
                 ? record.analogChannelUnits.get(idx).trim() : "");

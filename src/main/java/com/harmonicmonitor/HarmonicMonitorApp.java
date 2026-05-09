@@ -3,7 +3,6 @@ package com.harmonicmonitor;
 import com.harmonicmonitor.alarm.AlarmEngine;
 import com.harmonicmonitor.comm.IEC61850Communicator;
 import com.harmonicmonitor.comm.MeasurementPoller;
-import com.harmonicmonitor.comm.SimulatedPoller;
 import com.harmonicmonitor.comtrade.ComtradeTriggerEngine;
 import com.harmonicmonitor.gui.*;
 import com.harmonicmonitor.gui.ComtradePanel;
@@ -13,7 +12,6 @@ import com.harmonicmonitor.storage.DataStorage;
 import com.harmonicmonitor.storage.MLDataExporter;
 
 import java.io.File;
-import java.util.Optional;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -31,7 +29,6 @@ import javafx.util.Duration;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -53,11 +50,8 @@ public class HarmonicMonitorApp extends Application {
     private AlarmEngine.AlarmListener    storageAlarmListener;
 
     // ── Feeders ────────────────────────────────────────────────────────────────
-    private final List<FeederConfig>         feederConfigs  = new ArrayList<>();
-    private final List<IEC61850Communicator> communicators  = new ArrayList<>();
-    private final List<MeasurementPoller>    pollers        = new ArrayList<>();
-    private final ConcurrentHashMap<String, FeederMeasurement> latestMeasurements
-        = new ConcurrentHashMap<>();
+    final FeederLifecycleManager feederMgr =
+        new FeederLifecycleManager(this, dataStorage, comtradeTrigger);
 
     // ── Theme ──────────────────────────────────────────────────────────────────
     public static boolean isDark = false;
@@ -74,13 +68,13 @@ public class HarmonicMonitorApp extends Application {
     private Label    feederCountLbl;
     private int      currentTabIndex = 0;
 
-    // ── Panels ─────────────────────────────────────────────────────────────────
-    private DashboardPanel          dashboardPanel;
-    private HarmonicsPanel          harmonicsPanel;
-    private AlarmsPanel             alarmsPanel;
-    private FeederMgmtPanel         feederMgmtPanel;
-    private MultiFeederMonitorPanel multiFeederPanel;
-    private TrendChartsPanel        trendsPanel;
+    // ── Panels (package-private: accessed by FeederLifecycleManager callbacks) ──
+    DashboardPanel          dashboardPanel;
+    HarmonicsPanel          harmonicsPanel;
+    AlarmsPanel             alarmsPanel;
+    FeederMgmtPanel         feederMgmtPanel;
+    MultiFeederMonitorPanel multiFeederPanel;
+    TrendChartsPanel        trendsPanel;
     private CompliancePanel         compliancePanel;
     private HelpPanel               helpPanel;
     private AboutPanel              aboutPanel;
@@ -97,7 +91,7 @@ public class HarmonicMonitorApp extends Application {
         setupAlarmStorage();
         startPeriodicTrigger();
         buildScene();
-        if (feederConfigs.isEmpty()) showWelcomeDialog();
+        if (feederMgr.feederConfigs.isEmpty()) showWelcomeDialog();
 
         stage.setTitle("HADES v1.0  |  Harmonic Analysis for Detection of Electronic Signatures  |  IEC 61850");
         stage.setMinWidth(980);
@@ -291,8 +285,9 @@ public class HarmonicMonitorApp extends Application {
 
     // ── Measurement dispatch ───────────────────────────────────────────────────
 
-    private void onMeasurement(FeederMeasurement m, FeederConfig cfg) {
-        latestMeasurements.put(m.getFeederId(), m);
+    /** Called by pollers (via FeederLifecycleManager); package-private intentionally. */
+    void onMeasurement(FeederMeasurement m, FeederConfig cfg) {
+        feederMgr.latestMeasurements.put(m.getFeederId(), m);
         dataStorage.storeMeasurement(m);
         alarmEngine.evaluate(m, cfg);
         // Evaluar triggers COMTRADE en hilo de polling (no bloquea la UI)
@@ -312,25 +307,9 @@ public class HarmonicMonitorApp extends Application {
         });
     }
 
-    // ── Feeder management ──────────────────────────────────────────────────────
+    // ── Feeder management (delegated to FeederLifecycleManager) ───────────────
 
-    public void addDemoFeeder() {
-        int n = feederConfigs.size() + 1;
-        FeederConfig cfg = new FeederConfig("AL-DEMO-" + n, "127.0.0.1");
-        cfg.setFeederName("Alimentador Demo " + n);
-        cfg.setIedName("IED_DEMO_" + n);
-        cfg.setNominalVoltageKv(23.0);
-        cfg.setNominalCurrentA(150.0 + (n - 1) * 25);
-        cfg.setShortCircuitMva(80.0);
-        cfg.setFeederCapacitanceMicroF(3.5);
-        feederConfigs.add(cfg);
-        comtradeTrigger.prepareFeederDir(cfg.getFeederId());
-        startSimulatedPoller(cfg);
-        updateFeedersIndicator();
-        if (multiFeederPanel != null) multiFeederPanel.refreshFeeders();
-        if (trendsPanel      != null) trendsPanel.refreshFeederSelector();
-        setStatusMessage("Feeder demo agregado: " + cfg.getFeederName());
-    }
+    public void addDemoFeeder()                       { feederMgr.addDemoFeeder(); }
 
     private void showWelcomeDialog() {
         Platform.runLater(() -> {
@@ -368,245 +347,49 @@ public class HarmonicMonitorApp extends Application {
         });
     }
 
-    /** Agrega un feeder con SimulatedPoller usando el perfil definido en cfg.getSimProfile(). */
-    public void addSimulatedFeeder(FeederConfig cfg) {
-        // Evitar ID duplicado
-        String id = cfg.getFeederId();
-        boolean dup = feederConfigs.stream().anyMatch(c -> c.getFeederId().equals(id));
-        if (dup) {
-            cfg.setFeederId(id + "-" + (feederConfigs.size() + 1));
-        }
-        feederConfigs.add(cfg);
-        comtradeTrigger.prepareFeederDir(cfg.getFeederId());
-        startSimulatedPoller(cfg);
-        updateFeedersIndicator();
-        if (multiFeederPanel != null) multiFeederPanel.refreshFeeders();
-        if (trendsPanel      != null) trendsPanel.refreshFeederSelector();
-        if (alarmsPanel      != null) alarmsPanel.refreshFeederFilter();
-        String profileName = cfg.getSimProfile() != null ? cfg.getSimProfile().displayName : "Demo";
-        setStatusMessage("Feeder simulado: " + cfg.getFeederName() + "  [" + profileName + "]");
-    }
-
-    public void addFeeder(FeederConfig cfg) {
-        boolean dup = feederConfigs.stream().anyMatch(c -> c.getFeederId().equals(cfg.getFeederId()));
-        if (dup) {
-            setStatusMessage("Ya existe un feeder con ID \"" + cfg.getFeederId() + "\" — ignorado");
-            return;
-        }
-        feederConfigs.add(cfg);
-        comtradeTrigger.prepareFeederDir(cfg.getFeederId());
-        IEC61850Communicator comm = new IEC61850Communicator(cfg);
-        communicators.add(comm);
-        comm.addListener(ev -> Platform.runLater(() -> {
-            setStatusMessage(ev.feederId + ": " + ev.message);
-            // Actualizar LED de conexion en pestana MULTI
-            if (multiFeederPanel != null) {
-                IEC61850Communicator.State ledState;
-                switch (ev.type) {
-                    case CONNECTED:
-                    case MODEL_LOADED:  ledState = IEC61850Communicator.State.CONNECTED;    break;
-                    case DISCONNECTED:  ledState = IEC61850Communicator.State.DISCONNECTED; break;
-                    case CONNECTION_FAILED:
-                    case READ_ERROR:    ledState = IEC61850Communicator.State.ERROR;         break;
-                    default:            ledState = IEC61850Communicator.State.CONNECTING;   break;
-                }
-                multiFeederPanel.updateConnectionState(cfg.getFeederId(), ledState);
-            }
-            // Actualizar dashboard con estado de conexion
-            if (dashboardPanel != null) {
-                IEC61850Communicator.State ds;
-                switch (ev.type) {
-                    case CONNECTED:
-                    case MODEL_LOADED:  ds = IEC61850Communicator.State.CONNECTED;    break;
-                    case DISCONNECTED:  ds = IEC61850Communicator.State.DISCONNECTED; break;
-                    case CONNECTION_FAILED:
-                    case READ_ERROR:    ds = IEC61850Communicator.State.ERROR;         break;
-                    default:            ds = IEC61850Communicator.State.CONNECTING;   break;
-                }
-                dashboardPanel.updateConnectionState(cfg.getFeederId(), ds);
-            }
-            // Registrar perdida/recuperacion de conexion como alarma
-            if (ev.type == IEC61850Communicator.CommEvent.Type.DISCONNECTED ||
-                ev.type == IEC61850Communicator.CommEvent.Type.CONNECTION_FAILED) {
-                AlarmEvent connAlarm = new AlarmEvent(
-                    AlarmEvent.Level.WARNING, cfg.getFeederId(),
-                    "Conexion",
-                    "Perdida de conexion [" + cfg.getFeederId() + "]: " + ev.message,
-                    0.0, 0.0);
-                dataStorage.storeAlarm(connAlarm);
-                if (alarmsPanel != null) alarmsPanel.onAlarm(connAlarm);
-            } else if (ev.type == IEC61850Communicator.CommEvent.Type.MODEL_LOADED) {
-                // Registrar reconexion exitosa si ya habia habido un ciclo previo (reconnectAttempts > 0 se maneja en comm)
-                AlarmEvent connOk = new AlarmEvent(
-                    AlarmEvent.Level.WARNING, cfg.getFeederId(),
-                    "Conexion",
-                    "Conexion establecida/restablecida [" + cfg.getFeederId() + "]: " + ev.message,
-                    1.0, 1.0);
-                dataStorage.storeAlarm(connOk);
-            }
-            if (ev.type == IEC61850Communicator.CommEvent.Type.MODEL_LOADED) {
-                // Advertir al usuario si el IED no expone el array de armónicos
-                // y operará en modo degradado (espectro estimado, clasificación con validez reducida).
-                if (!comm.isHarmonicArrayInModel()) {
-                    Alert warn = new Alert(Alert.AlertType.WARNING);
-                    warn.setTitle("Modo degradado — armónicos no disponibles");
-                    warn.setHeaderText("El IED \"" + cfg.getIedName() + "\" no expone el array de armónicos (MHAI.HA)");
-                    warn.setContentText(
-                        "Sin el array H1–H13, las dimensiones espectrales del clasificador\n" +
-                        "(H5/H1, H7/H1, H11/H1) serán ESTIMADAS con un perfil SMPS genérico,\n" +
-                        "no medidas desde el IED.\n\n" +
-                        "En modo degradado solo THD_I, CV y FP son observables reales.\n" +
-                        "Los resultados de clasificación de tipo de carga tienen validez reducida\n" +
-                        "y el espectro mostrado NO proviene del instrumento.\n\n" +
-                        "¿Desea continuar de todas formas?");
-                    ButtonType btnContinuar = new ButtonType("Continuar en modo degradado", ButtonBar.ButtonData.OK_DONE);
-                    ButtonType btnCancelar  = new ButtonType("Cancelar conexión",           ButtonBar.ButtonData.CANCEL_CLOSE);
-                    warn.getButtonTypes().setAll(btnContinuar, btnCancelar);
-                    Optional<ButtonType> res = warn.showAndWait();
-                    if (res.isEmpty() || res.get().getButtonData() == ButtonBar.ButtonData.CANCEL_CLOSE) {
-                        comm.disconnect();
-                        communicators.remove(comm);
-                        feederConfigs.remove(cfg);
-                        setStatusMessage(cfg.getFeederId() + ": conexión cancelada — el IED no provee armónicos");
-                        if (multiFeederPanel != null) {
-                            multiFeederPanel.updateConnectionState(cfg.getFeederId(), IEC61850Communicator.State.DISCONNECTED);
-                            multiFeederPanel.refreshFeeders();
-                        }
-                        updateFeedersIndicator();
-                        return;
-                    }
-                }
-                startPoller(comm, cfg);
-                updateFeedersIndicator();
-                if (multiFeederPanel != null) multiFeederPanel.refreshFeeders();
-                if (trendsPanel      != null) trendsPanel.refreshFeederSelector();
-                if (alarmsPanel      != null) alarmsPanel.refreshFeederFilter();
-            }
-            updatePollingIndicator();
-        }));
-        comm.connectAsync();
-        // LED a CONNECTING inmediatamente
-        if (multiFeederPanel != null)
-            multiFeederPanel.updateConnectionState(cfg.getFeederId(), IEC61850Communicator.State.CONNECTING);
-        updateFeedersIndicator();
-        setStatusMessage("Conectando a " + cfg.getFeederName() + " (" + cfg.getIedHost() + ")...");
-    }
-
-    public void removeFeeder(String feederId) {
-        // Detener y eliminar pollers asociados al feeder
-        List<MeasurementPoller> toRemove = new ArrayList<>();
-        for (MeasurementPoller p : pollers) {
-            if (p.getConfig().getFeederId().equals(feederId)) {
-                try { p.stop(); } catch (Exception ignored) {}
-                toRemove.add(p);
-            }
-        }
-        pollers.removeAll(toRemove);
-
-        // Desconectar el comunicador IEC 61850 antes de removerlo
-        communicators.stream()
-            .filter(c -> c.getConfig().getFeederId().equals(feederId))
-            .findFirst()
-            .ifPresent(c -> { try { c.disconnect(); } catch (Exception ignored) {} });
-        communicators.removeIf(c -> c.getConfig().getFeederId().equals(feederId));
-
-        feederConfigs.removeIf(c -> c.getFeederId().equals(feederId));
-        latestMeasurements.remove(feederId);
-        updateFeedersIndicator();
-        if (multiFeederPanel != null) multiFeederPanel.refreshFeeders();
-        if (trendsPanel      != null) trendsPanel.refreshFeederSelector();
-        if (alarmsPanel      != null) alarmsPanel.refreshFeederFilter();
-        setStatusMessage("Feeder eliminado: " + feederId);
-    }
+    public void addSimulatedFeeder(FeederConfig cfg)    { feederMgr.addSimulatedFeeder(cfg); }
+    public void addFeeder(FeederConfig cfg)             { feederMgr.addFeeder(cfg); }
+    public void removeFeeder(String feederId)           { feederMgr.removeFeeder(feederId); }
 
     /** Actualiza el testigo de polling en la barra de estado. */
     public void updatePollingIndicator() {
         Platform.runLater(() -> {
             if (pollingIndicatorLbl == null) return;
-            long total     = communicators.size();
-            long connected = communicators.stream()
+            long total     = feederMgr.communicators.size();
+            long connected = feederMgr.communicators.stream()
                 .filter(c -> c.getState() == IEC61850Communicator.State.CONNECTED)
                 .count();
             if (total == 0) {
-                if (feederConfigs.isEmpty()) {
-                    pollingIndicatorLbl.setText("● SIN FEEDERS");
+                if (feederMgr.feederConfigs.isEmpty()) {
+                    pollingIndicatorLbl.setText("\u25CF SIN FEEDERS");
                     pollingIndicatorLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #78909C;");
                 } else {
-                    pollingIndicatorLbl.setText("● SIM");
+                    pollingIndicatorLbl.setText("\u25CF SIM");
                     pollingIndicatorLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00BCD4;");
                 }
             } else if (connected == total) {
-                pollingIndicatorLbl.setText("● POLLING OK (" + connected + "/" + total + ")");
+                pollingIndicatorLbl.setText("\u25CF POLLING OK (" + connected + "/" + total + ")");
                 pollingIndicatorLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #00C853;");
             } else if (connected > 0) {
-                pollingIndicatorLbl.setText("● PARCIAL (" + connected + "/" + total + ")");
+                pollingIndicatorLbl.setText("\u25CF PARCIAL (" + connected + "/" + total + ")");
                 pollingIndicatorLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #FFB300;");
             } else {
-                pollingIndicatorLbl.setText("● DESCONECTADO (0/" + total + ")");
+                pollingIndicatorLbl.setText("\u25CF DESCONECTADO (0/" + total + ")");
                 pollingIndicatorLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #D50000;");
             }
         });
     }
 
     /** Fuerza la reconexion de un feeder real desconectado o en error. */
-    public void reconnectFeeder(String feederId) {
-        IEC61850Communicator comm = null;
-        for (IEC61850Communicator c : communicators) {
-            if (c.getConfig().getFeederId().equals(feederId)) { comm = c; break; }
-        }
-        if (comm == null) { setStatusMessage(feederId + ": es simulado, no requiere reconexion"); return; }
-        IEC61850Communicator.State st = comm.getState();
-        if (st == IEC61850Communicator.State.CONNECTED || st == IEC61850Communicator.State.CONNECTING) {
-            setStatusMessage(feederId + ": ya esta conectado o conectandose");
-            return;
-        }
-        // Detener pollers existentes para evitar duplicados
-        List<MeasurementPoller> toStop = new ArrayList<>();
-        for (MeasurementPoller p : pollers) {
-            if (p.getConfig().getFeederId().equals(feederId)) toStop.add(p);
-        }
-        for (MeasurementPoller p : toStop) { try { p.stop(); } catch (Exception ignored) {} }
-        pollers.removeAll(toStop);
+    public void reconnectFeeder(String feederId)   { feederMgr.reconnectFeeder(feederId); }
+    public void setPollingInterval(int ms)         { feederMgr.setPollingInterval(ms); }
 
-        comm.connectAsync();
-        if (multiFeederPanel != null)
-            multiFeederPanel.updateConnectionState(feederId, IEC61850Communicator.State.CONNECTING);
-        setStatusMessage("Reconectando " + feederId + "...");
-        updatePollingIndicator();
-    }
-
-    public void setPollingInterval(int ms) {
-        for (MeasurementPoller p : pollers) p.setInterval(ms);
-        setStatusMessage("Intervalo de polling: " + ms / 1000 + " seg");
-    }
-
-    private void startPoller(IEC61850Communicator comm, FeederConfig cfg) {
-        // Detener pollers anteriores para este feeder (evita duplicados en reconexion)
-        List<MeasurementPoller> existing = new ArrayList<>();
-        for (MeasurementPoller px : pollers) {
-            if (px.getConfig().getFeederId().equals(cfg.getFeederId())) existing.add(px);
-        }
-        for (MeasurementPoller px : existing) { try { px.stop(); } catch (Exception ignored) {} }
-        pollers.removeAll(existing);
-
-        MeasurementPoller p = new MeasurementPoller(cfg, comm);
-        pollers.add(p);
-        p.addListener(m -> onMeasurement(m, cfg));
-        p.start();
-    }
-
-    private void startSimulatedPoller(FeederConfig cfg) {
-        SimulatedPoller p = new SimulatedPoller(cfg);
-        pollers.add(p);
-        p.addListener(m -> onMeasurement(m, cfg));
-        p.start();
-    }
-
-    private void updateFeedersIndicator() {
+    /** Called by FeederLifecycleManager after collection mutations. Package-private intentionally. */
+    void updateFeedersIndicator() {
         Platform.runLater(() -> {
-            int n = feederConfigs.size();
+            int n = feederMgr.feederConfigs.size();
             if (feederCountLbl != null)
-                feederCountLbl.setText("● " + n + " feeder" + (n != 1 ? "s" : ""));
+                feederCountLbl.setText("\u25CF " + n + " feeder" + (n != 1 ? "s" : ""));
         });
         updatePollingIndicator();
     }
@@ -629,22 +412,6 @@ public class HarmonicMonitorApp extends Application {
         });
     }
 
-    // ── CSV export ─────────────────────────────────────────────────────────────
-
-    private void exportCsv() {
-        if (feederConfigs.isEmpty()) { setStatusMessage("Sin feeders configurados"); return; }
-        StringBuilder msg = new StringBuilder("Exportado: ");
-        for (FeederConfig cfg : feederConfigs) {
-            try {
-                String path = dataStorage.exportToCsv(cfg.getFeederId(), null, null);
-                msg.append(path).append("  ");
-            } catch (Exception ex) {
-                msg.append("[Error: ").append(cfg.getFeederId()).append("]  ");
-            }
-        }
-        setStatusMessage(msg.toString().trim());
-    }
-
     // ── Status message ─────────────────────────────────────────────────────────
 
     public void setStatusMessage(String msg) {
@@ -657,11 +424,7 @@ public class HarmonicMonitorApp extends Application {
 
     /** Inicia el scheduler que dispara un registro COMTRADE cada 5 minutos para cada feeder activo. */
     private void startPeriodicTrigger() {
-        periodicScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "PeriodicTrigger-5min");
-            t.setDaemon(true);
-            return t;
-        });
+        periodicScheduler = AppExecutors.newDaemonScheduler("PeriodicTrigger-5min");
         // Primer disparo a los 10 s del inicio.
         // scheduleWithFixedDelay: espera 5 min DESPUÉS de cada ejecución completada.
         // A diferencia de scheduleAtFixedRate, NO acumula ejecuciones perdidas
@@ -672,9 +435,9 @@ public class HarmonicMonitorApp extends Application {
 
     /** Ejecuta el disparo periódico obligatorio para todos los feeders con medición disponible. */
     private void runPeriodicTrigger() {
-        List<FeederConfig> cfgs = new ArrayList<>(feederConfigs);
+        List<FeederConfig> cfgs = new ArrayList<>(feederMgr.feederConfigs);
         for (FeederConfig cfg : cfgs) {
-            FeederMeasurement m = latestMeasurements.get(cfg.getFeederId());
+            FeederMeasurement m = feederMgr.latestMeasurements.get(cfg.getFeederId());
             if (m != null) {
                 try {
                     comtradeTrigger.triggerScheduled(m, cfg);
@@ -700,13 +463,13 @@ public class HarmonicMonitorApp extends Application {
                 com.harmonicmonitor.model.AlarmEvent.Level lvl = event.getLevel();
                 if (lvl == com.harmonicmonitor.model.AlarmEvent.Level.CRITICAL
                         || lvl == com.harmonicmonitor.model.AlarmEvent.Level.DETECTION) {
-                    FeederMeasurement m = latestMeasurements.get(event.getFeederId());
-                    FeederConfig cfg = feederConfigs.stream()
+                    FeederMeasurement m = feederMgr.latestMeasurements.get(event.getFeederId());
+                    FeederConfig cfg = feederMgr.feederConfigs.stream()
                         .filter(c -> c.getFeederId().equals(event.getFeederId()))
                         .findFirst().orElse(null);
                     if (m != null && cfg != null) {
-                        new Thread(() -> comtradeTrigger.triggerAlarm(m, cfg, event),
-                            "ComtradeTrigger-Alarm").start();
+                        AppExecutors.ioPool().execute(
+                            () -> comtradeTrigger.triggerAlarm(m, cfg, event));
                     }
                 }
             }
@@ -716,8 +479,10 @@ public class HarmonicMonitorApp extends Application {
 
     private void shutdown() {
         if (periodicScheduler != null) periodicScheduler.shutdownNow();
-        for (MeasurementPoller p : pollers)          { try { p.stop();       } catch (Exception ignored) {} }
-        for (IEC61850Communicator c : communicators) { try { c.disconnect(); } catch (Exception ignored) {} }
+        AppExecutors.shutdownAll();
+        if (recordsPanel != null) recordsPanel.shutdown();
+        for (MeasurementPoller p : feederMgr.pollers)          { try { p.stop();       } catch (Exception ignored) {} }
+        for (IEC61850Communicator c : feederMgr.communicators) { try { c.disconnect(); } catch (Exception ignored) {} }
         dataStorage.close();
         Platform.exit();
     }
@@ -740,28 +505,24 @@ public class HarmonicMonitorApp extends Application {
         });
     }
 
-    public List<FeederConfig>  getFeederConfigs()      { return feederConfigs; }
+    public List<FeederConfig>  getFeederConfigs()      { return feederMgr.feederConfigs; }
     public AlarmEngine         getAlarmEngine()         { return alarmEngine; }
     public DataStorage         getDataStorage()         { return dataStorage; }
     public Stage               getPrimaryStage()        { return primaryStage; }
-    public List<MeasurementPoller> getPollers()         { return pollers; }
+    public List<MeasurementPoller> getPollers()         { return feederMgr.pollers; }
     public ComtradeTriggerEngine getComtradeTrigger()   { return comtradeTrigger; }
     public ConcurrentHashMap<String, FeederMeasurement> getLatestMeasurements() {
-        return latestMeasurements;
+        return feederMgr.latestMeasurements;
     }
 
-    /** Retorna el estado de conexión del comunicador para un feeder, o null si es simulado. */
+    /** Retorna el estado de conexion del comunicador para un feeder, o null si es simulado. */
     public IEC61850Communicator.State getCommunicatorState(String feederId) {
-        return communicators.stream()
-            .filter(c -> c.getConfig().getFeederId().equals(feederId))
-            .findFirst()
-            .map(IEC61850Communicator::getState)
-            .orElse(null);
+        return feederMgr.getCommunicatorState(feederId);
     }
 
     /** True si el feeder corre con SimulatedPoller (sin comunicador IEC 61850). */
     public boolean isSimulatedFeeder(String feederId) {
-        return communicators.stream().noneMatch(c -> c.getConfig().getFeederId().equals(feederId));
+        return feederMgr.isSimulatedFeeder(feederId);
     }
 
     public static void main(String[] args) { launch(args); }

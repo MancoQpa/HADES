@@ -7,9 +7,6 @@ import com.harmonicmonitor.model.FeederConfig;
 import com.harmonicmonitor.model.FeederMeasurement;
 import com.harmonicmonitor.storage.MLDataExporter;
 
-import javafx.animation.Animation;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -19,19 +16,12 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.util.Duration;
 
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecordsPanel {
 
@@ -45,43 +35,7 @@ public class RecordsPanel {
     private Label statusLbl;
     private Label countLbl;
 
-    // ── Caracterización espectral ──────────────────────────────────────────────
-    private Button   btnChar;
-    private Label    charStatusLbl;
-    private HBox     charBanner;
-    private Timeline charPulse;
-    private ScheduledExecutorService charScheduler;
-    private volatile boolean         characterizing  = false;
-    private final AtomicInteger      charSampleCount = new AtomicInteger(0);
-    private volatile Instant         charStartTime;
-
-    // ── Estilos del botón ──────────────────────────────────────────────────────
-    private static final String STYLE_CHAR_OFF =
-        "-fx-background-color: #E65C00;" +
-        "-fx-text-fill: white;" +
-        "-fx-font-size: 13px; -fx-font-weight: bold;" +
-        "-fx-padding: 10 28;" +
-        "-fx-background-radius: 8;" +
-        "-fx-border-color: #FF8C00; -fx-border-width: 2; -fx-border-radius: 8;" +
-        "-fx-cursor: hand;";
-
-    private static final String STYLE_CHAR_ON_A =
-        "-fx-background-color: #107C10;" +
-        "-fx-text-fill: white;" +
-        "-fx-font-size: 13px; -fx-font-weight: bold;" +
-        "-fx-padding: 10 28;" +
-        "-fx-background-radius: 8;" +
-        "-fx-border-color: #FFFFFF; -fx-border-width: 2; -fx-border-radius: 8;" +
-        "-fx-cursor: hand;";
-
-    private static final String STYLE_CHAR_ON_B =
-        "-fx-background-color: #0A5C0A;" +
-        "-fx-text-fill: #CCFFCC;" +
-        "-fx-font-size: 13px; -fx-font-weight: bold;" +
-        "-fx-padding: 10 28;" +
-        "-fx-background-radius: 8;" +
-        "-fx-border-color: #50FF50; -fx-border-width: 2; -fx-border-radius: 8;" +
-        "-fx-cursor: hand;";
+    private final CharacterizationController charController;
 
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -91,6 +45,7 @@ public class RecordsPanel {
         this.app           = app;
         this.triggerEngine = triggerEngine;
         this.mlExporter    = mlExporter;
+        charController = new CharacterizationController(app, mlExporter);
         root = buildRoot();
 
         triggerEngine.addListener(entry -> Platform.runLater(() -> addEntry(entry)));
@@ -101,7 +56,7 @@ public class RecordsPanel {
 
     /** Llamar desde HarmonicMonitorApp.shutdown() para detener el scheduler. */
     public void shutdown() {
-        stopCharacterization();
+        charController.shutdown();
     }
 
     // ── Construcción de UI ────────────────────────────────────────────────────
@@ -113,7 +68,7 @@ public class RecordsPanel {
         vbox.getChildren().addAll(
             buildHeader(),
             buildToolbar(),
-            buildCharBanner(),    // ← banner de caracterización
+            charController.getNode(),
             buildTable(),
             buildStatusBar()
         );
@@ -200,165 +155,6 @@ public class RecordsPanel {
             btnRefresh, btnClear,
             spacer, trigInfo);
         return bar;
-    }
-
-    /**
-     * Banner de caracterización espectral.
-     * Contiene el botón grande y el indicador de estado de captura.
-     */
-    private HBox buildCharBanner() {
-        charBanner = new HBox(16);
-        charBanner.setAlignment(Pos.CENTER_LEFT);
-        charBanner.setPadding(new Insets(10, 18, 10, 18));
-        charBanner.setStyle(
-            "-fx-background-color: #1A1A2E;" +
-            "-fx-border-color: #E65C00;" +
-            "-fx-border-width: 0 0 2 0;");
-
-        // Botón principal
-        btnChar = new Button("🧬  INICIAR CARACTERIZACIÓN ESPECTRAL");
-        btnChar.setStyle(STYLE_CHAR_OFF);
-        btnChar.setTooltip(new Tooltip(
-            "Inicia la captura de datos espectrales cada 1 minuto para\n" +
-            "construir un dataset de entrenamiento de modelos ML.\n" +
-            "Los datos se guardan en <feeder>_dataset.csv dentro de cada carpeta de feeder."));
-        btnChar.setOnAction(e -> toggleCharacterization());
-
-        // Indicador de estado
-        charStatusLbl = new Label("  Sin captura activa");
-        charStatusLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #808080; -fx-font-style: italic;");
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        Label hint = new Label("Genera  <feeder>_dataset.csv  →  listo para pandas / sklearn");
-        hint.setStyle("-fx-font-size: 10px; -fx-text-fill: #606080; -fx-font-style: italic;");
-
-        charBanner.getChildren().addAll(btnChar, charStatusLbl, spacer, hint);
-        return charBanner;
-    }
-
-    // ── Lógica de caracterización ─────────────────────────────────────────────
-
-    private void toggleCharacterization() {
-        if (characterizing) stopCharacterization();
-        else                startCharacterization();
-    }
-
-    private void startCharacterization() {
-        if (characterizing) return;
-
-        List<FeederConfig> feeders = app.getFeederConfigs();
-        if (feeders.isEmpty()) {
-            showInfo("Sin feeders", "Agregue al menos un feeder antes de iniciar la caracterización.");
-            return;
-        }
-
-        characterizing  = true;
-        charSampleCount.set(0);
-        charStartTime   = Instant.now();
-
-        // Scheduler dedicado: primer disparo inmediato, luego cada 5 minutos
-        charScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "CharSpectral-5min");
-            t.setDaemon(true);
-            return t;
-        });
-        charScheduler.scheduleWithFixedDelay(
-            this::appendCharRow, 0, 60, TimeUnit.SECONDS);
-
-        // Animación de pulso en el botón
-        charPulse = new Timeline(
-            new KeyFrame(Duration.millis(600), e ->
-                btnChar.setStyle(STYLE_CHAR_ON_A)),
-            new KeyFrame(Duration.millis(1200), e ->
-                btnChar.setStyle(STYLE_CHAR_ON_B))
-        );
-        charPulse.setCycleCount(Animation.INDEFINITE);
-        charPulse.play();
-
-        btnChar.setText("⏹  FINALIZAR CARACTERIZACIÓN ESPECTRAL");
-
-        charBanner.setStyle(
-            "-fx-background-color: #0A2A0A;" +
-            "-fx-border-color: #50FF50;" +
-            "-fx-border-width: 0 0 2 0;");
-
-        // Timeline de reloj que actualiza el label cada segundo
-        Timeline clock = new Timeline(new KeyFrame(Duration.seconds(1),
-            e -> Platform.runLater(this::updateCharStatus)));
-        clock.setCycleCount(Animation.INDEFINITE);
-        clock.play();
-        // Guardamos la ref en el botón para poder detenerla
-        btnChar.setUserData(clock);
-
-        updateCharStatus();
-        app.setStatusMessage("🧬 Caracterización espectral iniciada — capturando cada 1 min");
-    }
-
-    private void stopCharacterization() {
-        if (!characterizing) return;
-        characterizing = false;
-
-        if (charScheduler != null) { charScheduler.shutdownNow(); charScheduler = null; }
-        if (charPulse     != null) { charPulse.stop();            charPulse     = null; }
-
-        // Detener el reloj
-        if (btnChar.getUserData() instanceof Timeline) {
-            ((Timeline) btnChar.getUserData()).stop();
-            btnChar.setUserData(null);
-        }
-
-        btnChar.setText("🧬  INICIAR CARACTERIZACIÓN ESPECTRAL");
-        btnChar.setStyle(STYLE_CHAR_OFF);
-
-        charBanner.setStyle(
-            "-fx-background-color: #1A1A2E;" +
-            "-fx-border-color: #E65C00;" +
-            "-fx-border-width: 0 0 2 0;");
-
-        int total = charSampleCount.get();
-        charStatusLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #A0A0A0; -fx-font-style: italic;");
-        charStatusLbl.setText(String.format(
-            "  Captura finalizada  —  %d muestra%s guardada%s",
-            total, total != 1 ? "s" : "", total != 1 ? "s" : ""));
-
-        app.setStatusMessage(String.format(
-            "🧬 Caracterización finalizada — %d muestras en <feeder>_dataset.csv", total));
-    }
-
-    /** Ejecutado en el hilo del scheduler cada 1 minuto. */
-    private void appendCharRow() {
-        List<FeederConfig> cfgs = new ArrayList<>(app.getFeederConfigs());
-        int added = 0;
-        for (FeederConfig cfg : cfgs) {
-            FeederMeasurement m = app.getLatestMeasurements().get(cfg.getFeederId());
-            if (m != null) {
-                try {
-                    mlExporter.appendRow(m, app.getComtradeTrigger().getFeederDir(cfg.getFeederId()));
-                    added++;
-                } catch (Exception ex) {
-                    // log silencioso
-                }
-            }
-        }
-        final int n = added;
-        charSampleCount.addAndGet(n);
-        Platform.runLater(this::updateCharStatus);
-    }
-
-    private void updateCharStatus() {
-        if (!characterizing || charStartTime == null) return;
-        long secs  = ChronoUnit.SECONDS.between(charStartTime, Instant.now());
-        long hh    = secs / 3600;
-        long mm    = (secs % 3600) / 60;
-        long ss    = secs % 60;
-        int  count = charSampleCount.get();
-        charStatusLbl.setStyle(
-            "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #50FF50;");
-        charStatusLbl.setText(String.format(
-            "  ● CAPTURANDO  |  %d muestra%s  |  %02d:%02d:%02d  |  próx. muestra en ~1 min",
-            count, count != 1 ? "s" : "", hh, mm, ss));
     }
 
     // ── Tabla ────────────────────────────────────────────────────────────────
@@ -592,8 +388,4 @@ public class RecordsPanel {
         alert.showAndWait();
     }
 
-    // fix: import faltante para List en appendCharRow
-    private static class ArrayList<T> extends java.util.ArrayList<T> {
-        ArrayList(java.util.Collection<? extends T> c) { super(c); }
-    }
 }

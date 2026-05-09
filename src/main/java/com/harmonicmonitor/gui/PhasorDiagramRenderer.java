@@ -1,5 +1,6 @@
 package com.harmonicmonitor.gui;
 
+import com.harmonicmonitor.comtrade.ComtradeDsp;
 import com.harmonicmonitor.comtrade.ComtradeReader.ComtradeRecord;
 
 import javafx.scene.canvas.Canvas;
@@ -98,8 +99,8 @@ class PhasorDiagramRenderer {
         double maxMag = 0, maxV = 0, maxI = 0;
         for (int idx : sel) {
             if (idx >= record.numAnalogChannels) continue;
-            double[][] spec = ComtradePanel.calculateComplexSpectrum(
-                ComtradePanel.extractWindow(record.analogData[idx], winStartSample, winEndSample),
+            double[][] spec = ComtradeDsp.calculateComplexSpectrum(
+                ComtradeDsp.extractWindow(record.analogData[idx], winStartSample, winEndSample),
                 fs, f0, 1);
             double mag = spec[0][0];
             phasors.add(new double[]{mag, spec[0][1]});

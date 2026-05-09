@@ -18,8 +18,8 @@ import javafx.stage.Window;
 
 import java.net.InetAddress;
 import java.util.List;
+import com.harmonicmonitor.AppExecutors;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Diálogo modal que conecta al IED, descubre sus nodos lógicos y
@@ -49,11 +49,7 @@ public class DiscoveryPanel {
     private Button btnDiscover;
 
     private DiscoveryResult lastResult;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "IED-Discovery");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ExecutorService executor = AppExecutors.newDaemonExecutor("IED-Discovery");
 
     public DiscoveryPanel(Window owner, FeederConfig baseConfig) {
         this.baseConfig = baseConfig;
