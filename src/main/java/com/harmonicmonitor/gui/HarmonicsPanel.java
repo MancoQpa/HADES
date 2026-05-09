@@ -50,6 +50,7 @@ public class HarmonicsPanel {
     final Label[] summaryCurrentPct  = new Label[8];
     final Label[] summaryCurrentAmp  = new Label[8];
     final Label[] summaryVoltagePct  = new Label[8];
+    final Label[] summaryFreqLbl     = new Label[8];
 
     // Table — package-private: updated by HarmonicsDisplayUpdater.
     TableView<HarmonicRow> table;
@@ -236,9 +237,9 @@ public class HarmonicsPanel {
         Label orderLbl = new Label("H" + order);
         orderLbl.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #0078D4;");
 
-        String freqStr = String.format("%.0f Hz", order * 50.0);
-        Label freqLbl = new Label(freqStr);
+        Label freqLbl = new Label("— Hz");
         freqLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #0078D4;");
+        summaryFreqLbl[idx] = freqLbl;
 
         Label iPct = new Label("—");
         iPct.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
@@ -248,7 +249,7 @@ public class HarmonicsPanel {
         iAmp.setStyle("-fx-font-size: 10px; -fx-text-fill: " + Theme.TEXT + ";");
         summaryCurrentAmp[idx] = iAmp;
 
-        Label vPct = new Label("— V%");
+        Label vPct = new Label("—");
         vPct.setStyle("-fx-font-size: 10px; -fx-text-fill: #0078D4;");
         summaryVoltagePct[idx] = vPct;
 
@@ -352,6 +353,16 @@ public class HarmonicsPanel {
         if (!m.getFeederId().equals(selectedFeederId)) return;
 
         lastMeasurement = m;
+
+        // Update harmonic frequency labels using actual measured frequency
+        double freq = m.getFrequency();
+        if (freq > 10) {
+            for (int i = 0; i < SUMMARY_ORDERS.length; i++) {
+                if (summaryFreqLbl[i] != null)
+                    summaryFreqLbl[i].setText(String.format("%.0f Hz", SUMMARY_ORDERS[i] * freq));
+            }
+        }
+
         refreshDisplay();
     }
 

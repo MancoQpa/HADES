@@ -299,14 +299,14 @@ public class MmsDataMapper {
                 if (harmonicsPollCounter >= HARMONICS_READ_EVERY_N) {
                     harmonicsPollCounter = 0;
                     double[] tryA = reader.readHarmonicArray(haPhsAHarRef, association);
-                    for (int i = 0; i < tryA.length; i++) { if (tryA[i] > 1e30f) tryA[i] = 0.0; }
+                    for (int i = 0; i < tryA.length; i++) { if (tryA[i] > 1e30) tryA[i] = 0.0; }
                     if (tryA[0] > 1e-9) {
                         cachedHarPhsA = tryA;
                         double[] tryB = reader.readHarmonicArray(haPhsBHarRef, association);
                         double[] tryC = reader.readHarmonicArray(haPhsCHarRef, association);
                         for (int i = 0; i < 50; i++) {
-                            if (tryB[i] > 1e30f) tryB[i] = 0.0;
-                            if (tryC[i] > 1e30f) tryC[i] = 0.0;
+                            if (tryB[i] > 1e30) tryB[i] = 0.0;
+                            if (tryC[i] > 1e30) tryC[i] = 0.0;
                         }
                         cachedHarPhsB = tryB;
                         cachedHarPhsC = tryC;
