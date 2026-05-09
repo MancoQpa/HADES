@@ -386,6 +386,10 @@ Extraer DSP puro y cálculos de análisis (Fortescue + potencia) para desacoplar
 | 2026-05-08 | F17-001 AboutPanelBuilder | ✅ 69 fuentes, exit 0 | AboutPanel 429→18 (−96%); AboutPanelBuilder 280 líneas; toda la construcción UI extraída como clase estática pura |
 | 2026-05-08 | F18-001 ComparativaPanel → recurso HTML | ✅ 69 fuentes, exit 0 | ComparativaPanel 375→41 (−89%); comparativa.html creado en resources/; patrón F1-001 |
 | 2026-05-08 | F19-001 FeederRow | ✅ 70 fuentes, exit 0 | MultiFeederMonitorPanel 427→346 (−19%); FeederRow 93 líneas; inner class extraída |
+| 2026-05-08 | F20-001 AppSceneBuilder | ✅ 71 fuentes, exit 0 | HarmonicMonitorApp 529→393 (−26%); AppSceneBuilder 155 líneas; toolbar+tabpane+statusbar extraídos |
+| 2026-05-08 | F21-001 HarmonicRefDetector + PowerScaleDetector | ✅ 73 fuentes, exit 0 | MmsDataMapper 465→360 (−23%); HarmonicRefDetector 90 líneas; PowerScaleDetector 75 líneas; 2 bloques de lógica pura extraídos |
+| 2026-05-09 | F22-001 ComtradeHeaderBuilder | ✅ 74 fuentes, exit 0 | ComtradePanel 556→465 (−16%); ComtradeHeaderBuilder 115 líneas; buildHeader+buildSidebar+buildStatusBar extraídos |
+| 2026-05-09 | F23-001 MultiFeederTableBuilder | ✅ 75 fuentes, exit 0 | MultiFeederMonitorPanel 346→215 (−38%); MultiFeederTableBuilder 170 líneas; buildTable+3 cell factories+row factory+colStr+colInt extraídos |
 
 ---
 

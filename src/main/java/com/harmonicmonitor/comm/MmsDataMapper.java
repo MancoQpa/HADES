@@ -207,57 +207,12 @@ public class MmsDataMapper {
             serverModel.findModelNode(thdAL1Ref, Fc.MX) != null);
 
         if (serverModel != null && harmonicsAvailable) {
-            String[] harVariants = {
-                mhaiBase + ".HarA.h01.mag.f",
-                mhaiBase + ".HA.phsAHar.0.cVal.mag.f",
-                mhaiBase + ".HA.phsAHar.1.cVal.mag.f",
-                mhaiBase + ".HA.phsAHar01.cVal.mag.f",
-            };
-            String workingPattern = null;
-            for (String variant : harVariants) {
-                if (serverModel.findModelNode(variant, Fc.MX) != null ||
-                    serverModel.findModelNode(variant, null) != null) {
-                    workingPattern = variant;
-                    break;
-                }
-            }
-            harmonicArrayInModel = (workingPattern != null);
-            LOG.info("Harmonicos en modelo: " + harmonicArrayInModel +
-                     (workingPattern != null ? "  patron: " + workingPattern : "  (no encontrado)"));
-
-            if (workingPattern != null) {
-                if (workingPattern.contains(".HarA.h01.")) {
-                    for (int h = 0; h < 50; h++) {
-                        String hn = String.format(".h%02d", h + 1);
-                        haPhsAHarRef[h] = mhaiBase + ".HarA" + hn;
-                        haPhsBHarRef[h] = mhaiBase + ".HarB" + hn;
-                        haPhsCHarRef[h] = mhaiBase + ".HarC" + hn;
-                    }
-                    LOG.info("Refs HA: HAR50_t h01..h50 (simulador nuevo)");
-                } else if (workingPattern.contains(".phsAHar.1.")) {
-                    for (int h = 0; h < 50; h++) {
-                        haPhsAHarRef[h] = mhaiBase + ".HA.phsAHar." + (h + 1);
-                        haPhsBHarRef[h] = mhaiBase + ".HA.phsBHar." + (h + 1);
-                        haPhsCHarRef[h] = mhaiBase + ".HA.phsCHar." + (h + 1);
-                    }
-                    LOG.info("Refs HA: dot-index base 1 (ION 7400 real)");
-                } else if (workingPattern.contains(".phsAHar01.")) {
-                    for (int h = 0; h < 50; h++) {
-                        haPhsAHarRef[h] = mhaiBase + ".HA.phsAHar" + String.format("%02d", h + 1);
-                        haPhsBHarRef[h] = mhaiBase + ".HA.phsBHar" + String.format("%02d", h + 1);
-                        haPhsCHarRef[h] = mhaiBase + ".HA.phsCHar" + String.format("%02d", h + 1);
-                    }
-                    LOG.info("Refs HA: zero-padded legacy");
-                } else {
-                    LOG.info("Refs HA: dot-index base 0 (simulador antiguo)");
-                }
-            }
-
-            if (!harmonicArrayInModel) reader.dumpMhaiStructure(mhaiBase);
+            harmonicArrayInModel = HarmonicRefDetector.detect(
+                serverModel, mhaiBase, haPhsAHarRef, haPhsBHarRef, haPhsCHarRef, reader);
         }
 
         if (!powerScaleDetected) {
-            autoDetectPowerScale(association);
+            PowerScaleDetector.detect(config, wRef, phsAPhVRef, phsAARef, association, reader);
             powerScaleDetected = true;
         }
 
@@ -410,56 +365,4 @@ public class MmsDataMapper {
         return m;
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    /**
-     * Auto-detects powerScaleFactor by comparing raw TotW against V×I from the IED.
-     * Immune to TotW.units.multiplier default values in iec61850bean.
-     */
-    private void autoDetectPowerScale(ClientAssociation association) {
-        if (serverModel == null || wRef == null
-                || phsAPhVRef == null || phsAARef == null) return;
-        try {
-            float rawW   = reader.readMxFloat(wRef, association);
-            float vPhsA  = reader.readMxFloat(phsAPhVRef, association);
-            float iPhsA  = reader.readMxFloat(phsAARef, association);
-
-            if (rawW <= 0 || vPhsA <= 0 || iPhsA <= 0) {
-                config.setPowerScaleFactor(0.001);
-                LOG.info("[" + config.getFeederId() + "] Auto-detect: valores nulos → ps=0.001 (fallback)");
-                return;
-            }
-
-            double sApparent = 3.0 * vPhsA * iPhsA;
-            double ratioIfW  = rawW / sApparent;
-            double ratioIfKW = rawW * 1000.0 / sApparent;
-
-            LOG.info(String.format("[%s] Auto-detect sanity: rawW=%.1f V=%.1f I=%.1f S=%.1f ratioW=%.4f ratioKW=%.4f",
-                    config.getFeederId(), rawW, vPhsA, iPhsA, sApparent, ratioIfW, ratioIfKW));
-
-            boolean wPlausible  = ratioIfW  >= 0.01 && ratioIfW  <= 1.10;
-            boolean kwPlausible = ratioIfKW >= 0.01 && ratioIfKW <= 1.10;
-
-            if (wPlausible && !kwPlausible) {
-                config.setPowerScaleFactor(0.001);
-                LOG.info("[" + config.getFeederId() + "] Auto-detect: IED reporta W → ps=0.001");
-            } else if (kwPlausible && !wPlausible) {
-                config.setPowerScaleFactor(1.0);
-                LOG.info("[" + config.getFeederId() + "] Auto-detect: IED reporta kW → ps=1.0");
-            } else {
-                double diffW  = Math.abs(ratioIfW  - 0.85);
-                double diffKW = Math.abs(ratioIfKW - 0.85);
-                if (diffW <= diffKW) {
-                    config.setPowerScaleFactor(0.001);
-                    LOG.info("[" + config.getFeederId() + "] Auto-detect (ambiguo, mejor W): ps=0.001");
-                } else {
-                    config.setPowerScaleFactor(1.0);
-                    LOG.info("[" + config.getFeederId() + "] Auto-detect (ambiguo, mejor kW): ps=1.0");
-                }
-            }
-        } catch (Exception e) {
-            config.setPowerScaleFactor(0.001);
-            LOG.info("[" + config.getFeederId() + "] Auto-detect error: " + e.getMessage() + " → ps=0.001");
-        }
-    }
 }

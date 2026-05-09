@@ -1,7 +1,6 @@
 package com.harmonicmonitor.gui;
 
 import com.harmonicmonitor.HarmonicMonitorApp;
-import com.harmonicmonitor.comtrade.ComtradeDsp;
 import com.harmonicmonitor.comtrade.ComtradeReader;
 import com.harmonicmonitor.comtrade.ComtradeReader.ComtradeRecord;
 import com.harmonicmonitor.model.FeederConfig;
@@ -9,8 +8,6 @@ import com.harmonicmonitor.model.FeederMeasurement;
 
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.chart.*;
@@ -101,90 +98,23 @@ public class ComtradePanel {
     // ── Build UI ──────────────────────────────────────────────────────────────
 
     private BorderPane buildUI() {
+        ComtradeHeaderBuilder hb = new ComtradeHeaderBuilder(this);
         BorderPane pane = new BorderPane();
         pane.setStyle("-fx-background-color: " + Theme.BG + ";");
-        pane.setTop(buildHeader());
+        pane.setTop(hb.buildHeader());
 
         SplitPane split = new SplitPane();
         split.setStyle("-fx-background-color: " + Theme.BG + ";");
         split.setDividerPositions(0.22);
-        split.getItems().addAll(buildSidebar(), buildTabs());
+        split.getItems().addAll(hb.buildSidebar(), buildTabs());
         pane.setCenter(split);
-        pane.setBottom(buildStatusBar());
+        pane.setBottom(hb.buildStatusBar());
+
+        tfFilePath  = hb.tfFilePath;
+        lblInfo     = hb.lblInfo;
+        channelList = hb.channelList;
+        lblStatus   = hb.lblStatus;
         return pane;
-    }
-
-    private HBox buildHeader() {
-        HBox h = new HBox(10);
-        h.setAlignment(Pos.CENTER_LEFT);
-        h.setPadding(new Insets(10, 16, 10, 16));
-        h.setStyle("-fx-background-color: " + Theme.BG + "; -fx-border-color: " + Theme.BORDER + "; -fx-border-width: 0 0 1 0;");
-
-        Label title = new Label("📁 COMTRADE VIEWER  —  ION 7400 / IEC 60255-24");
-        title.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        tfFilePath = new TextField();
-        tfFilePath.setPromptText("Seleccione un archivo .cfg ...");
-        tfFilePath.setEditable(false);
-        tfFilePath.setPrefWidth(360);
-        tfFilePath.setStyle("-fx-background-color: " + Theme.CARD + "; -fx-text-fill: " + Theme.TEXT + ";" +
-            "-fx-border-color: " + Theme.BORDER + "; -fx-border-width: 1; -fx-border-radius: 3; -fx-background-radius: 3;");
-
-        Button btnOpen = mkBtn("📂 Abrir .cfg", "#0078D4");
-        btnOpen.setOnAction(e -> openCfgFile());
-
-        Button btnAnalyze = mkBtn("🔍 Analizar", "#4CAF50");
-        btnAnalyze.setOnAction(e -> analyzeAll());
-
-        Button btnCapture = mkBtn("📸 Capturar ahora", "#E67E22");
-        btnCapture.setTooltip(new Tooltip("Dispara registro COMTRADE con los datos actuales del IED y lo abre automáticamente"));
-        btnCapture.setOnAction(e -> captureNow());
-
-        Button btnCsv = mkBtn("💾 CSV", "#6C757D");
-        btnCsv.setOnAction(e -> exportCsv());
-
-        h.getChildren().addAll(title, spacer, btnCapture, new Separator(), tfFilePath, btnOpen, btnAnalyze, btnCsv);
-        return h;
-    }
-
-    private VBox buildSidebar() {
-        VBox box = new VBox(8);
-        box.setPadding(new Insets(12));
-        box.setPrefWidth(215);
-        box.setStyle("-fx-background-color: " + Theme.BG + ";");
-
-        Label lblInfoTitle = sectionLbl("INFORMACIÓN DEL REGISTRO");
-        lblInfo = new Label("Sin archivo cargado");
-        lblInfo.setWrapText(true);
-        lblInfo.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Theme.TEXT + ";");
-
-        Label lblCh = sectionLbl("CANALES ANALÓGICOS");
-        Label hint = new Label("Ctrl+clic para multi-selección");
-        hint.setStyle("-fx-font-size: 10px; -fx-text-fill: " + Theme.TEXT + "; -fx-wrap-text: true;");
-
-        channelList = new ListView<>();
-        channelList.setStyle("-fx-background-color: " + Theme.BG + "; -fx-border-color: " + Theme.BORDER + ";");
-        channelList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        VBox.setVgrow(channelList, Priority.ALWAYS);
-        channelList.getSelectionModel().selectedItemProperty()
-            .addListener((obs, o, n) -> { if (n != null) onSelectionChanged(); });
-
-        Button btnAll = mkSmBtn("Sel. todos");
-        btnAll.setMaxWidth(Double.MAX_VALUE);
-        btnAll.setOnAction(e -> channelList.getSelectionModel().selectAll());
-
-        Button btnNone = mkSmBtn("Deseleccionar");
-        btnNone.setMaxWidth(Double.MAX_VALUE);
-        btnNone.setOnAction(e -> channelList.getSelectionModel().clearSelection());
-
-        HBox selBtns = new HBox(4, btnAll, btnNone);
-
-        box.getChildren().addAll(lblInfoTitle, lblInfo, new Separator(),
-                                 lblCh, hint, channelList, selBtns);
-        return box;
     }
 
     private TabPane buildTabs() {
@@ -230,17 +160,6 @@ public class ComtradePanel {
         plotWaveforms();
     }
 
-    private HBox buildStatusBar() {
-        HBox bar = new HBox(10);
-        bar.setPadding(new Insets(4, 16, 4, 16));
-        bar.setAlignment(Pos.CENTER_LEFT);
-        bar.setStyle("-fx-background-color: " + Theme.BG + "; -fx-border-color: " + Theme.BORDER + "; -fx-border-width: 1 0 0 0;");
-        lblStatus = new Label("Listo — Abra un archivo .cfg para comenzar");
-        lblStatus.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Theme.TEXT + ";");
-        bar.getChildren().add(lblStatus);
-        return bar;
-    }
-
     // ── File operations ───────────────────────────────────────────────────────
 
     /**
@@ -248,7 +167,8 @@ public class ComtradePanel {
      * activos y lo carga automáticamente en el visor.
      * No tiene cooldown (triggerManual bypasses it).
      */
-    private void captureNow() {
+    /** Called by {@link ComtradeHeaderBuilder} capture button handler. */
+    void captureNow() {
         List<FeederConfig> configs = app.getFeederConfigs();
         if (configs.isEmpty()) {
             status("Sin feeders activos — no se puede capturar");
@@ -309,7 +229,8 @@ public class ComtradePanel {
         return cfgFiles[0];
     }
 
-    private void openCfgFile() {
+    /** Called by {@link ComtradeHeaderBuilder} open button handler. */
+    void openCfgFile() {
         FileChooser fc = new FileChooser();
         fc.setTitle("Abrir archivo COMTRADE (.cfg)");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("COMTRADE CFG", "*.cfg", "*.CFG"));
@@ -416,7 +337,8 @@ public class ComtradePanel {
         if (lblPowerResult != null) lblPowerResult.setText("— Seleccione 2 canales (V + I) —");
     }
 
-    private void onSelectionChanged() {
+    /** Called by {@link ComtradeHeaderBuilder} channel list selection listener. */
+    void onSelectionChanged() {
         plotWaveforms();
         plotFft();
         drawPhasors();
@@ -471,7 +393,8 @@ public class ComtradePanel {
 
     // ── CSV export ────────────────────────────────────────────────────────────
 
-    private void exportCsv() {
+    /** Called by {@link ComtradeHeaderBuilder} CSV button handler. */
+    void exportCsv() {
         if (currentRecord == null || currentRecord.analogData == null) {
             status("Sin datos para exportar");
             return;

@@ -4,8 +4,6 @@ import com.harmonicmonitor.HarmonicMonitorApp;
 import com.harmonicmonitor.comm.IEC61850Communicator;
 import com.harmonicmonitor.model.FeederConfig;
 import com.harmonicmonitor.model.FeederMeasurement;
-import com.harmonicmonitor.model.LoadType;
-
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -14,7 +12,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 
 import java.time.LocalDateTime;
@@ -106,150 +103,7 @@ public class MultiFeederMonitorPanel {
     }
 
     private TableView<FeederRow> buildTable() {
-        TableView<FeederRow> tv = new TableView<>();
-        tv.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        tv.setPlaceholder(new Label("Sin feeders configurados. Agregue un feeder con + Demo."));
-
-        TableColumn<FeederRow, Integer>  colNum    = colInt("#", "index", 38);
-
-        // LED de conexión
-        TableColumn<FeederRow, String>   colConn   = colStr("Con.", "connLed", 46);
-        colConn.setMaxWidth(46);
-        colConn.setCellFactory(col -> new TableCell<FeederRow, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); return; }
-                setText("●");
-                setAlignment(javafx.geometry.Pos.CENTER);
-                switch (item) {
-                    case "CONNECTED":
-                        setStyle("-fx-text-fill: #00C853; -fx-font-size: 18px;");
-                        setTooltip(new Tooltip("Conectado"));
-                        break;
-                    case "CONNECTING":
-                        setStyle("-fx-text-fill: #FFB300; -fx-font-size: 18px;");
-                        setTooltip(new Tooltip("Conectando…"));
-                        break;
-                    case "ERROR":
-                        setStyle("-fx-text-fill: #D50000; -fx-font-size: 18px;");
-                        setTooltip(new Tooltip("Error de conexión"));
-                        break;
-                    case "DISCONNECTED":
-                        setStyle("-fx-text-fill: #78909C; -fx-font-size: 18px;");
-                        setTooltip(new Tooltip("Desconectado"));
-                        break;
-                    case "SIM":
-                        setStyle("-fx-text-fill: #00BCD4; -fx-font-size: 18px;");
-                        setTooltip(new Tooltip("Simulado"));
-                        break;
-                    default:
-                        setStyle("-fx-text-fill: #78909C; -fx-font-size: 18px;");
-                        setTooltip(null);
-                }
-            }
-        });
-
-        TableColumn<FeederRow, String>   colName   = colStr("ID. Feeder", "feederId", 160);
-        TableColumn<FeederRow, String>   colStatus = colStr("Estado", "status", 80);
-        TableColumn<FeederRow, String>   colVolt   = colStr("Va (kV)", "voltageKv", 75);
-        TableColumn<FeederRow, String>   colCurr   = colStr("Ia (A)", "currentA", 75);
-        TableColumn<FeederRow, String>   colP      = colStr("P (kW)", "activePower", 80);
-        TableColumn<FeederRow, String>   colQ      = colStr("Q (kVAR)", "reactivePower", 85);
-        TableColumn<FeederRow, String>   colFP     = colStr("FP", "powerFactor", 60);
-        TableColumn<FeederRow, String>   colTHDi   = colStr("THDi %", "thdi", 70);
-        TableColumn<FeederRow, String>   colTHDv   = colStr("THDv %", "thdv", 70);
-        TableColumn<FeederRow, String>   colLoad   = colStr("Tipo Carga", "loadType", 140);
-        TableColumn<FeederRow, Integer>  colAlarm  = colInt("Alrm.", "alarmCount", 55);
-
-        // Color THDi column
-        colTHDi.setCellFactory(col -> new TableCell<FeederRow, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); return; }
-                setText(item);
-                try {
-                    double v = Double.parseDouble(item.replace("%","").trim());
-                    if (v > 12)      setStyle("-fx-text-fill: #C42B1C; -fx-font-weight: bold;");
-                    else if (v > 8)  setStyle("-fx-text-fill: #CA5010; -fx-font-weight: bold;");
-                    else             setStyle("-fx-text-fill: #107C10; -fx-font-weight: bold;");
-                } catch (NumberFormatException ex) { setStyle(""); }
-            }
-        });
-
-        // Color status column
-        colStatus.setCellFactory(col -> new TableCell<FeederRow, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); return; }
-                setText(item);
-                if (item.contains("OK"))       setStyle("-fx-text-fill: #107C10; -fx-font-weight: bold;");
-                else if (item.contains("WARN")) setStyle("-fx-text-fill: #CA5010; -fx-font-weight: bold;");
-                else if (item.contains("CRIT")) setStyle("-fx-text-fill: #C42B1C; -fx-font-weight: bold;");
-                else                            setStyle("-fx-text-fill: " + Theme.TEXT + ";");
-            }
-        });
-
-        tv.getColumns().addAll(colNum, colConn, colName, colStatus, colVolt, colCurr,
-            colP, colQ, colFP, colTHDi, colTHDv, colLoad, colAlarm);
-
-        // Double-click: go to Dashboard with selected feeder. Right-click: context menu
-        tv.setRowFactory(t -> {
-            TableRow<FeederRow> row = new TableRow<>();
-
-            MenuItem miReconn = new MenuItem("🔄 Reconectar");
-            miReconn.setOnAction(e -> {
-                FeederRow item = row.getItem();
-                if (item != null) app.reconnectFeeder(item.getFeeder().getFeederId());
-            });
-
-            MenuItem miDash = new MenuItem("📊 Ver en Dashboard");
-            miDash.setOnAction(e -> {
-                if (row.getItem() != null) {
-                    app.selectPanel(0);
-                    app.setStatusMessage("Feeder: " + row.getItem().getFeederName());
-                }
-            });
-
-            ContextMenu menu = new ContextMenu(miReconn, miDash);
-            menu.setOnShowing(e -> {
-                FeederRow item = row.getItem();
-                if (item == null) return;
-                String led = item.getConnLed();
-                miReconn.setDisable("CONNECTED".equals(led) || "CONNECTING".equals(led) || "SIM".equals(led));
-            });
-
-            row.setOnMouseClicked(e -> {
-                if (e.getClickCount() == 2 && row.getItem() != null) {
-                    app.selectFeederOnDashboard(row.getItem().getFeeder().getFeederId());
-                    app.setStatusMessage("Feeder seleccionado: " + row.getItem().getFeederId());
-                }
-            });
-            row.contextMenuProperty().bind(
-                javafx.beans.binding.Bindings.when(row.emptyProperty())
-                    .then((ContextMenu) null)
-                    .otherwise(menu));
-            return row;
-        });
-
-        return tv;
-    }
-
-    private TableColumn<FeederRow, String> colStr(String title, String prop, int width) {
-        TableColumn<FeederRow, String> c = new TableColumn<>(title);
-        c.setCellValueFactory(new PropertyValueFactory<>(prop));
-        c.setMinWidth(width);
-        return c;
-    }
-
-    private TableColumn<FeederRow, Integer> colInt(String title, String prop, int width) {
-        TableColumn<FeederRow, Integer> c = new TableColumn<>(title);
-        c.setCellValueFactory(new PropertyValueFactory<>(prop));
-        c.setMinWidth(width);
-        c.setMaxWidth(width + 20);
-        return c;
+        return new MultiFeederTableBuilder(app).build();
     }
 
     // ── Update ────────────────────────────────────────────────────────────────

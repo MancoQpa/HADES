@@ -13,19 +13,13 @@ import com.harmonicmonitor.storage.MLDataExporter;
 
 import java.io.File;
 
-import javafx.animation.Animation;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.*;
 import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.text.*;
 import javafx.stage.*;
-import javafx.util.Duration;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,27 +54,28 @@ public class HarmonicMonitorApp extends Application {
     private ScheduledExecutorService periodicScheduler;
 
     // ── Stage / UI refs ────────────────────────────────────────────────────────
-    private Stage    primaryStage;
-    private TabPane  tabPane;
-    private Label    statusMsgLbl;
-    private Label    statusStatsLbl;
-    private Label    pollingIndicatorLbl;
-    private Label    feederCountLbl;
-    private int      currentTabIndex = 0;
+    private Stage primaryStage;
+    // Package-private: read/written by AppSceneBuilder
+    TabPane tabPane;
+    Label   statusMsgLbl;
+    Label   statusStatsLbl;
+    Label   pollingIndicatorLbl;
+    Label   feederCountLbl;
+    int     currentTabIndex = 0;
 
-    // ── Panels (package-private: accessed by FeederLifecycleManager callbacks) ──
+    // ── Panels (package-private: accessed by FeederLifecycleManager + AppSceneBuilder) ──
     DashboardPanel          dashboardPanel;
     HarmonicsPanel          harmonicsPanel;
     AlarmsPanel             alarmsPanel;
     FeederMgmtPanel         feederMgmtPanel;
     MultiFeederMonitorPanel multiFeederPanel;
     TrendChartsPanel        trendsPanel;
-    private CompliancePanel         compliancePanel;
-    private HelpPanel               helpPanel;
-    private AboutPanel              aboutPanel;
-    private ComtradePanel           comtradePanel;
-    private ComparativaPanel        comparativaPanel;
-    private RecordsPanel            recordsPanel;
+    CompliancePanel         compliancePanel;
+    HelpPanel               helpPanel;
+    AboutPanel              aboutPanel;
+    ComtradePanel           comtradePanel;
+    ComparativaPanel        comparativaPanel;
+    RecordsPanel            recordsPanel;
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -109,24 +104,29 @@ public class HarmonicMonitorApp extends Application {
 
     // ── Scene construction ─────────────────────────────────────────────────────
 
-    private void buildScene() {
+    /** Package-private: called by AppSceneBuilder's theme-toggle button handler. */
+    void buildScene() {
         Theme.apply(isDark);
         createPanels();
 
+        AppSceneBuilder sb = new AppSceneBuilder(this);
         BorderPane root = new BorderPane();
-        root.setTop(buildToolbar());
-        root.setCenter(buildTabPane());
-        root.setBottom(buildStatusBar());
+        root.setTop(sb.buildToolbar());
+        root.setCenter(sb.buildTabPane());
+        root.setBottom(sb.buildStatusBar());
         root.setStyle("-fx-background-color: " + Theme.BG + ";");
 
-        java.net.URL cssUrl = getClass().getResource(Theme.css());
+        feederCountLbl      = sb.feederCountLbl;
+        statusMsgLbl        = sb.statusMsgLbl;
+        statusStatsLbl      = sb.statusStatsLbl;
+        pollingIndicatorLbl = sb.pollingIndicatorLbl;
+        tabPane             = sb.tabPane;
 
+        java.net.URL cssUrl = getClass().getResource(Theme.css());
         Scene scene = new Scene(root);
         if (cssUrl != null) scene.getStylesheets().add(cssUrl.toExternalForm());
-
         primaryStage.setScene(scene);
 
-        // Restore tab selection after rebuild
         if (tabPane != null && currentTabIndex < tabPane.getTabs().size()) {
             tabPane.getSelectionModel().select(currentTabIndex);
         }
@@ -149,138 +149,6 @@ public class HarmonicMonitorApp extends Application {
         recordsPanel     = new RecordsPanel(this, comtradeTrigger, mlExporter);
 
         alarmEngine.addListener(alarmsPanel);
-    }
-
-    // ── Toolbar ────────────────────────────────────────────────────────────────
-
-    private HBox buildToolbar() {
-        HBox toolbar = new HBox(10);
-        toolbar.getStyleClass().add("toolbar-main");
-        toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setPadding(new Insets(8, 16, 8, 16));
-
-        // Logo / title
-        VBox titleBox = new VBox(1);
-        Label appTitle = new Label("⚡ HADES v1.0");
-        appTitle.getStyleClass().add("toolbar-title");
-        Label appSub = new Label("Harmonic Analysis for Detection of Electronic Signatures  ·  MT 23kV  ·  IEC 61850");
-        appSub.getStyleClass().add("toolbar-subtitle");
-        titleBox.getChildren().addAll(appTitle, appSub);
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        // Feeder count badge
-        feederCountLbl = new Label("● 0 feeders");
-        feederCountLbl.getStyleClass().addAll("lbl-accent");
-        feederCountLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold;");
-
-        // Polling spinner
-        Label pollLbl = new Label("Polling:");
-        pollLbl.getStyleClass().add("lbl-secondary");
-        Spinner<Integer> pollSpinner = new Spinner<>(1, 60, 2);
-        pollSpinner.setPrefWidth(65);
-        Label secLbl = new Label("s");
-        secLbl.getStyleClass().add("lbl-muted");
-        Button btnApply = new Button("OK");
-        btnApply.getStyleClass().add("btn-sm");
-        btnApply.setOnAction(e -> setPollingInterval(pollSpinner.getValue() * 1000));
-
-        Button btnTheme = new Button(isDark ? "☀ Claro" : "🌙 Oscuro");
-        btnTheme.getStyleClass().add("btn-sm");
-        btnTheme.setOnAction(e -> {
-            isDark = !isDark;
-            buildScene();
-        });
-
-        toolbar.getChildren().addAll(
-            titleBox, spacer,
-            feederCountLbl,
-            new Separator(Orientation.VERTICAL),
-            pollLbl, pollSpinner, secLbl, btnApply,
-            new Separator(Orientation.VERTICAL),
-            btnTheme
-        );
-
-        return toolbar;
-    }
-
-    // ── TabPane ────────────────────────────────────────────────────────────────
-
-    private TabPane buildTabPane() {
-        tabPane = new TabPane();
-        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        tabPane.setStyle("-fx-background-color: " + Theme.BG + ";");
-
-        tabPane.getTabs().addAll(
-            buildTab("📊 RESUMEN",     dashboardPanel.getNode()),
-            buildTab("〜 ARMÓNICOS",    harmonicsPanel.getNode()),
-            buildTab("📋 MULTI",        multiFeederPanel.getNode()),
-            buildTab("📈 TENDENCIAS",   trendsPanel.getNode()),
-            buildTab("🔔 ALARMAS",      alarmsPanel.getNode()),
-            buildTab("🔌 FEEDERS",      feederMgmtPanel.getNode()),
-            buildTab("📏 NORMAS",       compliancePanel.getNode()),
-            buildTab("📁 COMTRADE",     comtradePanel.getNode()),
-            buildTab("📼 REGISTROS",    recordsPanel.getNode()),
-            buildTab("📖 AYUDA",        helpPanel.getNode()),
-            buildTab("🏆 ¿POR QUÉ?",   comparativaPanel.getNode()),
-            buildTab("ℹ ACERCA DE",    aboutPanel.getNode())
-        );
-
-        tabPane.getSelectionModel().selectedIndexProperty().addListener((obs, oldV, newV) -> {
-            if (newV != null) currentTabIndex = newV.intValue();
-        });
-
-        return tabPane;
-    }
-
-    private Tab buildTab(String title, Node content) {
-        Tab tab = new Tab(title, content);
-        return tab;
-    }
-
-    // ── Status bar ─────────────────────────────────────────────────────────────
-
-    private HBox buildStatusBar() {
-        HBox bar = new HBox(16);
-        bar.getStyleClass().add("status-bar");
-        bar.setAlignment(Pos.CENTER_LEFT);
-        bar.setPadding(new Insets(4, 16, 4, 16));
-
-        Label statusIcon = new Label("●");
-        statusIcon.getStyleClass().add("lbl-success");
-
-        statusMsgLbl = new Label("Listo  —  HADES iniciado");
-        statusMsgLbl.getStyleClass().add("status-msg");
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        statusStatsLbl = new Label("");
-        statusStatsLbl.getStyleClass().add("status-stats");
-
-        pollingIndicatorLbl = new Label("● SIN FEEDERS");
-        pollingIndicatorLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #78909C;");
-        Tooltip pollTip = new Tooltip("Estado de polling IEC 61850");
-        Tooltip.install(pollingIndicatorLbl, pollTip);
-
-        Label sep2 = new Label("|");
-        sep2.getStyleClass().add("lbl-muted");
-
-        Label sep = new Label("|");
-        sep.getStyleClass().add("lbl-muted");
-
-        Label timeLbl = new Label("");
-        timeLbl.getStyleClass().add("status-time");
-
-        Timeline clock = new Timeline(new KeyFrame(Duration.seconds(1), ev ->
-            timeLbl.setText(java.time.LocalDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd  HH:mm:ss")))));
-        clock.setCycleCount(Animation.INDEFINITE);
-        clock.play();
-
-        bar.getChildren().addAll(statusIcon, statusMsgLbl, spacer, statusStatsLbl, sep2, pollingIndicatorLbl, sep, timeLbl);
-        return bar;
     }
 
     // ── Measurement dispatch ───────────────────────────────────────────────────
