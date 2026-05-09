@@ -108,13 +108,19 @@ public class AlarmEngine {
 
     private void checkVoltageUnbalance(FeederMeasurement m, FeederConfig cfg) {
         double max = cfg.getMaxVoltageUnbalPct();
-        double avg = m.getVoltageAvg();
-        if (avg < 1e-6) return;
 
-        double maxDev = Math.max(
-            Math.max(Math.abs(m.getVoltageL1() - avg), Math.abs(m.getVoltageL2() - avg)),
-            Math.abs(m.getVoltageL3() - avg));
-        double unbal = 100.0 * maxDev / avg;
+        // Preferir el valor pre-calculado por MmsDataMapper (Fortescue: Vneg/Vpos×100,
+        // más preciso cuando el IED provee MSQI con componentes simétricas).
+        // Fallback: calcular por máxima desviación si el IED no proveyó ese valor.
+        double unbal = m.getVoltageUnbalancePct();
+        if (unbal < 1e-6) {
+            double avg = m.getVoltageAvg();
+            if (avg < 1e-6) return;
+            double maxDev = Math.max(
+                Math.max(Math.abs(m.getVoltageL1() - avg), Math.abs(m.getVoltageL2() - avg)),
+                Math.abs(m.getVoltageL3() - avg));
+            unbal = 100.0 * maxDev / avg;
+        }
 
         if (unbal > max * 1.5) {
             fire(Level.CRITICAL, m.getFeederId(), "DesbalV",
@@ -190,6 +196,11 @@ public class AlarmEngine {
                 fire(Level.DETECTION, m.getFeederId(), "TipoCarga",
                     String.format("DETECCIÓN: Centro de Datos identificado. THDi=%.1f%%, CV=%.3f, H5/H1=%.1f%%",
                         m.getThdCurrentAvg(), m.getCvCurrent(), m.getH5h1Ratio() * 100),
+                    m.getThdCurrentAvg(), cfg.getMinThdICryptoThreshold());
+            } else if (current == LoadType.INDUSTRIAL) {
+                fire(Level.DETECTION, m.getFeederId(), "TipoCarga",
+                    String.format("DETECCIÓN: Rectificador industrial identificado (6 o 12 pulsos). THDi=%.1f%%, H5/H1=%.1f%%, H7/H1=%.1f%%",
+                        m.getThdCurrentAvg(), m.getH5h1Ratio() * 100, m.getH7h1Ratio() * 100),
                     m.getThdCurrentAvg(), cfg.getMinThdICryptoThreshold());
             } else if (current == LoadType.MIXED_ELECTRONIC || current == LoadType.ELECTRONIC_LIGHT) {
                 fire(Level.WARNING, m.getFeederId(), "TipoCarga",

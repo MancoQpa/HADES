@@ -192,15 +192,16 @@ public class SimulatedPoller extends MeasurementPoller {
         double thdI   = 28.0 - 5 * vfdSpeed + 3 * g(); // THD mayor a baja velocidad
 
         // Patrón 6-pulsos: 5°, 7°, 11°, 13°, 17°, 19°, 23°, 25° (6k±1)
+        // buildSpectrum: relAmpl[n] → spec[n+1] = H(n+2), así H5=relAmpl[3], H7=relAmpl[5], etc.
         double[] relAmpl = new double[24];
-        relAmpl[4]  = 0.30 + 0.04 * g(); // H5
-        relAmpl[6]  = 0.20 + 0.03 * g(); // H7
-        relAmpl[10] = 0.10 + 0.02 * g(); // H11
-        relAmpl[12] = 0.08 + 0.02 * g(); // H13
-        relAmpl[16] = 0.05;              // H17
-        relAmpl[18] = 0.04;              // H19
-        relAmpl[22] = 0.03;              // H23
-        relAmpl[24-1] = 0.02;            // H25 (idx=24 → out of bounds; use 23)
+        relAmpl[3]  = 0.30 + 0.04 * g(); // H5
+        relAmpl[5]  = 0.20 + 0.03 * g(); // H7
+        relAmpl[9]  = 0.10 + 0.02 * g(); // H11
+        relAmpl[11] = 0.08 + 0.02 * g(); // H13
+        relAmpl[15] = 0.05;              // H17
+        relAmpl[17] = 0.04;              // H19
+        relAmpl[21] = 0.03;              // H23
+        relAmpl[23] = 0.02;              // H25 (idx=24 → out of bounds; use 23)
 
         double thdV = thdI * 0.10 + 0.5 * Math.abs(g());
         double[] iSpec = buildSpectrum(iTotal, thdI, relAmpl);
@@ -325,6 +326,11 @@ public class SimulatedPoller extends MeasurementPoller {
         m.setHarmonicVoltageL1(vSpec);
         m.setHarmonicVoltageL2(vSpec.clone());
         m.setHarmonicVoltageL3(vSpec.clone());
+
+        // Calcular desbalance de tensión para que AlarmEngine use el valor pre-calculado
+        double vAvg = (vL1 + vL2 + vL3) / 3.0;
+        double maxDev = Math.max(Math.max(Math.abs(vL1 - vAvg), Math.abs(vL2 - vAvg)), Math.abs(vL3 - vAvg));
+        m.setVoltageUnbalancePct(100.0 * maxDev / vAvg);
 
         return m;
     }

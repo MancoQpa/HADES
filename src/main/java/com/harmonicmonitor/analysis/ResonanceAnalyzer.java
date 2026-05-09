@@ -76,9 +76,11 @@ public class ResonanceAnalyzer {
      * Evalúa el riesgo de resonancia dado el orden armónico estimado
      * y la amplitud de las corrientes armónicas medidas.
      *
+     * @param m    medición con espectro y orden de resonancia calculados por {@link #analyze}
+     * @param cfg  configuración del alimentador (para obtener el umbral de amplificación)
      * @return descripción textual del riesgo
      */
-    public String assessResonanceRisk(FeederMeasurement m) {
+    public String assessResonanceRisk(FeederMeasurement m, FeederConfig cfg) {
         int hr = m.getResonanceOrder();
         if (hr <= 0) return "Sin datos suficientes para evaluar resonancia";
 
@@ -89,8 +91,9 @@ public class ResonanceAnalyzer {
         double hResAmp = (hr < spec.length) ? spec[hr - 1] : 0.0;
         double ratio   = (h1 > 0) ? hResAmp / h1 : 0.0;
 
-        if (ratio > cfg_resonanceAmplMax(m)) {
-            return String.format("RIESGO ALTO: H%d amplificado %.1f× el fundamental. Posible resonancia activa.", hr, ratio);
+        double maxRatio = (cfg != null) ? cfg.getResonanceAmplificationMax() : 3.0;
+        if (ratio > maxRatio) {
+            return String.format("RIESGO ALTO: H%d amplificado %.1f\u00d7 el fundamental. Posible resonancia activa.", hr, ratio);
         }
 
         // Verificar si hay corrientes significativas cerca del orden de resonancia
@@ -110,11 +113,6 @@ public class ResonanceAnalyzer {
 
         return String.format("Resonancia estimada en H%d (%.0f Hz). Sin amplificación significativa detectada.",
             hr, m.getResonanceFrequency());
-    }
-
-    /** Obtiene el umbral de amplificación desde la medición (workaround sin config directa). */
-    private double cfg_resonanceAmplMax(FeederMeasurement m) {
-        return 3.0; // valor por defecto; la config pasa por ResonanceAnalyzer.analyze()
     }
 
     /**

@@ -268,6 +268,10 @@ public class MmsDataMapper {
             m.setReactivePower(reader.readMxFloat(varRef, association) * ps);
             m.setApparentPower(reader.readMxFloat(vaRef, association)  * ps);
             m.setPowerFactor(Math.min(1.0, reader.readMxFloat(pfRef, association) * pfs));
+            // NOTA: Hz se escala con analogScaleFactor (as), asumiendo que el IED aplica
+            // el mismo multiplicador de unidades a Hz que a V y A (p.ej. ION 7400 con
+            // units.multiplier=-4 en todo el LD). Para IEDs que reportan Hz en unidades
+            // directas (multiplier=0), usar analogScaleFactor=1.0 en FeederConfig.
             m.setFrequency(reader.readMxFloat(hzRef, association) * as);
             m.setDataValid(true);
             m.setQualityFlag("GOOD");

@@ -133,12 +133,20 @@ public class HarmonicAnalyzer {
 
     /**
      * Cuando el IED provee THD pero NO el espectro armónico completo (array en ceros),
-     * estima el espectro usando el perfil SMPS (CRYPTO/DATACENTER) normalizado al THD medido.
+     * estima el espectro usando el perfil SMPS (rectificador con condensador bulk, H5/H7 dominantes)
+     * normalizado al THD medido.
      *
-     * Se llama en el poller ANTES de calculateHarmonicRatios(). Marca
+     * <p><b>LIMITACIÓN IMPORTANTE:</b> este método siempre aplica el perfil SMPS/CRYPTO
+     * (H5 ≈ 35%, H7 ≈ 22% del fundamental), independientemente del tipo real de carga.
+     * Si la carga es un rectificador industrial de 6 pulsos (VFD), horno de arco u otro
+     * tipo no-SMPS, los ratios estimados serán incorrectos y el clasificador podría
+     * producir una detección errónea. Solo invocar cuando se sospecha carga SMPS/electrónica
+     * de alta densidad, o cuando se requiere una estimación genérica de fallback.
+     *
+     * <p>Se llama en el poller ANTES de calculateHarmonicRatios(). Marca
      * m.spectrumEstimated=true para que la GUI pueda indicarlo visualmente.
      *
-     * No hace nada si el espectro ya tiene datos (H1 > 0).
+     * <p>No hace nada si el espectro ya tiene datos (H1 > 0).
      */
     public void estimateMissingSpectrum(FeederMeasurement m) {
         if (m.getHarmonicCurrentL1()[0] > 1e-9) return;  // ya tiene espectro
@@ -164,8 +172,12 @@ public class HarmonicAnalyzer {
     }
 
     /**
-     * Calcula el desbalance de tensión según IEC 61000-3-14:
+     * Calcula el desbalance de tensión según EN 50160:2010 §4.3.4 / IEC 61000-4-30:
      *   Desbalance% = (max desviación de la media) / media × 100
+     *
+     * Nota: este método aplica el criterio de máxima desviación (EN 50160).
+     * El método Fortescue (IEC 61000-2-2) — Vneg/Vpos × 100 — es más preciso
+     * cuando se dispone de componentes simétricas (MSQI en IEC 61850).
      */
     public double calculateVoltageUnbalance(FeederMeasurement m) {
         double avg = m.getVoltageAvg();
