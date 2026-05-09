@@ -61,6 +61,11 @@ tras normalización para que THD = 45% (verificado):
   H13/H1 =  5.2%
   H15/H1 =  3.1%
 
+  Flatness = (H5+H7) / (H11+H13)
+           = (36.5 + 22.9) / (7.3 + 5.2)
+           = 59.4 / 12.5  =  4.75  ← espectro muy frontal
+  Clasificación: Flatness 4.75 > 3.0 → CRYPTO_MINING incluso si FP < 0.92
+
 NOTA SOBRE H3: Un SMPS monofásico real genera H3=20-35%.
 H3 bajo (3.1%) es válido cuando las unidades individuales se distribuyen
 equilibradamente entre fases (resultado: cancelación trifásica de triplén).

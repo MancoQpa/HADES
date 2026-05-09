@@ -33,11 +33,14 @@ Valores reales tras normalización (ciclo de velocidad variable):
 
   A plena velocidad (THDi = 23%):
    H5/H1 = 17.7%  H7/H1 = 11.8%  H11/H1 = 5.9%  H13/H1 = 4.7%
+   Flatness = (17.7+11.8)/(5.9+4.7) = 29.5/10.6 = 2.78  ← rango 6-pulsos típico
 
   A baja velocidad (THDi = 27%):
    H5/H1 = 20.8%  H7/H1 = 13.9%  H11/H1 = 6.9%  H13/H1 = 5.6%
+   Flatness = (20.8+13.9)/(6.9+5.6) = 34.7/12.5 = 2.78  ← idéntico (1/n es constante)
 
 Estos valores son consistentes con VFDs reales con reactor AC 5%.
+Clasificación HADES: Flatness ∈ [1.3, 6.0] → condición 6-pulsos satisfecha → INDUSTRIAL.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 3. COMPORTAMIENTO THD vs VELOCIDAD
@@ -52,7 +55,32 @@ Esto es OPUESTO al comportamiento de SMPS (estables) y útil
 para clasificación: VFD tiene correlación THD-carga negativa.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4. NORMATIVA
+4. VFD 12 PULSOS — FLATNESS INVERTIDA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+En instalaciones industriales de alta potencia se usan dos puentes de
+6 pulsos con transformadores desfasados 30° (configuración Δ-Y / Δ-Δ).
+
+Efecto en el espectro:
+  H5 y H7 se cancelan mutuamente (reducción > 90%).
+  H11 y H13 emergen como armónicos dominantes (orden 12k±1).
+
+Espectro teórico 12-pulsos (sin reactor):
+  H5/H1  ≈ 2–4%   (suprimido)
+  H7/H1  ≈ 2–3%   (suprimido)
+  H11/H1 ≈ 9%     (dominante)
+  H13/H1 ≈ 8%     (dominante)
+  Flatness = (2+2)/(9+8) ≈ 0.24 → muy por debajo del umbral 1.2
+
+Clasificación HADES (desde v1.1):
+  THDi > 8% + H11 > 7% + H13 > 6% + Flatness < 1.2 → INDUSTRIAL
+  Antes de esta mejora estos VFDs quedaban clasificados MIXED_ELECTRONIC.
+
+Ref: Chapman, "Electric Machinery Fundamentals", cap. rectificadores 12-pulsos;
+     Mohan, Undeland, Robbins, "Power Electronics", §3.3.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. NORMATIVA
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   IEC 61000-3-4:2021  — Limitación de armónicas > 16 A

@@ -1,8 +1,9 @@
 CLASIFICACIÓN DE FIRMA ESPECTRAL DE CARGA
 
 El módulo ElectronicLoadDetector aplica un árbol de decisión multivariable
-sobre señales armónicas (CV, THDi, THDv, H5/H1, H7/H1, FP) para identificar
-el patrón espectral predominante en el alimentador.
+sobre señales armónicas (CV, THDi, THDv, H5/H1, H7/H1, H11/H1, H13/H1,
+Flatness, FP) para identificar el patrón espectral predominante en el
+alimentador.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 LIMITACIONES Y CONDICIÓN DE USO
@@ -82,7 +83,11 @@ TIPOS DE CARGA DETECTADOS
 
   CRYPTO_MINING  (minería / HPC)
   THDi > 15%, CV < 5%, H5/H1 > 15%, H7/H1 > 10%, FP > 0.92
+  — Criterio adicional: Flatness > 3.0 relaja el requisito de FP.
+    Un espectro muy frontal (H5+H7 >> H11+H13) con carga estable es
+    firma inequívoca de SMPS de alta densidad aunque FP < 0.92.
   SMPS de alta densidad con PFC activo. Consumo muy estable.
+  Flatness típica de miners: 3.5–6.0 (espectro fuertemente frontal).
   IMPORTANTE: No exclusivo de criptomonedas; coincide con UPS
   industriales, cargadores EV de alta potencia y rectificadores
   de gran escala. Confirmación requiere análisis temporal del CV.
@@ -90,11 +95,20 @@ TIPOS DE CARGA DETECTADOS
   DATA_CENTER
   THDi > 15%, CV < 5%, H5/H1 > 15%, H7/H1 > 10%, FP ≤ 0.92
   Similar al cripto pero con factor de potencia no tan alto.
+  Flatness típica de datacenter: 2.0–4.0.
 
-  INDUSTRIAL  (rectificador 6-pulsos)
+  INDUSTRIAL  (rectificador 6-pulsos clásico)
   THDi > 8%, H5 > 12%, H7 > 8%, H11 > 5%, H13 > 4%
+  Flatness: 1.3–6.0 (confirma topología 6-pulsos)
   Firma típica de variadores de frecuencia (VFD) y rectificadores
   de gran escala (electrometalurgia, tracción, compensadores).
+
+  INDUSTRIAL  (rectificador 12-pulsos — caso nuevo)
+  THDi > 8%, H11/H1 > 7%, H13/H1 > 6%, Flatness < 1.2
+  VFDs industriales de alta potencia con dos puentes de 6 pulsos
+  desfasados 30°. Los armónicos H5 y H7 se cancelan mutuamente;
+  H11 y H13 emergen como dominantes (patrón 12k±1).
+  Antes de HADES v1.1 estos casos se clasificaban como MIXED_ELECTRONIC.
 
   ELECTRONIC_LIGHT  (electrónica ligera)
   THDi > 8%, H5 > 8% o H7 > 5%
@@ -107,13 +121,15 @@ TIPOS DE CARGA DETECTADOS
 ÍNDICE DE ELECTRÓNICA (0-100)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Score compuesto de 4 componentes (pesos suma máx = 100):
+Score compuesto de 5 componentes (pesos suma máx = 100):
 
-  25 pts — CV inverso:   carga estable → electrónica de alta densidad
-  35 pts — THDi:         corriente distorsionada → carga no lineal
-  25 pts — H5 + H7:      firma espectral rectificador 6/12-pulsos
-  15 pts — THDv:         distorsión propagada a tensión (confirma impacto
-                         en red; bajo en redes rígidas, no penaliza detección)
+  25 pts — CV inverso:      carga estable → electrónica de alta densidad
+  35 pts — THDi:            corriente distorsionada → carga no lineal
+  20 pts — H5 + H7:         firma espectral de armónicos bajos (6-pulsos)
+   5 pts — Flatness bonus:  espectro frontal (H5+H7 >> H11+H13) confirma
+                            SMPS; se normaliza al rango flatness 1–6
+  15 pts — THDv:            distorsión propagada a tensión (confirma impacto
+                            en red; bajo en redes rígidas, no penaliza)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PARÁMETROS CLAVE
@@ -121,8 +137,22 @@ PARÁMETROS CLAVE
 
   CV = σ(I) / μ(I) · 100%
   CV < 5%: carga muy estable (SMPS regulado, servidores, miners)
+
   H₅/H₁, H₇/H₁: ratios armónicos de 5° y 7° orden
   H₁₁/H₁, H₁₃/H₁: ratios de 11° y 13° orden (firma 6-pulsos)
+
+  Flatness = (H₅/H₁ + H₇/H₁) / (H₁₁/H₁ + H₁₃/H₁)
+           = (H₅ + H₇) / (H₁₁ + H₁₃)   [siendo H₅ etc. amplitud relativa a H₁]
+
+  Interpretación:
+    Flatness > 2.0 : espectro frontal — H5/H7 dominan. SMPS (cripto, datacenter)
+                     Valor teórico ideal 6-pulsos: Flatness = 2.04
+                     Cripto/datacenter práctico:   Flatness = 2.5–6.0
+    Flatness 1.3–2.0: 6-pulsos equilibrado (drives industriales con reactores)
+    Flatness < 1.2 : H11/H13 dominan — rectificador 12-pulsos (VFDs alta potencia)
+
+  Guarda numérica: si H₁₁+H₁₃ < 0.5%,  Flatness = 10.0  (espectro muy frontal)
+                   si además H₅+H₇ < 2%, Flatness = 1.0   (carga prácticamente lineal)
 
   REFERENCIAS NORMATIVAS (umbrales con respaldo formal):
     IEEE 519-2022     — Límites TDD por nivel de Scc (TABLA 2)
@@ -132,7 +162,10 @@ PARÁMETROS CLAVE
     IEC 61000-3-12:2011 — Armónicos de corriente >16A/fase
 
   UMBRALES DE ESTIMACIÓN (sin respaldo de campo):
-    CV < 5%            — Juicio de ingeniería (SMPS regulado típico)
-    THDi > 15% cripto  — Estimación bibliográfica genérica
-    FP > 0.92 cripto   — Criterio empírico sin validación formal
-    (Fuente: literatura general de SMPS y UPS industriales)
+    CV < 5%              — Juicio de ingeniería (SMPS regulado típico)
+    THDi > 15% cripto    — Estimación bibliográfica genérica
+    FP > 0.92 cripto     — Criterio empírico sin validación formal
+    Flatness > 3.0 cripto — Criterio nuevo; relaja FP en espectros muy frontales
+    Flatness < 1.2 12p   — Criterio nuevo; detecta VFDs 12-pulsos antes ocultos
+    (Fuente: literatura general de SMPS, UPS industriales y Chapman "Electric
+     Machinery Fundamentals", rectificadores de 12 pulsos)
