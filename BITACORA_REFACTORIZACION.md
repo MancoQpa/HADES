@@ -391,6 +391,9 @@ Extraer DSP puro y cálculos de análisis (Fortescue + potencia) para desacoplar
 | 2026-05-09 | F22-001 ComtradeHeaderBuilder | ✅ 74 fuentes, exit 0 | ComtradePanel 556→465 (−16%); ComtradeHeaderBuilder 115 líneas; buildHeader+buildSidebar+buildStatusBar extraídos |
 | 2026-05-09 | F23-001 MultiFeederTableBuilder | ✅ 75 fuentes, exit 0 | MultiFeederMonitorPanel 346→215 (−38%); MultiFeederTableBuilder 170 líneas; buildTable+3 cell factories+row factory+colStr+colInt extraídos |
 | 2026-05-09 | F24-001 ComtradeCaptureAction + ComtradeCsvExporter | ✅ 77 fuentes, exit 0 | ComtradePanel 465→370 (−20%); ComtradeCaptureAction 95 líneas; ComtradeCsvExporter 70 líneas; captureNow+findNewestCfgFile+exportCsv extraídos |
+| 2026-05-09 | F25-001 AlarmTableBuilder | ✅ 78 fuentes, exit 0 | AlarmsPanel 421→362 (−14%); AlarmTableBuilder 78 líneas; buildAlarmTable+col extraídos; PropertyValueFactory+Color imports eliminados |
+| 2026-05-09 | F26-001 DiscoveredConfigBuilder | ✅ 79 fuentes, exit 0 | IEDModelDiscovery 433→376 (−13%); DiscoveredConfigBuilder 68 líneas; buildSuggestedConfig() extraído como static builder |
+| 2026-05-09 | F27-001 RecordsTableBuilder | ✅ 80 fuentes, exit 0 | RecordsPanel 391→270 (−31%); RecordsTableBuilder 135 líneas; buildTable+buildPlaceholder+styledCell+levelCell extraídos; bug doble-buildTable() corregido |
 
 ---
 

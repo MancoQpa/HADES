@@ -163,7 +163,7 @@ public class IEDModelDiscovery {
         result.selectBestCandidates();
 
         // ── Paso 5: Construir configuración sugerida ──────────────────────────
-        FeederConfig suggested = buildSuggestedConfig(result, baseConfig, iedName);
+        FeederConfig suggested = DiscoveredConfigBuilder.build(result, baseConfig, iedName);
         // Detectar escala de potencia durante el descubrimiento (si tenemos association)
         if (association != null) {
             detectPowerScale(serverModel, association, suggested, report);
@@ -293,63 +293,6 @@ public class IEDModelDiscovery {
             }
         }
         return found;
-    }
-
-    /**
-     * Construye la FeederConfig sugerida a partir de los mejores candidatos.
-     */
-    private static FeederConfig buildSuggestedConfig(
-            DiscoveryResult result, FeederConfig base, String iedName) {
-
-        FeederConfig cfg = new FeederConfig();
-        // Copiar datos de conexión desde la configuración base
-        cfg.setIedHost(base.getIedHost());
-        cfg.setIedPort(base.getIedPort());
-        cfg.setFeederId(base.getFeederId());
-        cfg.setFeederName(base.getFeederName());
-        cfg.setDescription(base.getDescription());
-        cfg.setNominalVoltageKv(base.getNominalVoltageKv());
-        cfg.setNominalCurrentA(base.getNominalCurrentA());
-        cfg.setPollIntervalMs(base.getPollIntervalMs());
-
-        // IED name
-        cfg.setIedName(iedName.isEmpty() ? base.getIedName() : iedName);
-
-        // MMXU (o MMXN como fallback)
-        DiscoveryResult.FoundNode mmxu = result.getBestMMXU();
-        if (mmxu != null) {
-            cfg.setLdInst(mmxu.ldInst);
-            cfg.setMmxuPrefix(mmxu.prefix);
-            cfg.setMmxuLnRef(mmxu.lnClass + mmxu.inst);  // e.g. "MMXU1"
-        } else {
-            cfg.setLdInst(base.getLdInst());
-        }
-
-        // MHAI
-        DiscoveryResult.FoundNode mhai = result.getBestMHAI();
-        cfg.setMhaiLnRef(mhai != null
-            ? mhai.prefix + mhai.lnClass + mhai.inst
-            : "");
-
-        // MSQI
-        DiscoveryResult.FoundNode msqi = result.getBestMSQI();
-        cfg.setMsqiLnRef(msqi != null
-            ? msqi.prefix + msqi.lnClass + msqi.inst
-            : "");
-
-        // MMTR
-        DiscoveryResult.FoundNode mmtr = result.getBestMMTR();
-        cfg.setMmtrLnRef(mmtr != null
-            ? mmtr.prefix + mmtr.lnClass + mmtr.inst
-            : "");
-
-        // MSTA
-        DiscoveryResult.FoundNode msta = result.getBestMSTA();
-        cfg.setMstaLnRef(msta != null
-            ? msta.prefix + msta.lnClass + msta.inst
-            : "");
-
-        return cfg;
     }
 
     private static void appendNodeSummary(StringBuilder sb, String cls,

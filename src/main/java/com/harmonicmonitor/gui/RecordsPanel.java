@@ -8,7 +8,6 @@ import com.harmonicmonitor.model.FeederMeasurement;
 import com.harmonicmonitor.storage.MLDataExporter;
 
 import javafx.application.Platform;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -64,16 +63,15 @@ public class RecordsPanel {
     private VBox buildRoot() {
         VBox vbox = new VBox(0);
         vbox.setStyle("-fx-background-color: " + Theme.BG + ";");
-
+        table = new RecordsTableBuilder(tableItems, this::handleOpenInViewer).build();
         vbox.getChildren().addAll(
             buildHeader(),
             buildToolbar(),
             charController.getNode(),
-            buildTable(),
+            table,
             buildStatusBar()
         );
-
-        VBox.setVgrow(buildTable(), Priority.ALWAYS);
+        VBox.setVgrow(table, Priority.ALWAYS);
         return vbox;
     }
 
@@ -157,95 +155,6 @@ public class RecordsPanel {
         return bar;
     }
 
-    // ── Tabla ────────────────────────────────────────────────────────────────
-
-    @SuppressWarnings("unchecked")
-    private TableView<RecordEntry> buildTable() {
-        table = new TableView<>(tableItems);
-        table.setStyle("-fx-background-color: " + Theme.BG + "; -fx-border-color: " + Theme.BORDER + ";");
-        table.setPlaceholder(buildPlaceholder());
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        VBox.setVgrow(table, Priority.ALWAYS);
-
-        TableColumn<RecordEntry, String> colTs = new TableColumn<>("Fecha / Hora");
-        colTs.setMinWidth(160); colTs.setMaxWidth(200);
-        colTs.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getTimestampStr()));
-        colTs.setCellFactory(c -> styledCell());
-
-        TableColumn<RecordEntry, String> colFeeder = new TableColumn<>("Feeder");
-        colFeeder.setMinWidth(100); colFeeder.setMaxWidth(160);
-        colFeeder.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().feederId));
-        colFeeder.setCellFactory(c -> styledCell());
-
-        TableColumn<RecordEntry, String> colLevel = new TableColumn<>("Nivel");
-        colLevel.setMinWidth(90); colLevel.setMaxWidth(110);
-        colLevel.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().level.displayName()));
-        colLevel.setCellFactory(c -> levelCell());
-
-        TableColumn<RecordEntry, String> colCause = new TableColumn<>("Causa");
-        colCause.setMinWidth(130); colCause.setMaxWidth(200);
-        colCause.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().cause));
-        colCause.setCellFactory(c -> styledCell());
-
-        TableColumn<RecordEntry, String> colReason = new TableColumn<>("Descripción / Norma");
-        colReason.setCellValueFactory(d -> {
-            String r = d.getValue().reason;
-            return new SimpleStringProperty(r.contains("\n") ? r.substring(0, r.indexOf('\n')) : r);
-        });
-        colReason.setCellFactory(c -> styledCell());
-
-        TableColumn<RecordEntry, String> colFile = new TableColumn<>("Archivo COMTRADE");
-        colFile.setMinWidth(220); colFile.setMaxWidth(320);
-        colFile.setCellValueFactory(d -> new SimpleStringProperty(
-            d.getValue().cfgFile != null ? d.getValue().cfgFile.getName() : "—"));
-        colFile.setCellFactory(c -> styledCell());
-
-        table.getColumns().addAll(colTs, colFeeder, colLevel, colCause, colReason, colFile);
-
-        table.setRowFactory(t -> new TableRow<RecordEntry>() {
-            private void refresh() {
-                RecordEntry item = getItem();
-                if (item == null || isEmpty()) { setStyle("-fx-background-color: transparent;"); return; }
-                if (isSelected()) { setStyle("-fx-background-color: #0078D4;"); return; }
-                String bg;
-                switch (item.level) {
-                    case CRITICAL:  bg = "#FF2D5530"; break;
-                    case PQ_RISK:   bg = "#C42B1C22"; break;
-                    case DETECTION: bg = "#88179822"; break;
-                    case WARNING:   bg = "#CA501018"; break;
-                    default:        bg = "transparent"; break;
-                }
-                setStyle("-fx-background-color: " + bg + ";");
-            }
-            { selectedProperty().addListener((obs, o, n) -> refresh()); }
-            @Override protected void updateItem(RecordEntry item, boolean empty) {
-                super.updateItem(item, empty); refresh();
-            }
-        });
-
-        table.setOnMouseClicked(e -> { if (e.getClickCount() == 2) handleOpenInViewer(); });
-        return table;
-    }
-
-    private Node buildPlaceholder() {
-        VBox box = new VBox(10);
-        box.setAlignment(Pos.CENTER);
-        box.setPadding(new Insets(40));
-        Label icon = new Label("📼");
-        icon.setStyle("-fx-font-size: 48px;");
-        Label msg = new Label("No hay registros COMTRADE aún");
-        msg.setStyle("-fx-font-size: 14px; -fx-text-fill: " + Theme.TEXT + "; -fx-font-weight: bold;");
-        Label hint = new Label(
-            "Los registros se generan automáticamente cuando los valores\n"
-            + "superan los límites normativos o al detectar cargas electrónicas.\n\n"
-            + "Use '⚡ Disparo manual' para capturar el estado actual de un feeder.\n"
-            + "Use '🧬 INICIAR CARACTERIZACIÓN' para acumular dataset de ML.");
-        hint.setStyle("-fx-font-size: 12px; -fx-text-fill: " + Theme.TEXT + "; -fx-text-alignment: center;");
-        hint.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
-        box.getChildren().addAll(icon, msg, hint);
-        return box;
-    }
-
     private HBox buildStatusBar() {
         HBox bar = new HBox(12);
         bar.setPadding(new Insets(5, 18, 5, 18));
@@ -261,37 +170,6 @@ public class RecordsPanel {
         normLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: " + Theme.TEXT + "; -fx-font-style: italic;");
         bar.getChildren().addAll(statusLbl, spacer, normLabel);
         return bar;
-    }
-
-    // ── Cell factories ────────────────────────────────────────────────────────
-
-    private <T> TableCell<RecordEntry, T> styledCell() {
-        return new TableCell<RecordEntry, T>() {
-            @Override protected void updateItem(T item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); }
-                else { setText(item.toString()); setStyle("-fx-text-fill: " + Theme.TEXT + "; -fx-font-size: 11px;"); }
-            }
-        };
-    }
-
-    private TableCell<RecordEntry, String> levelCell() {
-        return new TableCell<RecordEntry, String>() {
-            @Override protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); return; }
-                setText(item);
-                String color;
-                switch (item) {
-                    case "CRÍTICO":   color = "#FF4060"; break;
-                    case "PQ-RIESGO": color = "#FF8040"; break;
-                    case "DETECCIÓN": color = "#A070FF"; break;
-                    case "WARNING":   color = "#F0A030"; break;
-                    default:          color = "#90A0B0"; break;
-                }
-                setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold; -fx-font-size: 11px;");
-            }
-        };
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────

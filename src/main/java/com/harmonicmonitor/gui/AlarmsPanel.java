@@ -14,9 +14,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -254,7 +252,7 @@ public class AlarmsPanel implements AlarmEngine.AlarmListener {
 
         activeData = FXCollections.observableArrayList();
         filteredActive = new FilteredList<>(activeData, row -> true);
-        activeTable = buildAlarmTable(filteredActive);
+        activeTable = AlarmTableBuilder.build(filteredActive);
         activeTable.setPrefHeight(220);
 
         card.getChildren().addAll(header, activeTable);
@@ -284,68 +282,11 @@ public class AlarmsPanel implements AlarmEngine.AlarmListener {
 
         historyData = FXCollections.observableArrayList();
         filteredHistory = new FilteredList<>(historyData, row -> true);
-        historyTable = buildAlarmTable(filteredHistory);
+        historyTable = AlarmTableBuilder.build(filteredHistory);
         historyTable.setPrefHeight(260);
 
         card.getChildren().addAll(header, historyTable);
         return card;
-    }
-
-    private TableView<AlarmRow> buildAlarmTable(ObservableList<AlarmRow> data) {
-        TableView<AlarmRow> tv = new TableView<>(data);
-        tv.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
-        TableColumn<AlarmRow, String> colTime = col("Timestamp", "timestamp", 150);
-        TableColumn<AlarmRow, String> colLevel = col("Nivel", "level", 90);
-        TableColumn<AlarmRow, String> colFeeder = col("Feeder", "feederId", 110);
-        TableColumn<AlarmRow, String> colParam = col("Parámetro", "parameter", 100);
-        TableColumn<AlarmRow, String> colMsg = col("Mensaje", "message", 340);
-        TableColumn<AlarmRow, String> colVal = col("Valor", "measuredValue", 80);
-        TableColumn<AlarmRow, String> colThr = col("Umbral", "threshold", 80);
-        TableColumn<AlarmRow, String> colAck = col("Ack.", "ack", 60);
-
-        tv.getColumns().addAll(colTime, colLevel, colFeeder, colParam, colMsg, colVal, colThr, colAck);
-
-        // Color rows by alarm level; also handle selected state to keep text readable
-        tv.setRowFactory(t -> new TableRow<AlarmRow>() {
-            private void refresh() {
-                AlarmRow item = getItem();
-                if (item == null || isEmpty()) {
-                    setStyle("-fx-background-color: transparent; -fx-text-fill: " + Theme.TEXT + ";");
-                    return;
-                }
-                if (isSelected()) {
-                    setStyle("-fx-background-color: #0078D4; -fx-text-fill: #FFFFFF;");
-                    return;
-                }
-                String bg;
-                switch (item.getLevel()) {
-                    case "WARNING":   bg = "#CA501022"; break;
-                    case "PQ_RISK":   bg = "#C42B1C22"; break;
-                    case "CRITICAL":  bg = "#FF2D5530"; break;
-                    case "DETECTION": bg = "#88179822"; break;
-                    default:          bg = "transparent"; break;
-                }
-                setStyle("-fx-background-color: " + bg + "; -fx-text-fill: " + Theme.TEXT + ";");
-            }
-            {
-                selectedProperty().addListener((obs, o, n) -> refresh());
-            }
-            @Override
-            protected void updateItem(AlarmRow item, boolean empty) {
-                super.updateItem(item, empty);
-                refresh();
-            }
-        });
-
-        return tv;
-    }
-
-    private TableColumn<AlarmRow, String> col(String title, String prop, int width) {
-        TableColumn<AlarmRow, String> c = new TableColumn<>(title);
-        c.setCellValueFactory(new PropertyValueFactory<>(prop));
-        c.setMinWidth(width);
-        return c;
     }
 
     // ── Update helpers ────────────────────────────────────────────────────────
