@@ -348,6 +348,22 @@ public class HarmonicsPanel {
         return card;
     }
 
+    // ── Degraded mode control (called from FeederLifecycleManager at connect) ──
+
+    /** Activa o desactiva el banner de MODO DEGRADADO. Puede llamarse desde cualquier hilo. */
+    public void setDegradedMode(boolean degraded) {
+        javafx.application.Platform.runLater(() -> {
+            if (estimatedLabel == null) return;
+            javafx.scene.layout.HBox banner =
+                (javafx.scene.layout.HBox) estimatedLabel.getParent();
+            if (banner != null) {
+                banner.setManaged(degraded);
+                banner.setVisible(degraded);
+            }
+            estimatedLabel.setVisible(degraded);
+        });
+    }
+
     // ── Refresh display ───────────────────────────────────────────────────────
 
     private void refreshDisplay() {

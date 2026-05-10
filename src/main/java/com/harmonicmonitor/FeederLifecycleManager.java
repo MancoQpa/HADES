@@ -193,6 +193,13 @@ class FeederLifecycleManager {
                         app.updateFeedersIndicator();
                         return;
                     }
+                    // Usuario eligió continuar en modo degradado — activar banner
+                    if (app.harmonicsPanel != null)
+                        app.harmonicsPanel.setDegradedMode(true);
+                } else {
+                    // Tiene armónicos completos — asegurar que el banner esté apagado
+                    if (app.harmonicsPanel != null)
+                        app.harmonicsPanel.setDegradedMode(false);
                 }
                 startPoller(comm, cfg);
                 app.updateFeedersIndicator();
