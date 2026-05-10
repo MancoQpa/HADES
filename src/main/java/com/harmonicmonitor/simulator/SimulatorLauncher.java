@@ -150,6 +150,10 @@ public class SimulatorLauncher {
         String profile  = jstr(body, "profile",  "crypto_mining");
         String noise    = jstr(body, "noise",    "0.03");
         int    interval = jint(body, "interval",  5000);
+        String cidFile  = jstr(body, "cid",      "generic_meter_sim.cid");
+        // Sanitize: only allow basename (no path traversal)
+        if (cidFile.isEmpty() || cidFile.contains("..") || cidFile.contains("/") || cidFile.contains("\\"))
+            cidFile = "generic_meter_sim.cid";
 
         // Matar proceso existente con el mismo IED (por mapa y por puerto)
         Process old = procs.get(ied);
@@ -168,7 +172,7 @@ public class SimulatorLauncher {
         // CID como ruta absoluta para que IonSimServer encuentre templates/
         // independientemente del directorio de trabajo del subproceso
         String cidAbsolute = new File(System.getProperty("user.dir"),
-                "simulator" + File.separator + "generic_meter_sim.cid").getAbsolutePath();
+                "simulator" + File.separator + cidFile).getAbsolutePath();
 
         ProcessBuilder pb = new ProcessBuilder(
             javaExe, "-cp", cp,

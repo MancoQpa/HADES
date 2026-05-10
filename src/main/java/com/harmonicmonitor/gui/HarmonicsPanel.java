@@ -141,11 +141,15 @@ public class HarmonicsPanel {
         });
         refreshFeederCombo();
 
-        estimatedLabel = new Label("~ espectro estimado (IED no provee armónicas)");
-        estimatedLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #CA5010; -fx-font-style: italic;");
+        estimatedLabel = new Label("⚠ MODO DEGRADADO — espectro estimado (IED sin MHAI)");
+        estimatedLabel.setStyle(
+            "-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #ffb74d;" +
+            "-fx-background-color: #3a1f00; -fx-border-color: #7a4200;" +
+            "-fx-border-width: 1; -fx-border-radius: 3; -fx-background-radius: 3;" +
+            "-fx-padding: 3 8 3 8;");
         estimatedLabel.setVisible(false);
 
-        h.getChildren().addAll(title, spacer, estimatedLabel, phaseBox, sep, feederLbl, feederCombo);
+        h.getChildren().addAll(title, estimatedLabel, spacer, phaseBox, sep, feederLbl, feederCombo);
         return h;
     }
 

@@ -9,7 +9,7 @@ import java.util.logging.*;
  *   java -cp <classpath> com.harmonicmonitor.simulator.SimulatorMain [opciones]
  *
  * Opciones:
- *   --cid      <ruta>    Ruta al archivo CID  (default: simulator/ion7400sim.cid)
+ *   --cid      <ruta>    Ruta al archivo CID  (default: simulator/generic_meter_sim.cid)
  *   --port     <n>       Puerto MMS           (default: 10102)
  *   --ied      <nombre>  Nombre del IED       (default: SIM1)
  *   --ld       <inst>    Instancia LD         (default: LD0)
@@ -72,7 +72,7 @@ public class SimulatorMain {
 
         // Banner
         System.out.println("╔══════════════════════════════════════════════════╗");
-        System.out.println("║         ION 7400 Desktop Simulator — HADES         ║");
+        System.out.println("║      Generic Multimeter Simulator — HADES          ║");
         System.out.println("╚══════════════════════════════════════════════════╝");
         System.out.printf("  IED: %-10s  LD: %-6s  MMXU prefix: %s%n", iedName, ldInst, prefix);
         System.out.printf("  Puerto: %-6d  Perfil: %-20s  Ruido: %.0f%%%n",
