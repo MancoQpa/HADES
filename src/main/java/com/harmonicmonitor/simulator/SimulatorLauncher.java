@@ -168,7 +168,7 @@ public class SimulatorLauncher {
         // CID como ruta absoluta para que IonSimServer encuentre templates/
         // independientemente del directorio de trabajo del subproceso
         String cidAbsolute = new File(System.getProperty("user.dir"),
-                "simulator" + File.separator + "ion7400sim.cid").getAbsolutePath();
+                "simulator" + File.separator + "generic_meter_sim.cid").getAbsolutePath();
 
         ProcessBuilder pb = new ProcessBuilder(
             javaExe, "-cp", cp,

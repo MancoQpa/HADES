@@ -112,7 +112,7 @@ src/main/java/com/harmonicmonitor/
   gui/                     # Paneles JavaFX (MultiFeederMonitorPanel, HarmonicsPanel,
                            #   DiscoveryPanel, FeederMgmtPanel, ComtradePanel, ...)
 simulator/
-  ion7400sim.cid           # Archivo SCL del simulador IEC 61850
+  generic_meter_sim.cid    # Archivo SCL del simulador IEC 61850
   templates/               # Perfiles JSON de carga (8 perfiles)
 ```
 

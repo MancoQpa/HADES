@@ -47,7 +47,7 @@ public class SimulatorMain {
         rootLog.setLevel(Level.INFO);
 
         // Valores por defecto
-        String cidPath   = "simulator/ion7400sim.cid";
+        String cidPath   = "simulator/generic_meter_sim.cid";
         int    port      = 10102;
         String iedName   = "SIM1";
         String ldInst    = "LD0";
