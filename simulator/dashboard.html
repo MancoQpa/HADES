@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HADES — Generic Multimeter Simulator</title>
+<style>
+:root {
+  --bg:      #0d0d0d;
+  --surface: #161616;
+  --border:  #2a2a2a;
+  --text:    #e0e0e0;
+  --muted:   #5e5e5e;
+  --green:   #4caf50;
+  --red:     #ef5350;
+  --amber:   #ffa726;
+  --blue:    #42a5f5;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px; height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ── Header ── */
+header {
+  height: 46px; background: #0a0a0a;
+  border-bottom: 1px solid #222;
+  display: flex; align-items: center; padding: 0 12px; gap: 10px; flex-shrink: 0;
+}
+header h1 { font-size: 14px; font-weight: 700; color: #90caf9; white-space: nowrap; }
+.hdr-sep { flex: 1; }
+.hdr-ctrl { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.hdr-ctrl input[type=range] { width: 70px; accent-color: #90caf9; }
+#ivLabel { color: #90caf9; font-weight: 600; width: 30px; }
+
+.mode-badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  font-weight: 600; letter-spacing: .3px;
+}
+.mode-badge.launcher { background: #1a3a1a; color: #66bb6a; border: 1px solid #2a5a2a; }
+.mode-badge.offline  { background: #2a2a1a; color: #ffa726; border: 1px solid #4a4a1a; }
+
+/* Global launch buttons */
+.btn-all {
+  padding: 3px 10px; font-size: 11px; border-radius: 4px;
+  border: 1px solid; cursor: pointer; font-weight: 600;
+  transition: opacity .15s;
+}
+.btn-all:disabled { opacity: .35; cursor: default; }
+.btn-launch-all { background: #1a3a1a; color: #66bb6a; border-color: #2a6a2a; }
+.btn-launch-all:not(:disabled):hover { background: #224a22; }
+.btn-stop-all   { background: #3a1a1a; color: #ef5350; border-color: #6a2a2a; }
+.btn-stop-all:not(:disabled):hover   { background: #4a2222; }
+
+/* ── 2×2 grid ── */
+.grid {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px; background: var(--border); overflow: hidden;
+}
+
+/* ── Panel ── */
+.panel { background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
+
+/* Panel header */
+.pnl-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; background: #111;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted); flex-shrink: 0; transition: all .4s;
+}
+.status-dot.running { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.stopped { background: var(--red);   box-shadow: 0 0 4px #ef535060; }
+.pnl-title  { font-weight: 700; font-size: 13px; white-space: nowrap; }
+.pnl-badge  { font-size: 10px; padding: 1px 5px; border-radius: 8px;
+               background: #222; color: var(--muted); white-space: nowrap;
+               overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.pnl-sep    { flex: 1; }
+.pnl-cfg    { display: flex; align-items: center; gap: 4px; }
+.pnl-cfg select, .pnl-cfg input[type=text], .pnl-cfg input[type=number] {
+  background: #1a1a1a; border: 1px solid #333; color: var(--text);
+  border-radius: 3px; padding: 2px 4px; font-size: 11px; outline: none;
+}
+.pnl-cfg select:focus, .pnl-cfg input:focus { border-color: #555; }
+.pnl-cfg input[type=text]   { width: 48px; }
+.pnl-cfg input[type=number] { width: 50px; }
+.pnl-cfg label { color: var(--muted); font-size: 10px; }
+.pnl-cfg input[type=range] { width: 52px; accent-color: var(--amber); }
+
+/* Launch / Stop buttons */
+.btn-launch, .btn-stop {
+  padding: 2px 8px; font-size: 11px; font-weight: 700;
+  border-radius: 3px; border: 1px solid; cursor: pointer;
+  white-space: nowrap; transition: opacity .15s;
+}
+.btn-launch:disabled, .btn-stop:disabled { opacity: .3; cursor: default; }
+.btn-launch { background: #1a3a1a; color: #66bb6a; border-color: #2a6a2a; }
+.btn-launch:not(:disabled):hover { background: #224a22; }
+.btn-stop   { background: #3a1a1a; color: #ef5350; border-color: #6a2a2a; }
+.btn-stop:not(:disabled):hover   { background: #4a2222; }
+
+/* ── Body ── */
+.pnl-body {
+  flex: 1; display: flex; flex-direction: row;
+  overflow: hidden; min-height: 0;
+}
+.metrics {
+  width: 128px; flex-shrink: 0; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  border-right: 1px solid var(--border); overflow: hidden;
+}
+.metric {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 2px 3px; border-radius: 2px;
+}
+.metric:nth-child(odd) { background: #1a1a1a; }
+.mlbl { color: var(--muted); font-size: 10px; }
+.mval { font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; }
+.munt { color: var(--muted); font-size: 9px; margin-left: 1px; }
+.mval.hi   { color: var(--red);   }
+.mval.warn { color: var(--amber); }
+.mval.ok   { color: var(--green); }
+.mval.bl   { color: var(--blue);  }
+.div { height: 1px; background: var(--border); margin: 1px 0; }
+
+/* Charts column */
+.charts {
+  flex: 1; display: flex; flex-direction: column;
+  padding: 5px; gap: 3px; overflow: hidden; min-width: 0;
+}
+.clbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+canvas.spectrum { flex: 0 0 auto; }
+canvas.trend    { flex: 1; min-height: 0; }
+
+/* ── Log strip ── */
+.pnl-log {
+  max-height: 64px; overflow-y: auto;
+  background: #080808; border-top: 1px solid var(--border);
+  font-family: 'Cascadia Code','Consolas',monospace; font-size: 9px;
+  color: #546e7a; padding: 3px 8px; flex-shrink: 0;
+  transition: max-height .2s;
+}
+.pnl-log:empty, .pnl-log.hidden { max-height: 0; padding: 0; }
+.pnl-log .log-err { color: #ef9a9a; }
+.pnl-log .log-ok  { color: #a5d6a7; }
+
+/* ── Footer ── */
+.pnl-foot {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 8px; background: #0a0a0a;
+  border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.cmd-text {
+  flex: 1; font-family: 'Cascadia Code','Consolas',monospace;
+  font-size: 10px; color: #455a64;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.btn-apply {
+  padding: 2px 8px; font-size: 11px; font-weight: 700;
+  border-radius: 3px; border: 1px solid #4a8a2a; cursor: pointer;
+  background: #1e3a10; color: #88d860; white-space: nowrap;
+  transition: opacity .15s, background .15s;
+  animation: pulse-apply 1s ease infinite alternate;
+}
+.btn-apply:hover { background: #2a4a18; }
+@keyframes pulse-apply {
+  from { box-shadow: 0 0 0 0 #66bb6a30; }
+  to   { box-shadow: 0 0 6px 2px #66bb6a60; }
+}
+.cmd-text.pending { color: #ffa726; font-weight: 700; }
+.btn-copy {
+  padding: 1px 7px; font-size: 10px;
+  background: #1e2a35; border: 1px solid #2a4060;
+  color: #90caf9; border-radius: 3px; cursor: pointer; flex-shrink: 0;
+}
+.btn-copy:hover { background: #263545; }
+.btn-copy.done  { color: var(--green); border-color: #2a5a2a; background: #1a2a1a; }
+
+/* ── About button ── */
+.btn-about {
+  padding: 3px 10px; font-size: 12px; border-radius: 4px;
+  border: 1px solid #2a4060; background: #1a2535; color: #90caf9;
+  cursor: pointer; transition: background .15s; font-weight: 600;
+}
+.btn-about:hover { background: #22304a; }
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.72); z-index: 9999;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #111; border: 1px solid #2a3a50;
+  border-radius: 10px; width: 540px; max-width: 96vw;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 12px 48px #000a;
+  animation: fadeUp .18s ease;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(18px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+/* Hero */
+.ab-hero {
+  background: linear-gradient(160deg, #0d1a2e 0%, #060e1c 100%);
+  border-bottom: 1px solid #1e3050;
+  padding: 28px 24px 20px;
+  text-align: center;
+}
+.ab-icon { font-size: 44px; line-height: 1; }
+.ab-title {
+  font-size: 26px; font-weight: 900; color: #90caf9;
+  letter-spacing: 2px; margin: 8px 0 2px;
+  text-shadow: 0 0 20px #90caf955;
+}
+.ab-subtitle {
+  font-size: 12px; color: #546e7a; letter-spacing: .5px; margin-bottom: 8px;
+}
+.ab-project-badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 3px 14px; border-radius: 10px;
+  background: #1a2a1a; color: #81c784;
+  border: 1px solid #2a4a2a; letter-spacing: .5px; margin-bottom: 8px;
+}
+.ab-version {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 12px; border-radius: 10px;
+  background: #0d2040; color: #42a5f5; border: 1px solid #1a3a60;
+}
+
+/* Body */
+.ab-body { padding: 18px 20px 20px; }
+
+/* Paraguay flag (CSS) */
+.py-flag {
+  display: inline-flex; flex-direction: column;
+  width: 72px; height: 48px; border-radius: 2px;
+  overflow: hidden; border: 1px solid #333;
+  box-shadow: 0 2px 8px #0006; flex-shrink: 0;
+  vertical-align: middle;
+}
+.py-flag .s1 { flex: 1; background: #CC0001; }
+.py-flag .s2 { flex: 1; background: #F0F0F0; }
+.py-flag .s3 { flex: 1; background: #0038A8; }
+
+/* Sections */
+.ab-section {
+  font-size: 10px; font-weight: 700; color: #42a5f5;
+  letter-spacing: 1px; text-transform: uppercase;
+  margin: 14px 0 6px;
+}
+.ab-sep { height: 1px; background: #1e2e40; margin: 4px 0 10px; }
+
+/* Author card */
+.ab-author-card {
+  background: #0d1a2e; border: 1px solid #1e3050;
+  border-radius: 6px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 14px;
+}
+.ab-author-info { flex: 1; }
+.ab-author-name {
+  font-size: 16px; font-weight: 800; color: #90caf9; margin-bottom: 2px;
+}
+.ab-author-role {
+  font-size: 11px; color: #546e7a; margin-bottom: 6px;
+}
+.ab-country-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+}
+.ab-country-text { font-size: 12px; color: #90caf9; font-weight: 600; }
+
+/* Team */
+.ab-team-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 10px; border-left: 3px solid #1e3a6a;
+  background: #0a1520; border-radius: 0 4px 4px 0; margin-bottom: 5px;
+}
+.ab-team-name { font-size: 12px; font-weight: 700; color: #e0e0e0; }
+.ab-team-role { font-size: 10px; color: #546e7a; font-style: italic; margin-top: 1px; }
+
+/* Info rows */
+.ab-info-row {
+  display: flex; gap: 10px; font-size: 11px; padding: 3px 0;
+}
+.ab-info-key   { color: #546e7a; min-width: 100px; }
+.ab-info-val   { color: #e0e0e0; font-weight: 600; }
+
+/* Tech badges */
+.ab-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.ab-badge {
+  font-size: 10px; padding: 3px 9px; border-radius: 3px;
+  font-weight: 600;
+}
+.ab-badge.blue  { background: #0d2040; color: #42a5f5; border: 1px solid #1a3a6040; }
+.ab-badge.green { background: #0d2010; color: #66bb6a; border: 1px solid #1a4a1a40; }
+.ab-badge.amber { background: #2a1a00; color: #ffa726; border: 1px solid #4a3a0040; }
+
+/* Footer */
+.ab-footer {
+  border-top: 1px solid #1e2e40; padding: 10px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ab-footer-txt { font-size: 10px; color: #374a5a; }
+.ab-close {
+  padding: 4px 16px; font-size: 11px; font-weight: 700;
+  background: #1a2535; color: #90caf9;
+  border: 1px solid #2a4060; border-radius: 4px; cursor: pointer;
+}
+.ab-close:hover { background: #22304a; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ HADES — Generic Multimeter Simulator</h1>
+  <span style="font-size:10px;color:#546e7a;white-space:nowrap;margin-left:4px">Proyecto ANDE-SIGFE</span>
+  <span class="mode-badge offline" id="modeBadge" style="margin-left:8px">DEMO (archivo local)</span>
+  <div class="hdr-sep"></div>
+  <button class="btn-all btn-launch-all" id="btnLaunchAll" disabled onclick="launchAll()">▶ Lanzar todos</button>
+  <button class="btn-all btn-stop-all"   id="btnStopAll"   disabled onclick="stopAll()">⏹ Detener todos</button>
+  <div class="hdr-ctrl" style="margin-left:8px">
+    <label>Actualiz.:</label>
+    <input type="range" id="slIv" min="500" max="5000" step="500" value="2000"
+           oninput="setIv(+this.value)">
+    <span id="ivLabel">2 s</span>
+  </div>
+  <button class="btn-about" style="margin-left:8px" onclick="openAbout()">ℹ Acerca de</button>
+</header>
+
+<!-- ══ ABOUT MODAL ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="aboutModal" onclick="closeAboutOutside(event)">
+  <div class="modal-box" id="aboutBox">
+
+    <!-- Hero -->
+    <div class="ab-hero">
+      <div class="ab-icon">⚡</div>
+      <div class="ab-title">HADES</div>
+      <div class="ab-subtitle">Harmonic Analysis for Detection of Electronic Signatures</div>
+      <div class="ab-project-badge">PROYECTO ANDE-SIGFE</div><br>
+      <div style="font-size:11px;color:#78909c;margin:4px 0 8px">
+        Sistema Inteligente de Gestión de Firmas Energéticas
+      </div>
+      <div class="ab-version">Generic Multimeter Simulator — v 1.0 · 2026</div>
+    </div>
+
+    <!-- Body -->
+    <div class="ab-body">
+
+      <!-- Autor principal -->
+      <div class="ab-section">👤 Desarrollador Principal</div>
+      <div class="ab-sep"></div>
+      <div class="ab-author-card">
+        <div class="py-flag"><div class="s1"></div><div class="s2"></div><div class="s3"></div></div>
+        <div class="ab-author-info">
+          <div class="ab-author-name">Emilio Medina</div>
+          <div class="ab-author-role">Arquitectura · Backend IEC 61850 · Análisis Armónico</div>
+          <div class="ab-country-row">
+            <span class="ab-country-text">🇵🇾 República del Paraguay</span>
+            <span style="color:#374a5a;font-size:10px">· Asunción · América del Sur</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipo -->
+      <div class="ab-section" style="margin-top:16px">👥 Equipo de Desarrollo</div>
+      <div class="ab-sep"></div>
+      <div class="ab-team-row">
+        <div>
+          <div class="ab-team-name">👤 Ubaldo Fernández</div>
+          <div class="ab-team-role">Procesamiento de señales y detección de cargas</div>
+        </div>
+      </div>
+      <div class="ab-team-row">
+        <div>
+          <div class="ab-team-name">👤 Diego Rojas</div>
+          <div class="ab-team-role">Interfaz gráfica y visualización de datos</div>
+        </div>
+      </div>
+      <div class="ab-team-row">
+        <div>
+          <div class="ab-team-name">👤 Enrique Paiva</div>
+          <div class="ab-team-role">Integración de normas y validación de modelos</div>
+        </div>
+      </div>
+      <div class="ab-team-row">
+        <div>
+          <div class="ab-team-name">👤 Sergio Domínguez</div>
+          <div class="ab-team-role">Gestión de Proyecto</div>
+        </div>
+      </div>
+
+      <!-- Info del proyecto -->
+      <div class="ab-section" style="margin-top:16px">📋 Información del Proyecto</div>
+      <div class="ab-sep"></div>
+      <div class="ab-info-row"><span class="ab-info-key">Proyecto:</span>     <span class="ab-info-val">ANDE-SIGFE</span></div>
+      <div class="ab-info-row"><span class="ab-info-key">Sector:</span>       <span class="ab-info-val">Distribución eléctrica MT 23 kV — ANDE</span></div>
+      <div class="ab-info-row"><span class="ab-info-key">País:</span>         <span class="ab-info-val">Paraguay 🇵🇾</span></div>
+      <div class="ab-info-row"><span class="ab-info-key">Año:</span>          <span class="ab-info-val">2026</span></div>
+      <div class="ab-info-row"><span class="ab-info-key">Protocolo:</span>    <span class="ab-info-val">IEC 61850 / MMS / ACSE</span></div>
+      <div class="ab-info-row"><span class="ab-info-key">Versión:</span>      <span class="ab-info-val">v 1.0</span></div>
+
+      <!-- Descripción -->
+      <div class="ab-section" style="margin-top:16px">📖 Descripción</div>
+      <div class="ab-sep"></div>
+      <p style="font-size:11px;color:#607d8b;line-height:1.7;margin:0">
+        Este simulador forma parte de <strong style="color:#90caf9">HADES</strong>, plataforma de escritorio para el monitoreo
+        en tiempo real de la calidad de energía en alimentadores de 23 kV.<br><br>
+        Genera señales sintéticas de 8 perfiles de carga — criptominería, data center,
+        motores, variadores VFD, alumbrado, iluminación electrónica, mixto y residencial —
+        permitiendo desarrollo y demostración sin acceso a hardware real.<br><br>
+        Los datos se exponen vía <strong style="color:#90caf9">IEC 61850 MMS</strong> en el mismo formato que un
+        medidor multifunción genérico IEC 61850, con LNs MMXU1, MHAI1, MSQI1, MMTR1 y MSTA1.
+      </p>
+
+      <!-- Tecnologías -->
+      <div class="ab-section" style="margin-top:16px">🛠 Tecnologías</div>
+      <div class="ab-sep"></div>
+      <div class="ab-badges">
+        <span class="ab-badge blue">Java 17+</span>
+        <span class="ab-badge blue">JavaFX 17</span>
+        <span class="ab-badge blue">Maven 3.6+</span>
+        <span class="ab-badge green">iec61850bean 1.9</span>
+        <span class="ab-badge green">asn1bean 1.13</span>
+        <span class="ab-badge green">SLF4J 2.0</span>
+        <span class="ab-badge amber">IEC 61850 MMS</span>
+        <span class="ab-badge amber">IEEE 519-2022</span>
+        <span class="ab-badge amber">IEC 61000</span>
+      </div>
+
+    </div><!-- /ab-body -->
+
+    <!-- Footer -->
+    <div class="ab-footer">
+      <span class="ab-footer-txt">
+        Proyecto ANDE-SIGFE · Emilio Medina · Asunción, Paraguay 🇵🇾 · 2026
+      </span>
+      <button class="ab-close" onclick="closeAbout()">Cerrar</button>
+    </div>
+
+  </div><!-- /modal-box -->
+</div><!-- /modal-overlay -->
+
+<div class="grid" id="grid"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// PROFILES
+// ══════════════════════════════════════════════════════════
+const PROFILES = {
+  // har[0]=H1(fundamental), har[2]=H3, har[4]=H5, ... (índice = orden-1)
+  // Valores sincronizados con simulator/templates/*.json  (fuente de verdad = IEC 61850 server)
+  crypto_mining:    { label:"Criptominería (SMPS+PFC)",    color:"#ef5350",
+    phV:13280, aL:170, totW:6671208, totVAr:1167124, totVA:6772800, pf:0.985, hz:50,
+    thd:42,  kf:6.8, odd:41.5, evn:1.2, neg:1.0,
+    har:[1,.000,.030,.000,.350,.000,.220,.000,.080,.000,.070,.000,.050,.000,.010,.000,.005,.000,.003,.000,.002,.000,.001,.000,.001] },
+  linear_load:      { label:"Carga Lineal (Motores)",       color:"#66bb6a",
+    phV:13280, aL:90,  totW:3047760, totVAr:1888661, totVA:3585600, pf:0.85,  hz:50,
+    thd:4,   kf:1.1, odd:3.8,  evn:0.5, neg:0.9,
+    har:[1,.000,.010,.000,.030,.000,.020,.000,.005,.000,.010,.000,.005,.000,.003,.000,.002,.000,.001,.000,.001,.000,.001,.000,.001] },
+  data_center:      { label:"Data Center (PFC parcial)",    color:"#42a5f5",
+    phV:13280, aL:150, totW:5258880, totVAr:2838600, totVA:5976000, pf:0.88,  hz:50,
+    thd:20,  kf:4.6, odd:19.5, evn:1.5, neg:0.8,
+    har:[1,.000,.050,.000,.280,.000,.180,.000,.060,.000,.040,.000,.020,.000,.010,.000,.008,.000,.005,.000,.003,.000,.002,.000,.001] },
+  electronic_light: { label:"Electrónica Ligera (UPS)",     color:"#ab47bc",
+    phV:13280, aL:80,  totW:2804736, totVAr:1513920, totVA:3187200, pf:0.88,  hz:50,
+    thd:10,  kf:1.5, odd:9.8,  evn:0.9, neg:0.8,
+    har:[1,.000,.150,.000,.100,.000,.040,.000,.020,.000,.010,.000,.005,.000,.003,.000,.002,.000,.001,.000,.001,.000,.001,.000,.000] },
+  industrial:       { label:"Industrial VFD 6 Pulsos",      color:"#ffa726",
+    phV:13280, aL:130, totW:4816656, totVAr:1903356, totVA:5179200, pf:0.93,  hz:50,
+    thd:26,  kf:4.8, odd:25.5, evn:1.8, neg:1.3,
+    har:[1,.000,.020,.000,.250,.000,.110,.000,.010,.000,.090,.000,.080,.000,.005,.000,.003,.000,.002,.000,.001,.000,.001,.000,.001] },
+  lighting:         { label:"Iluminación LED",               color:"#26c6da",
+    phV:13280, aL:60,  totW:2031840, totVAr:1259031, totVA:2390400, pf:0.85,  hz:50,
+    thd:12,  kf:1.5, odd:11.8, evn:0.8, neg:0.6,
+    har:[1,.000,.400,.000,.060,.000,.030,.000,.020,.000,.015,.000,.010,.000,.008,.000,.005,.000,.003,.000,.002,.000,.001,.000,.001] },
+  mixed_electronic: { label:"Mixto Electrónico (Comercial)", color:"#ff7043",
+    phV:13280, aL:100, totW:3625440, totVAr:1651598, totVA:3984000, pf:0.91,  hz:50,
+    thd:7,   kf:1.3, odd:6.8,  evn:0.7, neg:1.0,
+    har:[1,.000,.120,.000,.060,.000,.040,.000,.015,.000,.010,.000,.005,.000,.003,.000,.002,.000,.001,.000,.001,.000,.001,.000,.000] },
+  normal_load:      { label:"Carga Normal (Residencial)",    color:"#9ccc65",
+    phV:13280, aL:10,  totW:390432,  totVAr:79282,   totVA:398400,  pf:0.98,  hz:50,
+    thd:5,   kf:1.2, odd:4.8,  evn:0.8, neg:0.1,
+    har:[1,.005,.030,.004,.040,.003,.020,.002,.010,.002,.008,.002,.006,.002,.004,.001,.003,.001,.002,.001,.002,.001,.001,.001,.001] },
+};
+const PK = Object.keys(PROFILES);
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+const DEFAULTS = [
+  {id:"SIM1", port:10102, profile:"crypto_mining",    noise:.03},
+  {id:"SIM2", port:10103, profile:"linear_load",      noise:.03},
+  {id:"SIM3", port:10104, profile:"data_center",      noise:.03},
+  {id:"SIM4", port:10105, profile:"normal_load",      noise:.03},
+];
+const state = DEFAULTS.map(d => ({
+  ...d, thdHist:Array(60).fill(null), running:false, tick:0
+}));
+
+// ══════════════════════════════════════════════════════════
+// LAUNCHER MODE  (true when served via http://localhost:8765)
+// ══════════════════════════════════════════════════════════
+const LAUNCHER_MODE = (location.protocol === 'http:' || location.protocol === 'https:');
+const API = '';  // same origin
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (LAUNCHER_MODE) {
+    document.getElementById('modeBadge').textContent  = 'LAUNCHER activo';
+    document.getElementById('modeBadge').className    = 'mode-badge launcher';
+    document.getElementById('btnLaunchAll').disabled  = false;
+    document.getElementById('btnStopAll').disabled    = false;
+    for (let i=0;i<4;i++) {
+      document.getElementById(`btnL-${i}`).disabled = false;
+      document.getElementById(`btnS-${i}`).disabled = false;
+      // btnA-${i} se muestra solo cuando hay un perfil pendiente de aplicar
+    }
+    pollStatus();
+    setInterval(pollStatus, 2000);
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+// BUILD DOM
+// ══════════════════════════════════════════════════════════
+function profileOpts(sel) {
+  return PK.map(k=>`<option value="${k}"${k===sel?' selected':''}>${PROFILES[k].label}</option>`).join('');
+}
+
+function buildPanel(s, i) {
+  return `<div class="panel" id="panel-${i}">
+  <div class="pnl-head">
+    <div class="status-dot" id="dot-${i}"></div>
+    <span class="pnl-title" id="ttl-${i}">${s.id}</span>
+    <span class="pnl-badge" id="bdg-${i}">${PROFILES[s.profile].label}</span>
+    <div class="pnl-sep"></div>
+    <div class="pnl-cfg">
+      <label>IED:</label>
+      <input type="text" id="ci-${i}" value="${s.id}" maxlength="8"
+             onchange="setCfg(${i},'id',this.value)">
+      <label>Puerto:</label>
+      <input type="number" id="cp-${i}" value="${s.port}" min="1024" max="65535"
+             onchange="setCfg(${i},'port',+this.value)">
+      <label>Perfil:</label>
+      <select id="cs-${i}" onchange="changeProfile(${i},this.value)">${profileOpts(s.profile)}</select>
+      <label title="Nivel de ruido gaussiano">Ruido:</label>
+      <input type="range" id="cn-${i}" min="0" max="0.15" step="0.01" value="${s.noise}"
+             oninput="setCfg(${i},'noise',+this.value)">
+    </div>
+    <button class="btn-launch" id="btnL-${i}" disabled onclick="launchSim(${i})">▶ Lanzar</button>
+    <button class="btn-stop"   id="btnS-${i}" disabled onclick="stopSim(${i})">⏹</button>
+  </div>
+
+  <div class="pnl-body">
+    <div class="metrics">
+      <div class="metric"><span class="mlbl">V fase</span>
+        <span><span class="mval bl" id="v-${i}">--</span><span class="munt">kV</span></span></div>
+      <div class="metric"><span class="mlbl">I fase</span>
+        <span><span class="mval" id="a-${i}">--</span><span class="munt">A</span></span></div>
+      <div class="div"></div>
+      <div class="metric"><span class="mlbl">P activa</span>
+        <span><span class="mval" id="w-${i}">--</span><span class="munt">kW</span></span></div>
+      <div class="metric"><span class="mlbl">Q react.</span>
+        <span><span class="mval" id="q-${i}">--</span><span class="munt">kVAr</span></span></div>
+      <div class="metric"><span class="mlbl">S aparen.</span>
+        <span><span class="mval" id="s-${i}">--</span><span class="munt">kVA</span></span></div>
+      <div class="metric"><span class="mlbl">FP</span>
+        <span><span class="mval" id="fp-${i}">--</span></span></div>
+      <div class="metric"><span class="mlbl">Hz</span>
+        <span><span class="mval" id="hz-${i}">--</span><span class="munt">Hz</span></span></div>
+      <div class="div"></div>
+      <div class="metric"><span class="mlbl">THD-I</span>
+        <span><span class="mval" id="thd-${i}">--</span><span class="munt">%</span></span></div>
+      <div class="metric"><span class="mlbl">K-factor</span>
+        <span><span class="mval" id="kf-${i}">--</span></span></div>
+      <div class="metric"><span class="mlbl">I desbal.</span>
+        <span><span class="mval" id="ub-${i}">--</span><span class="munt">%</span></span></div>
+    </div>
+    <div class="charts">
+      <div class="clbl">Espectro Armónico I-A (% fundamental)</div>
+      <canvas class="spectrum" id="sp-${i}"></canvas>
+      <div class="clbl" style="margin-top:2px">Tendencia THD-I</div>
+      <canvas class="trend"    id="tr-${i}"></canvas>
+    </div>
+  </div>
+
+  <div class="pnl-log hidden" id="log-${i}"></div>
+
+  <div class="pnl-foot">
+    <span class="cmd-text" id="cmd-${i}"></span>
+    <button class="btn-copy" id="cpy-${i}" onclick="copyCmd(${i})">📋</button>
+  </div>
+</div>`;
+}
+
+document.getElementById('grid').innerHTML = state.map((s,i)=>buildPanel(s,i)).join('');
+state.forEach((_,i)=>updateCmd(i));
+resizeAll();
+
+// ══════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════
+function setCfg(i, key, val) {
+  state[i][key] = val;
+  document.getElementById(`ttl-${i}`).textContent = state[i].id;
+  document.getElementById(`bdg-${i}`).textContent = PROFILES[state[i].profile].label;
+  updateCmd(i);
+}
+
+// Cambio de perfil: actualiza visualización JS inmediatamente
+// En LAUNCHER mode envía SET_PROFILE al proceso Java (sin reiniciar → sin desconectar HADES)
+async function changeProfile(i, val) {
+  state[i].profile = val;
+  document.getElementById(`bdg-${i}`).textContent = PROFILES[val].label;
+  updateCmd(i);
+
+  if (LAUNCHER_MODE) {
+    const s = state[i];
+    if (!s.running) {
+      // Simulador no corre: solo marcar el perfil, se usará al lanzar
+      addLog(i, `Perfil seleccionado: ${PROFILES[val].label} (se aplicará al lanzar)`, 'ok');
+      return;
+    }
+    try {
+      const r = await fetch(`${API}/setprofile`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ied: s.id, profile: val})
+      });
+      const j = await r.json();
+      if (j.ok) {
+        addLog(i, `✓ Perfil cambiado a: ${PROFILES[val].label}`, 'ok');
+        document.getElementById(`bdg-${i}`).textContent = PROFILES[val].label;
+      } else {
+        addLog(i, `Error: ${j.error || 'desconocido'}`, 'err');
+      }
+    } catch(e) {
+      addLog(i, `Error de red: ${e.message}`, 'err');
+    }
+  } else {
+    // Demo mode: indicar que hay que copiar el comando
+    const cpy = document.getElementById(`cpy-${i}`);
+    if (cpy) { cpy.textContent = '📋 Nuevo perfil →'; setTimeout(()=>{ cpy.textContent='📋'; }, 3000); }
+  }
+}
+function updateCmd(i) {
+  const s = state[i];
+  document.getElementById(`cmd-${i}`).textContent =
+    `simulator\\run_sim.bat --ied ${s.id} --port ${s.port} --profile ${s.profile} --noise ${s.noise.toFixed(2)} --interval 5000`;
+}
+function copyCmd(i) {
+  navigator.clipboard.writeText(document.getElementById(`cmd-${i}`).textContent).then(()=>{
+    const b = document.getElementById(`cpy-${i}`);
+    b.textContent='✓'; b.classList.add('done');
+    setTimeout(()=>{ b.textContent='📋'; b.classList.remove('done'); }, 1500);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// LAUNCHER API
+// ══════════════════════════════════════════════════════════
+async function launchSim(i) {
+  const s = state[i];
+  clearLog(i);
+  addLog(i, `Lanzando ${s.id} en puerto ${s.port}...`, 'ok');
+  try {
+    const r = await fetch(`${API}/launch`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ied:s.id, port:s.port, profile:s.profile,
+                            noise:s.noise.toFixed(2), interval:5000})
+    });
+    const j = await r.json();
+    if (j.ok) addLog(i, `Proceso iniciado (PID ${j.pid})`, 'ok');
+    else       addLog(i, `Error: ${j.error||'desconocido'}`, 'err');
+  } catch(e) { addLog(i, `Error de red: ${e.message}`, 'err'); }
+}
+
+async function stopSim(i) {
+  const s = state[i];
+  addLog(i, `Deteniendo ${s.id}...`);
+  try {
+    await fetch(`${API}/stop`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ied: s.id})
+    });
+  } catch(e) { addLog(i, `Error: ${e.message}`, 'err'); }
+}
+
+function launchAll() { for(let i=0;i<4;i++) launchSim(i); }
+function stopAll()   { for(let i=0;i<4;i++) stopSim(i); }
+
+// Poll status from launcher every 2 s
+async function pollStatus() {
+  try {
+    const r = await fetch(`${API}/status`);
+    const j = await r.json();
+    for (let i=0; i<4; i++) {
+      const ied = state[i].id;
+      const info = j[ied];
+      if (!info) continue;
+      const running = info.running;
+      state[i].running = running;
+      const dot = document.getElementById(`dot-${i}`);
+      dot.className = 'status-dot ' + (running ? 'running' : 'stopped');
+      // Append new log lines
+      if (info.log && info.log.length) {
+        const logEl = document.getElementById(`log-${i}`);
+        const prev = logEl.dataset.lastLog || '';
+        const lines = info.log.join('\n');
+        if (lines !== prev) {
+          logEl.dataset.lastLog = lines;
+          logEl.innerHTML = info.log.map(l => {
+            const cls = l.includes('Error')||l.includes('error')||l.includes('terminado') ? 'log-err' :
+                        l.includes('iniciado')||l.includes('activo')||l.includes('OK')     ? 'log-ok'  : '';
+            return `<div class="${cls}">${escHtml(l)}</div>`;
+          }).join('');
+          logEl.scrollTop = logEl.scrollHeight;
+          logEl.classList.remove('hidden');
+        }
+      }
+    }
+  } catch(e) { /* launcher no disponible */ }
+}
+
+// Log helpers
+function addLog(i, msg, cls='') {
+  const el = document.getElementById(`log-${i}`);
+  el.classList.remove('hidden');
+  const d = document.createElement('div');
+  if (cls) d.className = 'log-' + cls;
+  d.textContent = msg;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog(i) {
+  const el = document.getElementById(`log-${i}`);
+  el.innerHTML = '';
+  el.dataset.lastLog = '';
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ══════════════════════════════════════════════════════════
+// NOISE & SIMULATION TICK
+// ══════════════════════════════════════════════════════════
+function gauss() {
+  let u=0,v=0;
+  while(!u) u=Math.random(); while(!v) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function n(base, f) {
+  if (!f || !base) return base;
+  const v = base*(1+gauss()*f/3);
+  return base>=0 ? Math.max(0,v) : Math.min(0,v);
+}
+
+function tickPanel(i) {
+  const s = state[i], p = PROFILES[s.profile], nf = s.noise;
+  const V   = n(p.phV,    nf)/1000;
+  const A   = n(p.aL,     nf);
+  const W   = n(p.totW,   nf)/1000;
+  const Q   = n(p.totVAr, nf)/1000;
+  const S   = n(p.totVA,  nf)/1000;
+  const PF  = n(p.pf,     nf*.3);
+  const Hz  = n(p.hz,     nf*.1);
+  const THD = n(p.thd,    nf);
+  const KF  = n(p.kf,     nf);
+  const UNB = n(p.neg/p.aL*100, nf);
+  const har = p.har.map(h => h > 0 ? Math.max(0, n(h, nf*2)) : 0);
+
+  s.thdHist.push(THD); if(s.thdHist.length>60) s.thdHist.shift();
+
+  const tc = THD>20?'hi':THD>8?'warn':'ok';
+  const pc = PF<0.85?'warn':'ok';
+
+  setM(`v-${i}`,  V.toFixed(2),    'bl');
+  setM(`a-${i}`,  A.toFixed(1),    A>160?'warn':'');
+  setM(`w-${i}`,  fmtK(W),         '');
+  setM(`q-${i}`,  fmtK(Q),         '');
+  setM(`s-${i}`,  fmtK(S),         '');
+  setM(`fp-${i}`, PF.toFixed(3),   pc);
+  setM(`hz-${i}`, Hz.toFixed(2),   '');
+  setM(`thd-${i}`,THD.toFixed(1),  tc);
+  setM(`kf-${i}`, KF.toFixed(2),   KF>4?'warn':'');
+  setM(`ub-${i}`, UNB.toFixed(2),  UNB>2?'warn':'');
+
+  drawSpec(i, har, p.color);
+  drawTrend(i, s.thdHist, p.color, THD);
+}
+
+function setM(id, val, cls) {
+  const e = document.getElementById(id); if(!e) return;
+  e.textContent = val;
+  e.className = 'mval' + (cls?' '+cls:'');
+}
+function fmtK(v) { return v>=1000 ? (v/1000).toFixed(2)+'M' : v.toFixed(1); }
+
+// ══════════════════════════════════════════════════════════
+// CANVAS
+// ══════════════════════════════════════════════════════════
+function drawSpec(i, har, color) {
+  const cv = document.getElementById(`sp-${i}`); if(!cv) return;
+  const ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#111'; ctx.fillRect(0,0,W,H);
+
+  const numBars = Math.min(har.length, 25);  // H1-H25
+  const bw = Math.max(3, Math.floor((W - 4) / numBars) - 1);
+  // Límites IEEE 519-2022 para armónicos individuales (per-unit)
+  const lims={3:.04,5:.04,7:.04,9:.04,11:.02,13:.02,17:.015,19:.015,23:.006,25:.006};
+
+  // Escala vertical: H1=100% ocupa toda la altura; resto en escala real
+  const chartH = H - 18;
+
+  // Gridlines (solo para escala sin H1: 50%, 20%, 10%, 5%)
+  [.5,.2,.1,.05].forEach(t=>{
+    const y = H - 18 - Math.floor(t * chartH);
+    ctx.strokeStyle='#1e2e1e'; ctx.lineWidth=1;
+    ctx.setLineDash([2,4]); ctx.beginPath();
+    ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#2a3a2a'; ctx.font='7px monospace'; ctx.textAlign='left';
+    ctx.fillText((t*100)+'%', 1, y-1);
+  });
+
+  for(let k=0;k<numBars;k++){
+    const h = k + 1;
+    const v = har[k] || 0;
+    const pct = Math.min(v, 1);
+    const x = 2 + k * (bw + 1);
+    const bh = Math.max(1, Math.floor(pct * chartH));
+    const y = H - 18 - bh;
+
+    let c = color;
+    if (h === 1)        c = '#37474f';   // fundamental — gris oscuro
+    else if (h % 2 === 0) c = '#1a2820'; // par — verde muy oscuro
+    else if (h % 3 === 0) c = '#bf360c'; // múltiplo de 3 — naranja oscuro
+    else                  c = '#1a3050'; // impar no múltiplo de 3 — azul oscuro
+
+    ctx.fillStyle = c; ctx.fillRect(x, y, bw, bh);
+
+    // Línea límite IEEE 519
+    const lim = lims[h];
+    if (lim) {
+      const ly = H - 18 - Math.floor(lim * chartH);
+      if (ly > 0 && ly < H - 10) {
+        ctx.strokeStyle = '#ff525240'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, ly); ctx.lineTo(x + bw, ly); ctx.stroke();
+      }
+    }
+
+    // Label de orden (solo impares y H1)
+    if (h === 1 || h % 2 !== 0) {
+      ctx.fillStyle = '#455a64'; ctx.font = '7px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('H'+h, x + bw/2, H - 4);
+    }
+
+    // Valor % encima de la barra (solo si es visible y >1%)
+    if (v >= 0.01 && h > 1 && bh > 10) {
+      ctx.fillStyle = '#78909c'; ctx.font = '7px monospace'; ctx.textAlign = 'center';
+      ctx.fillText((v*100).toFixed(0)+'%', x + bw/2, Math.max(8, y - 1));
+    }
+  }
+}
+
+function drawTrend(i, hist, color, cur) {
+  const cv = document.getElementById(`tr-${i}`); if(!cv) return;
+  const ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#111'; ctx.fillRect(0,0,W,H);
+
+  const valid=hist.filter(v=>v!==null);
+  if(valid.length<2) return;
+
+  const maxV=Math.max(...valid)*1.2||1, minV=0, rng=maxV-minV;
+
+  [5,10,20,30,50].forEach(t=>{
+    if(t>maxV*1.05) return;
+    const y=H-4-Math.floor((t-minV)/rng*(H-8));
+    ctx.strokeStyle='#1c2c1c'; ctx.lineWidth=1;
+    ctx.setLineDash([2,4]); ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#2a3a2a'; ctx.font='8px monospace'; ctx.textAlign='left';
+    ctx.fillText(t+'%',1,y-1);
+  });
+
+  // IEEE 519 8% limit
+  const ly=H-4-Math.floor((8-minV)/rng*(H-8));
+  if(ly>0&&ly<H){
+    ctx.strokeStyle='#ef535050'; ctx.lineWidth=1;
+    ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(0,ly); ctx.lineTo(W,ly); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#ef535066'; ctx.font='8px sans-serif'; ctx.textAlign='right';
+    ctx.fillText('IEEE519 8%',W-2,ly-2);
+  }
+
+  // Line
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.lineJoin='round';
+  ctx.shadowBlur=4; ctx.shadowColor=color+'66';
+  ctx.beginPath();
+  let first=true;
+  hist.forEach((v,k)=>{
+    if(v===null){first=true;return;}
+    const x=Math.floor(k/(hist.length-1)*(W-2))+1;
+    const y=H-4-Math.floor((v-minV)/rng*(H-8));
+    first ? (ctx.moveTo(x,y),first=false) : ctx.lineTo(x,y);
+  });
+  ctx.stroke(); ctx.shadowBlur=0;
+
+  // Current label
+  ctx.fillStyle=color; ctx.font='bold 10px monospace'; ctx.textAlign='right';
+  ctx.fillText(cur.toFixed(1)+'%',W-2,11);
+}
+
+// ══════════════════════════════════════════════════════════
+// LAYOUT & MAIN LOOP
+// ══════════════════════════════════════════════════════════
+function resizeAll() {
+  for(let i=0;i<4;i++){
+    const ch = document.querySelector(`#panel-${i} .charts`); if(!ch) continue;
+    const w = ch.clientWidth-10;
+    const h = ch.clientHeight;
+    const sp=document.getElementById(`sp-${i}`);
+    const tr=document.getElementById(`tr-${i}`);
+    if(!sp||!tr) continue;
+    const spH=Math.max(70, Math.floor(h*.46));
+    const trH=Math.max(50, h-spH-36);
+    sp.width=w; sp.height=spH;
+    tr.width=w; tr.height=trH;
+  }
+}
+
+let ivMs=2000, timer=null;
+function setIv(ms){
+  ivMs=ms;
+  document.getElementById('ivLabel').textContent = ms>=1000?(ms/1000)+' s':ms+' ms';
+  if(timer) clearInterval(timer);
+  timer=setInterval(tick,ivMs);
+}
+function tick(){ for(let i=0;i<4;i++) tickPanel(i); }
+
+window.addEventListener('load',()=>{ resizeAll(); tick(); timer=setInterval(tick,ivMs); });
+window.addEventListener('resize',()=>{ resizeAll(); tick(); });
+
+// ══════════════════════════════════════════════════════════
+// HEARTBEAT — mantiene el servidor vivo mientras el tab está abierto
+// ══════════════════════════════════════════════════════════
+if (LAUNCHER_MODE) {
+  async function sendPing() {
+    try { await fetch(`${API}/ping`); } catch(e) { /* servidor caído */ }
+  }
+  sendPing();
+  setInterval(sendPing, 5000);
+}
+
+// ══════════════════════════════════════════════════════════
+// ABOUT MODAL
+// ══════════════════════════════════════════════════════════
+function openAbout()  { document.getElementById('aboutModal').classList.add('open'); }
+function closeAbout() { document.getElementById('aboutModal').classList.remove('open'); }
+function closeAboutOutside(e) { if (e.target === document.getElementById('aboutModal')) closeAbout(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAbout(); });
+</script>
+</body>
+</html>

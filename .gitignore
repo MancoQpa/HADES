@@ -27,6 +27,7 @@ compile_output.txt
 # Excepciones: documentacion tecnica versionada
 !harmonic_monitor_teoria.html
 !validation_test_table.html
+!simulator/dashboard.html
 
 # Scripts de generacion de documentos (internos)
 gen_*.py
