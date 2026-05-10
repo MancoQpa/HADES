@@ -34,8 +34,8 @@ certificada y metodología normativa completa.
 
   Medicion armonica — IEC 61000-4-7 (via IED):
     Los valores de armonicos provienen del nodo MHAI del ION 7400.
-    La conformidad con IEC 61000-4-7 Clase A es responsabilidad de
-    Schneider Electric. HADES consume esos datos sin
+    La conformidad con IEC 61000-4-7 Clase A es responsabilidad del
+    fabricante del IED. HADES consume esos datos sin
     alterar ni reescalar los valores informados por el IED.
 
   Trigger THD_V absoluto — EN 50160:

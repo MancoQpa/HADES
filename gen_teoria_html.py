@@ -168,7 +168,7 @@ HTML = f"""<!DOCTYPE html>
   <table style="margin:16px auto;max-width:420px;font-size:9pt;">
     <tr style="background:#E3F2FD"><td style="padding:5px 10px;font-weight:bold;width:120px">Version</td><td style="padding:5px 10px">v 1.0 — 2026</td></tr>
     <tr><td style="padding:5px 10px;font-weight:bold">Sector</td><td style="padding:5px 10px">Distribucion electrica MT 23 kV — ANDE, Paraguay</td></tr>
-    <tr style="background:#E3F2FD"><td style="padding:5px 10px;font-weight:bold">Protocolo</td><td style="padding:5px 10px">IEC 61850 / MMS — ION 7400 (Schneider Electric)</td></tr>
+    <tr style="background:#E3F2FD"><td style="padding:5px 10px;font-weight:bold">Protocolo</td><td style="padding:5px 10px">IEC 61850 / MMS — Medidor multifuncion IEC 61850</td></tr>
     <tr><td style="padding:5px 10px;font-weight:bold">Equipo</td><td style="padding:5px 10px">E. Medina · D. Rojas · E. Paiva · S. Dominguez</td></tr>
     <tr style="background:#E3F2FD"><td style="padding:5px 10px;font-weight:bold">Normas</td><td style="padding:5px 10px">IEEE 519-2022 · IEC 61000-3-6 · EN 50160 · IEEE 1459-2010</td></tr>
   </table>
@@ -608,7 +608,7 @@ para lectura de mediciones en tiempo real.
     <th class="blue" style="width:43%">Descripcion</th>
     <th class="blue">Ejemplo ION 7400</th>
   </tr>
-  <tr><td><strong>IED</strong></td><td>Dispositivo fisico con modelo de datos IEC 61850</td><td>ION 7400 — Schneider Electric</td></tr>
+  <tr><td><strong>IED</strong></td><td>Dispositivo fisico con modelo de datos IEC 61850</td><td>Medidor multifuncion IEC 61850</td></tr>
   <tr><td><strong>MMS</strong></td><td>Protocolo de lectura/escritura de datos (ISO 9506)</td><td>Puerto TCP 102 (IANA estandar)</td></tr>
   <tr><td><strong>ACSE</strong></td><td>Capa de sesion / autenticacion</td><td>Asociacion MMS sobre TCP</td></tr>
   <tr><td><strong>Logical Device (LD)</strong></td><td>Agrupacion logica de nodos en el IED</td><td>LD0 (cbo2LD0)</td></tr>
@@ -681,7 +681,7 @@ Otros IEDs pueden tener prefijos distintos o no requerirlos.
   <ul>
     <li>Define el metodo de medicion usando DFT con ventanas de 10 ciclos (200 ms @ 50 Hz).</li>
     <li>Clase A: incertidumbre maxima ±5% para H ≤ 25; usada en instrumentacion certificada como ION 7400.</li>
-    <li>HarmonicMonitor consume los datos del nodo MHAI del IED sin reescalarlos; la conformidad Clase A es responsabilidad de Schneider Electric.</li>
+    <li>HarmonicMonitor consume los datos del nodo MHAI del IED sin reescalarlos; la conformidad Clase A es responsabilidad del fabricante del IED.</li>
   </ul>
 </div>
 
@@ -695,7 +695,7 @@ Otros IEDs pueden tener prefijos distintos o no requerirlos.
   </tr>
   <tr><td>Formato COMTRADE (.cfg/.dat)</td><td>IEEE C37.111-1999</td><td><span class="badge b-green">CONFORME</span></td><td>Implementacion directamente trazable a la norma</td></tr>
   <tr><td>Definiciones de potencia</td><td>IEEE 1459-2010</td><td><span class="badge b-green">CONFORME</span></td><td>FP, DPF, Q₁, D implementados segun la norma</td></tr>
-  <tr><td>Medicion armonica H1-H50</td><td>IEC 61000-4-7</td><td><span class="badge b-blue">VIA IED</span></td><td>Conformidad Clase A delegada al ION 7400 (Schneider)</td></tr>
+  <tr><td>Medicion armonica H1-H50</td><td>IEC 61000-4-7</td><td><span class="badge b-blue">VIA IED</span></td><td>Conformidad Clase A delegada al IED</td></tr>
   <tr><td>Trigger THDv limite absoluto</td><td>EN 50160 (8%)</td><td><span class="badge b-green">CONFORME</span></td><td>Umbral CRITICAL = 8%</td></tr>
   <tr><td>Trigger THDi vs TDD</td><td>IEEE 519-2022</td><td><span class="badge b-amber">APROX.</span></td><td>THD<sub>i</sub> usado como aproximacion conservadora del TDD</td></tr>
   <tr><td>Planning level 6.5%</td><td>IEC 61000-3-6</td><td><span class="badge b-amber">APROX.</span></td><td>≈80% del nivel de compatibilidad; requiere estudio formal</td></tr>
@@ -773,7 +773,7 @@ TOPOLOGIA = Depende del punto de instalacion. SINTETIZADA = Datos calculados, no
   <tr style="background:#E3F2FD"><td style="padding:5px 8px;font-weight:bold;width:20%">Proyecto</td><td style="padding:5px 8px">HADES</td></tr>
   <tr><td style="padding:5px 8px;font-weight:bold">Pais</td><td style="padding:5px 8px">Republica del Paraguay (Asuncion)</td></tr>
   <tr style="background:#E3F2FD"><td style="padding:5px 8px;font-weight:bold">Sector</td><td style="padding:5px 8px">Distribucion electrica MT 23 kV — ANDE (Administracion Nacional de Electricidad)</td></tr>
-  <tr><td style="padding:5px 8px;font-weight:bold">Protocolo</td><td style="padding:5px 8px">IEC 61850 / MMS / ACSE — ION 7400 Schneider Electric</td></tr>
+  <tr><td style="padding:5px 8px;font-weight:bold">Protocolo</td><td style="padding:5px 8px">IEC 61850 / MMS / ACSE — Medidor multifuncion IEC 61850</td></tr>
   <tr style="background:#E3F2FD"><td style="padding:5px 8px;font-weight:bold">Version</td><td style="padding:5px 8px">v 1.0 — 2026</td></tr>
   <tr><td style="padding:5px 8px;font-weight:bold">Objetivo</td><td style="padding:5px 8px">Detectar cargas electrointensivas no lineales en alimentadores MT 23 kV mediante firmas de energia</td></tr>
 </table>

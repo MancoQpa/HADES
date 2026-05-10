@@ -7,7 +7,7 @@
 
 ## Contexto del instrumento de campo
 
-El **ION 7400** (Schneider Electric) es un contador de energía clase **0.2S** (IEC 62053-22):
+El **ION 7400** es un contador de energía clase **0.2S** (IEC 62053-22):
 - Alta precisión en medición de energía: ±0.2% en Wh/VArh/VAh
 - **NO es PQM Clase A** (IEC 61000-4-30): sus valores de THD/armónicos son
   mediciones instantáneas o de ventana corta interna, sin agregación cuadrática

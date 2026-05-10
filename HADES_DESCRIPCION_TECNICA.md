@@ -96,7 +96,7 @@ HADES lee estos nodos usando referencias del tipo `cbo2LD0/M03_MMXU1.PhV.phsA.cV
 ### Por qué IEC 61850 y no Modbus/DNP3
 
 - Es el estándar de facto en protección y medición de subestaciones modernas.
-- El medidor ION 7400 (Schneider Electric) expone su modelo completo en IEC 61850.
+- El medidor ION 7400 expone su modelo completo en IEC 61850.
 - Permite leer espectro armónico completo (H1–H50) directamente sin procesamiento externo.
 - El modelo de datos es auto-descriptivo (no requiere mapa de registros manual).
 
