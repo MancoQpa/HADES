@@ -123,25 +123,31 @@ public class ElectronicLoadDetector {
             return LoadType.LIGHTING;
         }
 
+        // ── Rectificador industrial 6-pulsos (verificar ANTES que cripto/datacenter) ──
+        // Un VFD de 6 pulsos puede tener CV bajo en ventana corta (velocidad casi
+        // constante entre muestras) y PF alto (0.93+), satisfaciendo inadvertidamente
+        // todas las condiciones cripto. La presencia de H11 y H13 significativos
+        // más flatness < 3.5 discrimina 6-pulsos (flatness ≈ 2.1–2.8) de SMPS/cripto
+        // (flatness ≈ 4–8). El límite < 3.5 deja margen entre VFD máx (≈2.8) y
+        // cripto mín (≈4.7) sin solapamiento en los perfiles de referencia.
+        boolean sixPulseSignature = h5h1 > 0.12 && h7h1 > 0.08
+            && h11h1 > 0.05 && h13h1 > 0.04
+            && flatness >= 1.3 && flatness < 3.5;
+        if (thdI > 8.0 && sixPulseSignature) {
+            return LoadType.INDUSTRIAL;
+        }
+
         // ── Firma cripto/datacenter ─────────────────────────────────────────────
         // CV muy bajo (consumo estable) + THDi alto + H5 y H7 dominantes.
-        // THDv elevado (>2%) confirma que la distorsi\u00F3n se propaga a la tensi\u00F3n
-        // y afecta la red.  THDv bajo indica red r\u00EDgida (Scc alta): la carga
-        // existe igual, pero la red absorbe la distorsi\u00F3n sin elevar la tensi\u00F3n.
+        // PF > 0.92 distingue CRYPTO_MINING (PFC activo) de DATA_CENTER (PFC parcial).
+        // THDv elevado confirma que la distorsión se propaga a la tensión de red.
         boolean stableLoad = cv < cvThresh;
         boolean highTHD    = thdI > thdThresh;
         boolean h5Dominant = h5h1 > h5Thresh;
         boolean h7Present  = h7h1 > h7Thresh;
         boolean highPF     = pf > 0.92;
 
-        // Criterio principal: igual que antes (sin cambio de comportamiento).
         if (stableLoad && highTHD && h5Dominant && h7Present && highPF) {
-            return LoadType.CRYPTO_MINING;
-        }
-        // Criterio extendido: flatness muy alto (>3.0) relaja el requisito de FP.
-        // Un espectro fuertemente frontal (H5/H7 >> H11/H13) con carga estable
-        // es firma inequ\u00EDvoca de SMPS de alta densidad aunque FP < 0.92.
-        if (stableLoad && highTHD && h5Dominant && h7Present && flatness > 3.0) {
             return LoadType.CRYPTO_MINING;
         }
 
@@ -151,22 +157,13 @@ public class ElectronicLoadDetector {
 
         // ── Rectificador 12-pulsos (VFDs industriales de alta potencia) ─────────
         // En el puente de 12 pulsos, dos rectificadores de 6 pulsos operan con
-        // 30\u00B0 de desfase. Los arm\u00F3nicos H5 y H7 se cancelan mutuamente; H11 y H13
-        // emergen como los dominantes (orden 12k\u00B11).  La flatness se invierte.
+        // 30° de desfase. Los armónicos H5 y H7 se cancelan mutuamente; H11 y H13
+        // emergen como los dominantes (orden 12k±1). La flatness se invierte (<1.2).
+        // Este check puede ir después de cripto: en 12-pulsos H5 es cancelado
+        // (<7%), h5Dominant=false, por lo que el check cripto nunca se dispara.
         // Ref: Chapman "Electric Machinery Fundamentals", rectificadores 12-pulsos.
-        // Antes de esta mejora estos casos quedaban clasificados como MIXED_ELECTRONIC.
         boolean twelvePulseSignature = h11h1 > 0.07 && h13h1 > 0.06 && flatness < 1.2;
         if (thdI > 8.0 && twelvePulseSignature) {
-            return LoadType.INDUSTRIAL;
-        }
-
-        // ── Rectificador industrial 6-pulsos ────────────────────────────────────
-        // H5 y H7 dominantes + H11 y H13 significativos + CV variable.
-        // La flatness en rango 1.3\u20136.0 confirma topolog\u00EDa 6-pulsos cl\u00E1sica.
-        boolean sixPulseSignature = h5h1 > 0.12 && h7h1 > 0.08
-            && h11h1 > 0.05 && h13h1 > 0.04
-            && flatness >= 1.3 && flatness <= 6.0;
-        if (thdI > 8.0 && sixPulseSignature) {
             return LoadType.INDUSTRIAL;
         }
 
