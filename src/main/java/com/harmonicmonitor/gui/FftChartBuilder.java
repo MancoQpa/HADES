@@ -63,7 +63,8 @@ class FftChartBuilder {
         double f0 = record.nominalFrequency;
 
         // Build spectra for all selected channels using the analysis window
-        int maxOrder = 50;
+        int maxOrder   = 50; // FFT calculado hasta H50 (THD correcto)
+        int chartOrder = 13; // gráfico de barras limitado a H13 (legibilidad)
         List<String>   chNames = new ArrayList<>();
         List<double[]> mags    = new ArrayList<>();
         List<String>   units   = new ArrayList<>();
@@ -79,13 +80,13 @@ class FftChartBuilder {
         }
         if (mags.isEmpty()) return;
 
-        // FFT Bar chart — show as % of H1 — series names include unit
+        // FFT Bar chart — show as % of H1 — series names include unit — limitado a H13
         for (int c = 0; c < chNames.size(); c++) {
             double h1 = mags.get(c)[0];
             if (h1 <= 0) continue;
             XYChart.Series<String, Number> series = new XYChart.Series<>();
             series.setName(chNames.get(c));
-            for (int h = 1; h <= maxOrder; h++) {
+            for (int h = 1; h <= chartOrder; h++) {
                 series.getData().add(new XYChart.Data<>("H" + h, mags.get(c)[h - 1] / h1 * 100.0));
             }
             fftChart.getData().add(series);
@@ -114,8 +115,8 @@ class FftChartBuilder {
             harmonicsTable.getColumns().add(colPct);
         }
 
-        // Fill rows H1..H50
-        for (int h = 1; h <= maxOrder; h++) {
+        // Fill rows H1..H13
+        for (int h = 1; h <= chartOrder; h++) {
             ObservableList<String> row = FXCollections.observableArrayList();
             row.add("H" + h);
             row.add(String.format("%.1f", h * f0));  // frequency
