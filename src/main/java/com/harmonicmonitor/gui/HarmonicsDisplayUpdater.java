@@ -31,7 +31,14 @@ class HarmonicsDisplayUpdater {
      */
     void refresh(FeederMeasurement m) {
         if (panel.estimatedLabel != null) {
-            panel.estimatedLabel.setVisible(m.isSpectrumEstimated());
+            javafx.scene.layout.HBox banner =
+                (javafx.scene.layout.HBox) panel.estimatedLabel.getParent();
+            boolean degraded = m.isSpectrumEstimated();
+            if (banner != null) {
+                banner.setVisible(degraded);
+                banner.setManaged(degraded);
+            }
+            panel.estimatedLabel.setVisible(degraded);
         }
 
         double[] iSpec = getSelectedCurrentSpectrum(m);

@@ -77,12 +77,13 @@ public class HarmonicsPanel {
         // Top: header with controls
         pane.setTop(buildHeader());
 
-        // Center: chart + cards + table
+        // Center: degraded-mode banner + chart + cards + table
         VBox center = new VBox(10);
         center.setPadding(new Insets(12, 16, 16, 16));
         center.setStyle("-fx-background-color: " + Theme.BG + ";");
 
         center.getChildren().addAll(
+            buildDegradedBanner(),
             buildBarChart(),
             buildSummaryCards(),
             buildTable()
@@ -141,15 +142,7 @@ public class HarmonicsPanel {
         });
         refreshFeederCombo();
 
-        estimatedLabel = new Label("⚠ MODO DEGRADADO — espectro estimado (IED sin MHAI)");
-        estimatedLabel.setStyle(
-            "-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #ffb74d;" +
-            "-fx-background-color: #3a1f00; -fx-border-color: #7a4200;" +
-            "-fx-border-width: 1; -fx-border-radius: 3; -fx-background-radius: 3;" +
-            "-fx-padding: 3 8 3 8;");
-        estimatedLabel.setVisible(false);
-
-        h.getChildren().addAll(title, estimatedLabel, spacer, phaseBox, sep, feederLbl, feederCombo);
+        h.getChildren().addAll(title, spacer, phaseBox, sep, feederLbl, feederCombo);
         return h;
     }
 
@@ -176,6 +169,26 @@ public class HarmonicsPanel {
         int e = comboText.lastIndexOf(']');
         if (s >= 0 && e > s) return comboText.substring(s + 1, e);
         return comboText;
+    }
+
+    // ── Degraded mode banner ──────────────────────────────────────────────────
+
+    private HBox buildDegradedBanner() {
+        estimatedLabel = new Label(
+            "⚠  MODO DEGRADADO — El IED no expone el array de armónicos (MHAI.HarA/B/C). " +
+            "El espectro mostrado es una ESTIMACIÓN genérica, no una medición real del instrumento.");
+        estimatedLabel.setWrapText(true);
+        estimatedLabel.setStyle(
+            "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #1a1a00;" +
+            "-fx-background-color: #fff3cd; -fx-border-color: #ffc107;" +
+            "-fx-border-width: 2; -fx-border-radius: 4; -fx-background-radius: 4;" +
+            "-fx-padding: 8 12 8 12;");
+
+        HBox banner = new HBox(estimatedLabel);
+        HBox.setHgrow(estimatedLabel, Priority.ALWAYS);
+        banner.setVisible(false);
+        banner.setManaged(false);
+        return banner;
     }
 
     // ── Bar chart ─────────────────────────────────────────────────────────────
