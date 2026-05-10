@@ -1,0 +1,198 @@
+MODO DEGRADADO — MEDICIÓN PARCIAL Y ESTIMACIÓN ESPECTRAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. QUÉ ES EL MODO DEGRADADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Algunos IEDs exponen en IEC 61850 únicamente el nodo MHAI con valores
+agregados de THD (ThdA, ThdPhV, HKf), sin publicar el array de armónicos
+individuales HarA/HarB/HarC (h01..h50).
+
+Ejemplos de equipos que sólo exponen THD agregado:
+  • SEL-735 (lnType PQ_MHAI): ThdA, ThdPhV, HCfA — sin HarA
+  • Contadores de energía clase 0.2S sin módulo PQ extendido
+  • IEDs configurados con perfil de datos reducido (PIXIT restringido)
+
+Cuando HADES se conecta a uno de estos equipos, detecta la ausencia del
+array armónico en el modelo del servidor y activa el MODO DEGRADADO.
+
+El banner amarillo en la pestaña Armónicos indica este estado:
+  ⚠  MODO DEGRADADO — El IED no expone el array de armónicos (MHAI.HarA/B/C)
+
+
+2. QUÉ SE MIDE Y QUÉ SE ESTIMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ╔══════════════════╦═════════════════╦════════════════════════════╗
+  ║ Magnitud         ║ Fuente          ║ Fiabilidad                 ║
+  ╠══════════════════╬═════════════════╬════════════════════════════╣
+  ║ THD_I total (%)  ║ MEDIDO por IED  ║ ✓ Confiable                ║
+  ║ THD_V total (%)  ║ MEDIDO por IED  ║ ✓ Confiable                ║
+  ║ Corriente I₁ (A) ║ MEDIDO por IED  ║ ✓ Confiable                ║
+  ║ Tensión V₁ (V)   ║ MEDIDO por IED  ║ ✓ Confiable                ║
+  ║ Factor de potencia║ MEDIDO por IED ║ ✓ Confiable                ║
+  ║ K-factor (HKf)   ║ MEDIDO por IED  ║ ✓ Confiable (si disponible)║
+  ╠══════════════════╬═════════════════╬════════════════════════════╣
+  ║ H3 individual %  ║ ESTIMADO        ║ ✗ Orientativo únicamente   ║
+  ║ H5 individual %  ║ ESTIMADO        ║ ✗ Orientativo únicamente   ║
+  ║ H7 individual %  ║ ESTIMADO        ║ ✗ Orientativo únicamente   ║
+  ║ Hn cualquier n   ║ ESTIMADO        ║ ✗ Orientativo únicamente   ║
+  ╚══════════════════╩═════════════════╩════════════════════════════╝
+
+
+3. CÓMO SE ESTIMA EL ESPECTRO (método actual)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HADES aplica un perfil fijo de SMPS (fuente conmutada sin PFC) y lo
+escala para que el THD resultante coincida con el THD medido.
+
+Perfil base (proporciones relativas a H1):
+  H3  = 40%    H5  = 35%    H7  = 20%    H9  = 10%
+  H11 =  8%    H13 =  5%    H15 =  3%    ...
+
+Factor de escala:
+  normFactor = (THD_medido / 100) / √(Σ relAmpl²)
+
+Cada componente estimada:
+  Hn_estimado = I₁ × relAmpl_n × normFactor
+
+EJEMPLO CONCRETO:
+  Datos medidos por el IED:  I₁ = 100 A,  THD_I = 18%
+  THD objetivo:  √(H3²+H5²+H7²+...) / I₁ = 18%
+
+  Cálculo de normFactor:
+    √(0.40²+0.35²+0.20²+0.10²+0.08²+0.05²+...) = 0.577
+    normFactor = 0.18 / 0.577 = 0.312
+
+  Espectro estimado resultante:
+    H3  = 100 × 0.40 × 0.312 = 12.5 A   (12.5% de H1)
+    H5  = 100 × 0.35 × 0.312 = 10.9 A   (10.9% de H1)
+    H7  = 100 × 0.20 × 0.312 =  6.2 A   ( 6.2% de H1)
+    H9  = 100 × 0.10 × 0.312 =  3.1 A   ( 3.1% de H1)
+    verificación: THD = √(12.5²+10.9²+6.2²+...) / 100 ≈ 18% ✓
+
+  El THD cuadra. Los valores individuales son FICTICIOS si la carga
+  real no tiene perfil SMPS (por ejemplo, un VFD tendría H5 mucho mayor
+  y H3 casi nulo).
+
+
+4. POR QUÉ ESTO ES INSUFICIENTE PARA APLICACIONES NORMATIVAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+La distribución de energía entre armónicos depende del tipo de carga,
+no del THD total. El mismo THD del 18% puede originarse en:
+
+  Tipo de carga          H3 real  H5 real  H7 real  Observación
+  ─────────────────────  ───────  ───────  ───────  ──────────────
+  SMPS sin PFC           ~12%     ~10%     ~6%      perfil asumido
+  Rectificador 6 pulsos  ~1%      ~17%     ~12%     H3 casi nulo
+  Horno de arco          ~7%      ~8%      ~6%      aleatorio/ancho
+  Carga mixta            variable variable variable  sin forma fija
+
+La estimación devuelve siempre el perfil SMPS sin importar el tipo real
+de carga. Esto significa que:
+
+  ✗ H5 y H7 estimados pueden estar 50–100% alejados del valor real
+  ✗ La pantalla Normas mostrará H5 y H7 con valores NO medidos
+  ✗ La clasificación de carga pierde las dimensiones H5/H1 y H7/H1
+  ✗ No es válido comparar Hn estimado contra límites de IEC 61000-3-6
+
+
+5. ¿EXISTE UNA VENTANA ESTADÍSTICA QUE VALIDE LA ESTIMACIÓN?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sí, bajo condiciones estrictas la estimación puede usarse para inferencia
+cualitativa (no normativa). Las condiciones son:
+
+  CONDICIÓN 1 — Estacionariedad del THD (ventana temporal)
+  ─────────────────────────────────────────────────────────
+  Si el THD_I permanece estable (CV < 5%) durante al menos 10 minutos
+  consecutivos, la carga está en régimen cuasiestacionario. En ese
+  régimen, el perfil espectral también tiende a ser estable.
+
+  Base normativa: IEC 61000-4-7 §5.6 establece la ventana de 10 minutos
+  como período de agregación para evaluación de armónicos en condiciones
+  cuasiestacionarias.  EN 50160 §5.1 usa la misma ventana de 10 minutos
+  como base estadística para las características de tensión.
+
+  CONDICIÓN 2 — Conocimiento previo del tipo de carga
+  ────────────────────────────────────────────────────
+  Si por inspección de campo u otros medios se sabe que la carga es
+  predominantemente SMPS (ej: granjas de servidores, datacenters,
+  minería de criptomonedas), el perfil asumido se acerca al real y
+  la estimación mejora significativamente.
+
+  CONDICIÓN 3 — Uso exclusivo como indicador de tendencia
+  ────────────────────────────────────────────────────────
+  En lugar de comparar Hn estimado contra límites absolutos, comparar
+  la EVOLUCIÓN temporal del mismo Hn estimado. Si H5-estimado sube un
+  40% en una semana bajo la misma metodología de estimación, esa
+  tendencia sí es información válida: algo cambió en la carga.
+
+  CONCLUSIÓN sobre la ventana estadística:
+  La estimación es informativamente válida SÓLO cuando:
+    a) THD estable (CV < 5%, ventana ≥ 10 min)
+    b) Tipo de carga conocido por otro medio
+    c) Se usa para TENDENCIAS, no para valores absolutos
+
+  No existe ventana estadística que convierta Hn estimado en una
+  medición normativa equivalente a Hn directamente leído del IED.
+
+
+6. JUSTIFICACIÓN NORMATIVA DE LO QUE SÍ PUEDE CONCLUIRSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+En modo degradado, las siguientes evaluaciones son metodológicamente
+sólidas porque se basan en magnitudes MEDIDAS:
+
+  THD_I vs límites indicativos (IEC 61000-3-6 / IEEE 519)
+    THD_I es directamente medido por el IED. Una comparación orientativa
+    contra los límites es válida con la salvedad de la distinción
+    THD_I vs TDD (ver Disclaimer §3).
+
+  K-factor (HKf) para dimensionamiento de transformadores
+    Si el IED expone HKf, este valor es medido. Útil para evaluar
+    transformadores con cargas no lineales según IEEE C57.110.
+
+  Factor de potencia desplazamiento (DPF)
+    Medido directamente. Aplicable a evaluaciones de compensación
+    reactiva y facturación.
+
+  Detección de asimetría de carga
+    El clasificador HADES usa THD_I + CV + FP, todas magnitudes medidas.
+    La clasificación CRIPTO vs LINEAL por THD_I alto y CV bajo es
+    válida en modo degradado (sin las dimensiones H5/H1 y H7/H1).
+
+
+7. RECOMENDACIÓN OPERATIVA
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si el IED en campo no expone el array de armónicos:
+
+  OPCIÓN A — Reconfigura el IED (recomendada)
+    Habilita el nodo MHAI.HarA/HarB/HarC en el archivo de configuración
+    del IED. Muchos equipos lo tienen disponible pero desactivado por
+    defecto para reducir el tráfico MMS. Consulta el manual del IED.
+
+  OPCIÓN B — Complementa con medición puntual
+    Usa un analizador de calidad de energía portátil Clase A
+    (IEC 61000-4-30) para una campaña de medición espectral de
+    referencia. Registra el perfil Hn real y compáralo con la estimación
+    HADES para calibrar el error del perfil SMPS para ese feeder.
+
+  OPCIÓN C — Acepta la limitación y documéntala
+    Usa HADES en modo degradado sólo para monitorear THD_I, FP y CV.
+    Documenta explícitamente en tus informes que los valores Hn
+    individuales son estimaciones bajo perfil SMPS, no mediciones.
+    Cita la pantalla Normas en modo degradado con el mensaje:
+    "Valores Hn: ESTIMADOS — IED sin array MHAI.HarA (modo degradado)"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESUMEN: en modo degradado HADES mide THD, calcula tendencias y
+clasifica carga con las dimensiones disponibles. NO inventa una medición
+espectral — advierte claramente que la distribución entre armónicos
+individuales es una proyección orientativa bajo un perfil SMPS genérico.
+La diferencia entre "medir e inferir" (válido) y "medir e inventar"
+(inválido) está en la transparencia: toda pantalla que use valores
+estimados lo indica explícitamente con el banner de modo degradado.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

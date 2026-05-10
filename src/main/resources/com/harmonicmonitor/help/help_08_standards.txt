@@ -2,6 +2,14 @@ CUMPLIMIENTO NORMATIVO
 
 Evaluación automática contra tres normas internacionales.
 
+ADVERTENCIA — MODO DEGRADADO:
+  Si el IED opera en modo degradado (banner amarillo en pestaña Armónicos),
+  los valores de armónicos individuales Hn que aparecen en esta pantalla
+  son ESTIMADOS, no medidos. La comparación contra límites de IEC 61000-3-6
+  (H5 ≤ 4%, H7 ≤ 4%, etc.) NO tiene validez normativa en ese caso.
+  Solo el THD total comparado orientativamente mantiene valor informativo.
+  Ver ayuda: "Modo Degradado — IED sin espectro".
+
   IEC 61000-3-6:2008
   Emisiones armónicas en redes MT/AT. Límites para 23 kV:
   • THDv <= 5% (nivel de planificación)

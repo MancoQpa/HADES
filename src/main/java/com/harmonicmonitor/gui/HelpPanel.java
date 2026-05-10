@@ -43,6 +43,7 @@ public class HelpPanel {
         {"📁 Visor COMTRADE — Fundamentos",      loadResource("help_19_comtrade_fundamentals.txt")},
         {"📼 Registros COMTRADE — Generación",   loadResource("help_20_comtrade_generation.txt")},
         {"📖 Sobre HADES",                        loadResource("help_21_about_hades.txt")},
+        {"⚠ Modo Degradado — IED sin espectro",  loadResource("help_22_degraded_mode.txt")},
     };
 
     private static String loadResource(String name) {

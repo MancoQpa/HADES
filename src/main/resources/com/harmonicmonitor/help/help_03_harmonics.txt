@@ -1,6 +1,13 @@
 ANÁLISIS DE ARMÓNICOS
 
-Visualiza el espectro armónico completo H1-H25 del alimentador.
+Visualiza el espectro armónico completo H1-H15 del alimentador.
+
+NOTA — MODO DEGRADADO:
+  Si el IED no expone el array de armónicos individuales (MHAI.HarA),
+  aparece un banner amarillo de advertencia. En ese caso los valores Hn
+  individuales son ESTIMACIONES bajo un perfil SMPS genérico, NO mediciones.
+  Solo THD_I, THD_V, corriente y factor de potencia son valores reales.
+  Ver ayuda: "Modo Degradado — IED sin espectro" para detalles completos.
 
   SELECTOR DE FASE:
   • L1, L2, L3: muestra el espectro de esa fase específica
