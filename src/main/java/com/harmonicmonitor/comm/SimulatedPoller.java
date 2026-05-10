@@ -139,8 +139,8 @@ public class SimulatedPoller extends MeasurementPoller {
 
         double vn     = nominalPhaseV();
         double iTotal = cfg.getNominalCurrentA() * load * (1 + noise);
-        double pf     = 0.990 + 0.003 * g();
-        double thdI   = 18.0 + 2 * g();   // PFC activo: H3 suprimido, H5/H7 residuales
+        double pf     = 0.87 + 0.02 * g();   // PFC parcial: PF < 0.92 → DATA_CENTER (no CRYPTO)
+        double thdI   = 22.0 + 1.5 * g(); // PFC activo: H3 suprimido, H5/H7 residuales; 22% → H5/H1≈0.179>0.15, H7/H1≈0.115>0.10
         double thdV   = thdI * 0.08 + 0.3 * Math.abs(g());
 
         // Con PFC activo: H3 pequeño, H5 dominante, H7 secundario
