@@ -1,28 +1,85 @@
-# build_paquetes.ps1 — Compila y empaqueta HADES v1.0 + Simulador para distribución Windows
+# build_paquetes.ps1 — Compila y empaqueta HADES + Simulador para distribución Windows
+#
+# Uso:
+#   .\build_paquetes.ps1                          # versión 1.1 (default)
+#   .\build_paquetes.ps1 -Version 1.2
+#   .\build_paquetes.ps1 -Version 1.2 -FxLib "C:\javafx-sdk-17\lib"
 #
 # Genera:
-#   installer_output/HADES_v1.0_Windows.zip        (app principal, ~100 MB, JRE embebido)
-#   installer_output/HADES_Simulador_v1.0_Windows.zip  (simulador standalone, ~2 MB, requiere Java 17+)
+#   installer_output/HADES_v<VERSION>_Windows.zip        (app principal, ~100 MB, JRE embebido)
+#   installer_output/HADES_Simulador_v<VERSION>_Windows.zip  (simulador standalone, ~2 MB)
 #
 # Requisitos:
-#   - JDK 25 en C:\Program Files\Eclipse Adoptium\jdk-25.0.2.10-hotspot
-#   - JavaFX SDK 17 en C:\Users\admin\Downloads\openjfx-17.0.18_windows-x64_bin-sdk\javafx-sdk-17.0.18
+#   - JDK 17+ en JAVA_HOME o en el PATH
+#   - JavaFX SDK 17 — se detecta automáticamente o usar -FxLib para especificarlo
 #   - jpackage output previo en installer_output\HarmonicMonitor\ (exe + runtime JRE 17)
+#     Generar con: jpackage --type app-image --name HarmonicMonitor ...
+
+param(
+    [string]$Version = "1.1",
+    [string]$FxLib   = ""
+)
 
 $ErrorActionPreference = "Continue"
 
 $ROOT    = $PSScriptRoot
-$JAVAHOME = "C:\Program Files\Eclipse Adoptium\jdk-25.0.2.10-hotspot"
-$JAVAC   = "$JAVAHOME\bin\javac.exe"
-$JAR_EXE = "$JAVAHOME\bin\jar.exe"
 $SRCDIR  = "$ROOT\src\main\java"
 $RESDIR  = "$ROOT\src\main\resources"
 $OUTDIR  = "$ROOT\classes"
 $LIBDIR  = "$ROOT\lib"
-$FXLIB   = "C:\Users\admin\Downloads\openjfx-17.0.18_windows-x64_bin-sdk\javafx-sdk-17.0.18\lib"
-$INST_SRC = "$ROOT\installer_output\HarmonicMonitor"   # salida de jpackage
-$DIST    = "$ROOT\dist_package\HADES_v1.0"
+$INST_SRC = "$ROOT\installer_output\HarmonicMonitor"
+$DIST    = "$ROOT\dist_package\HADES_v$Version"
 $OUT_DIR = "$ROOT\installer_output"
+
+# ── Auto-detectar JDK ─────────────────────────────────────────────────────────
+$JAVAHOME = $null
+if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOME\bin\javac.exe")) {
+    $JAVAHOME = $env:JAVA_HOME
+} else {
+    $candidates = @(
+        "C:\Program Files\Eclipse Adoptium",
+        "C:\Program Files\Java",
+        "C:\Program Files\Microsoft"
+    )
+    foreach ($base in $candidates) {
+        if (Test-Path $base) {
+            $hit = Get-ChildItem $base -Directory | Where-Object { Test-Path "$($_.FullName)\bin\javac.exe" } | Sort-Object Name -Descending | Select-Object -First 1
+            if ($hit) { $JAVAHOME = $hit.FullName; break }
+        }
+    }
+}
+if (-not $JAVAHOME) {
+    try { $jc = (Get-Command javac -ErrorAction Stop).Source; $JAVAHOME = Split-Path (Split-Path $jc) } catch {}
+}
+if (-not $JAVAHOME) {
+    Write-Host "[ERROR] JDK no encontrado. Instale JDK 17+ o defina JAVA_HOME." -ForegroundColor Red
+    exit 1
+}
+Write-Host "JDK: $JAVAHOME" -ForegroundColor Gray
+
+$JAVAC   = "$JAVAHOME\bin\javac.exe"
+$JAR_EXE = "$JAVAHOME\bin\jar.exe"
+
+# ── Auto-detectar JavaFX SDK ──────────────────────────────────────────────────
+if (-not $FxLib) {
+    if ($env:JAVAFX_HOME -and (Test-Path "$env:JAVAFX_HOME\lib")) {
+        $FxLib = "$env:JAVAFX_HOME\lib"
+    } else {
+        $searchRoots = @("$env:USERPROFILE\Downloads", "$env:USERPROFILE", "C:\Program Files", "C:\")
+        foreach ($base in $searchRoots) {
+            $hit = Get-ChildItem $base -Recurse -Directory -ErrorAction SilentlyContinue |
+                   Where-Object { $_.Name -match '^javafx-sdk' -and (Test-Path "$($_.FullName)\lib\javafx.base.jar") } |
+                   Sort-Object Name -Descending | Select-Object -First 1
+            if ($hit) { $FxLib = "$($hit.FullName)\lib"; break }
+        }
+    }
+}
+if (-not $FxLib) {
+    Write-Host "[ERROR] JavaFX SDK no encontrado." -ForegroundColor Red
+    Write-Host "  Descargue desde https://gluonhq.com/products/javafx/ y especifique -FxLib 'C:\ruta\javafx-sdk-17\lib'" -ForegroundColor Yellow
+    exit 1
+}
+Write-Host "JavaFX: $FxLib" -ForegroundColor Gray
 
 # ── 1. Compilar con --release 17 ──────────────────────────────────────────────
 Write-Host ""
@@ -50,7 +107,7 @@ Write-Host "  OK — clases en $OUTDIR"
 
 # ── 2. Preparar staging del paquete principal ──────────────────────────────────
 Write-Host ""
-Write-Host "[2/6] Preparando staging HADES_v1.0..."
+Write-Host "[2/6] Preparando staging HADES_v$Version..."
 
 if (Test-Path $DIST) { Remove-Item -Recurse -Force $DIST }
 foreach ($d in @("app")) { New-Item -ItemType Directory -Force "$DIST\$d" | Out-Null }
@@ -99,7 +156,7 @@ Write-Host "[4/6] Escribiendo LEAME.txt..."
 
 @"
 ╔══════════════════════════════════════════════════════════════╗
-║         HADES / HarmonicMonitor v1.0 — Windows              ║
+║         HADES / HarmonicMonitor v$Version — Windows              ║
 ║     Monitor de Armónicos y Detección de Cargas Electrónicas  ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -125,21 +182,21 @@ SOPORTE
 
 # ── 5. Crear ZIP de HADES ─────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "[5/6] Empaquetando HADES_v1.0_Windows.zip..."
+Write-Host "[5/6] Empaquetando HADES_v${Version}_Windows.zip..."
 
-$zipHades = "$OUT_DIR\HADES_v1.0_Windows.zip"
+$zipHades = "$OUT_DIR\HADES_v${Version}_Windows.zip"
 if (Test-Path $zipHades) { Remove-Item $zipHades }
 Push-Location "$ROOT\dist_package"
-Compress-Archive -Path "HADES_v1.0" -DestinationPath $zipHades -CompressionLevel Optimal
+Compress-Archive -Path "HADES_v$Version" -DestinationPath $zipHades -CompressionLevel Optimal
 Pop-Location
 $sizeMB = [math]::Round((Get-Item $zipHades).Length / 1MB, 1)
 Write-Host "  OK — $zipHades ($sizeMB MB)"
 
 # ── 6. Crear ZIP del Simulador ────────────────────────────────────────────────
 Write-Host ""
-Write-Host "[6/6] Empaquetando HADES_Simulador_v1.0_Windows.zip..."
+Write-Host "[6/6] Empaquetando HADES_Simulador_v${Version}_Windows.zip..."
 
-$simStage = "$OUT_DIR\HADES_Simulador_v1.0"
+$simStage = "$OUT_DIR\HADES_Simulador_v$Version"
 if (Test-Path $simStage) { Remove-Item -Recurse -Force $simStage }
 New-Item -ItemType Directory -Force "$simStage\simulator\templates" | Out-Null
 New-Item -ItemType Directory -Force "$simStage\classes\com\harmonicmonitor\simulator" | Out-Null
@@ -217,7 +274,7 @@ pause
 
 @"
 ╔══════════════════════════════════════════════════════════════╗
-║         HADES — Simulador ION 7400  v1.0                    ║
+║         HADES — Simulador ION 7400  v$Version                    ║
 ║     Simulacion IEC 61850 MMS de medidor de armonicos         ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -244,10 +301,10 @@ SOPORTE
   Autor: Emilio Medina — Proyecto ANDE-SIGFE
 "@ | Out-File -Encoding UTF8 "$simStage\LEAME.txt"
 
-$zipSim = "$OUT_DIR\HADES_Simulador_v1.0_Windows.zip"
+$zipSim = "$OUT_DIR\HADES_Simulador_v${Version}_Windows.zip"
 if (Test-Path $zipSim) { Remove-Item $zipSim }
 Push-Location $OUT_DIR
-Compress-Archive -Path "HADES_Simulador_v1.0" -DestinationPath $zipSim -CompressionLevel Optimal
+Compress-Archive -Path "HADES_Simulador_v$Version" -DestinationPath $zipSim -CompressionLevel Optimal
 Pop-Location
 $sizeMB2 = [math]::Round((Get-Item $zipSim).Length / 1MB, 1)
 Write-Host "  OK — $zipSim ($sizeMB2 MB)"
