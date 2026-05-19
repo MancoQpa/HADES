@@ -21,11 +21,12 @@ Desarrollado por **Emilio Medina**.
 ### Monitor de armónicos
 - Conexión MMS/ACSE a medidores IEC 61850 (ION 7400 y compatibles)
 - Lectura de nodos lógicos MMXU, MHAI, MSQI, MMTR, MSTA
-- Espectro de armónicos hasta el orden 50 (fases A, B, C)
+- Espectro de armónicos hasta el orden 50 (fases A, B, C) — solo datos reales del IED, sin estimaciones
 - THD de tensión y corriente
 - Secuencias simétricas (positiva, negativa, cero)
 - Energía activa, reactiva y aparente (BCR, FC=ST)
 - Demanda máxima y factor de potencia
+- Si el IED no expone el array MHAI.HA, el gráfico de barras muestra un aviso y solo THD/CV/FP están disponibles
 
 ### Clasificación de firma espectral
 - Árbol de decisión multivariable: CV = σ(I)/μ(I), THD_I, H5/H1, H7/H1, H11/H1, FP
@@ -33,6 +34,7 @@ Desarrollado por **Emilio Medina**.
 - Clasificación en pocos ciclos de red; validada en laboratorio con patrones de energía replicados
 - Índice de electrónica 0–100 (score compuesto)
 - Análisis de resonancia LC por feeder
+- Requiere array MHAI.HA para las dimensiones H5/H1, H7/H1, H11/H1; sin él la clasificación opera solo sobre CV, THD_I y FP
 - Requiere dominancia ≥80% en el feeder para cargas solapadas
 
 ### Acumulación de datos para ML
@@ -70,6 +72,7 @@ Para desarrollo: https://gluonhq.com/products/javafx/
 ### 3. Medidor compatible IEC 61850 (opcional)
 - ION 7400: Host `169.254.0.10`, Puerto `102`, IED `cbo2`, Prefijo MMXU `M03_`, LD `LD0`
 - Cualquier IED que exponga MMXU / MHAI / MSQI / MMTR vía MMS
+- IEDs sin nodo MHAI.HA funcionan normalmente; el gráfico de armónicos muestra un aviso y trabaja con los datos disponibles (THD, CV, FP)
 
 Sin hardware, usar el **Modo Demo** integrado.
 
