@@ -34,7 +34,7 @@ class HarmonicSpectrumCard {
             "-fx-border-radius: 4; -fx-background-radius: 4;" +
             "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 4, 0, 0, 1);");
         card.setPadding(new Insets(12));
-        card.setMinHeight(220);
+        card.setMinHeight(170);
 
         Label title = new Label("ESPECTRO ARMÓNICO  (H1–H13, % de fundamental)");
         title.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");

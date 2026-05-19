@@ -32,47 +32,46 @@ final class MultiFeederTableBuilder {
             new Label("Sin feeders configurados. Agregue un feeder con + Demo."));
 
         // ── Identificación ────────────────────────────────────────────────────
-        TableColumn<FeederRow, Integer> colNum  = colInt("#",      "index",    36);
-        TableColumn<FeederRow, String>  colConn = colStr("●",      "connLed",  40);
-        colConn.setMaxWidth(44);
+        TableColumn<FeederRow, Integer> colNum  = colInt("#",     "index",    28);
+        TableColumn<FeederRow, String>  colConn = colStr("●",     "connLed",  28);
+        colConn.setMaxWidth(34);
         colConn.setCellFactory(col -> connLedCell());
 
-        TableColumn<FeederRow, String> colName   = colStr("Feeder",  "feederId",  140);
-        TableColumn<FeederRow, String> colStatus = colStr("Estado",  "status",     68);
+        TableColumn<FeederRow, String> colName   = colStr("Feeder",  "feederId",  90);
+        TableColumn<FeederRow, String> colStatus = colStr("Estado",  "status",    50);
         colStatus.setCellFactory(col -> statusCell());
 
         // ── MMXU — Tensiones de fase (kV) ─────────────────────────────────────
-        TableColumn<FeederRow, String> colVL1 = colStr("VL1 (kV)", "voltageL1Kv", 68);
-        TableColumn<FeederRow, String> colVL2 = colStr("VL2 (kV)", "voltageL2Kv", 68);
-        TableColumn<FeederRow, String> colVL3 = colStr("VL3 (kV)", "voltageL3Kv", 68);
+        TableColumn<FeederRow, String> colVL1 = colStr("VL1 kV", "voltageL1Kv", 52);
+        TableColumn<FeederRow, String> colVL2 = colStr("VL2 kV", "voltageL2Kv", 52);
+        TableColumn<FeederRow, String> colVL3 = colStr("VL3 kV", "voltageL3Kv", 52);
 
         // ── MMXU — Corrientes de fase (A) ─────────────────────────────────────
-        TableColumn<FeederRow, String> colIL1 = colStr("IL1 (A)", "currentL1", 68);
-        TableColumn<FeederRow, String> colIL2 = colStr("IL2 (A)", "currentL2", 68);
-        TableColumn<FeederRow, String> colIL3 = colStr("IL3 (A)", "currentL3", 68);
+        TableColumn<FeederRow, String> colIL1 = colStr("IL1 A", "currentL1", 50);
+        TableColumn<FeederRow, String> colIL2 = colStr("IL2 A", "currentL2", 50);
+        TableColumn<FeederRow, String> colIL3 = colStr("IL3 A", "currentL3", 50);
 
         // ── MMXU — Potencias totales 3φ ───────────────────────────────────────
-        TableColumn<FeederRow, String> colP = colStr("P (kW)",   "activePower",   72);
-        TableColumn<FeederRow, String> colQ = colStr("Q (kVAR)", "reactivePower", 72);
-        TableColumn<FeederRow, String> colS = colStr("S (kVA)",  "apparentPower", 72);
+        TableColumn<FeederRow, String> colP = colStr("P kW",   "activePower",   54);
+        TableColumn<FeederRow, String> colQ = colStr("Q kVAR", "reactivePower", 58);
+        TableColumn<FeederRow, String> colS = colStr("S kVA",  "apparentPower", 54);
 
         // ── MMTR — Energías totales ───────────────────────────────────────────
-        TableColumn<FeederRow, String> colEKwh   = colStr("Wh (k)",   "energyKwh",   76);
-        TableColumn<FeederRow, String> colEKvarh = colStr("VArh (k)", "energyKvarh", 76);
-        TableColumn<FeederRow, String> colEKvah  = colStr("VAh (k)",  "energyKvah",  76);
+        TableColumn<FeederRow, String> colEKwh   = colStr("Wh (k)",   "energyKwh",   56);
+        TableColumn<FeederRow, String> colEKvarh = colStr("VArh (k)", "energyKvarh", 60);
 
         // ── THDi + Alarmas ────────────────────────────────────────────────────
-        TableColumn<FeederRow, String>  colTHDi  = colStr("THDi%", "thdi",       62);
+        TableColumn<FeederRow, String>  colTHDi  = colStr("THDi%", "thdi",      50);
         colTHDi.setCellFactory(col -> thdiCell());
-        TableColumn<FeederRow, Integer> colAlarm = colInt("⚑",    "alarmCount",  44);
-        colAlarm.setMaxWidth(52);
+        TableColumn<FeederRow, Integer> colAlarm = colInt("⚑",    "alarmCount", 32);
+        colAlarm.setMaxWidth(40);
 
         tv.getColumns().addAll(
             colNum, colConn, colName, colStatus,
             colVL1, colVL2, colVL3,
             colIL1, colIL2, colIL3,
             colP, colQ, colS,
-            colEKwh, colEKvarh, colEKvah,
+            colEKwh, colEKvarh,
             colTHDi, colAlarm
         );
 
@@ -148,8 +147,13 @@ final class MultiFeederTableBuilder {
 
     // ── Row factory ────────────────────────────────────────────────────────────
 
+    private static final String ROW_EVEN = "-fx-background-color: #FFFFFF;";
+    private static final String ROW_ODD  = "-fx-background-color: #EEF1F5;";
+
     private TableRow<FeederRow> buildRow() {
         TableRow<FeederRow> row = new TableRow<>();
+        row.indexProperty().addListener((obs, oldIdx, newIdx) ->
+            row.setStyle(newIdx.intValue() % 2 == 0 ? ROW_EVEN : ROW_ODD));
 
         MenuItem miReconn = new MenuItem("\uD83D\uDD04 Reconectar");
         miReconn.setOnAction(e -> {

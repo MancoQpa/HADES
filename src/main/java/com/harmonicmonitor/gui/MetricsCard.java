@@ -36,11 +36,12 @@ class MetricsCard {
         metricRes  = metricLabel();
         metricL1   = metricLabel(); metricL2   = metricLabel(); metricL3 = metricLabel();
 
-        Label title = new Label("MÉTRICAS DE ALIMENTADOR");
-        title.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
+        // ── Sección izquierda: Métricas de alimentador ────────────────────────
+        Label titleLeft = new Label("MÉTRICAS DE ALIMENTADOR");
+        titleLeft.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
 
         GridPane grid = new GridPane();
-        grid.setHgap(20);
+        grid.setHgap(16);
         grid.setVgap(5);
         addMetricRow(grid, 0, "Q Reactiva:",   metricQ,    "kVAR", "P Aparente:",   metricS,    "kVA");
         addMetricRow(grid, 1, "Factor Pot.:",  metricFP,   "",     "Frecuencia:",   metricFreq, "Hz");
@@ -53,15 +54,19 @@ class MetricsCard {
         resLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Theme.TEXT + ";");
         resRow.getChildren().addAll(resLbl, metricRes);
 
-        Separator sep = new Separator();
-        sep.setStyle("-fx-background-color: #CCCCCC;");
+        VBox leftSection = new VBox(6, titleLeft, grid, resRow);
 
-        Label phaseTit = new Label("POR FASE");
-        phaseTit.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
+        // ── Separador vertical ─────────────────────────────────────────────────
+        Separator sepV = new Separator(javafx.geometry.Orientation.VERTICAL);
+        sepV.setStyle("-fx-background-color: #CCCCCC;");
+
+        // ── Sección derecha: Por fase ──────────────────────────────────────────
+        Label titleRight = new Label("POR FASE");
+        titleRight.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
 
         GridPane phaseGrid = new GridPane();
-        phaseGrid.setHgap(16);
-        phaseGrid.setVgap(3);
+        phaseGrid.setHgap(12);
+        phaseGrid.setVgap(4);
         addPhaseHeaderRow(phaseGrid);
         metricL1.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Theme.TEXT + ";");
         metricL2.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Theme.TEXT + ";");
@@ -74,13 +79,20 @@ class MetricsCard {
             phl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Theme.TEXT + ";");
         }
 
+        VBox rightSection = new VBox(6, titleRight, phaseGrid);
+        HBox.setHgrow(rightSection, Priority.ALWAYS);
+
+        // ── Layout horizontal ──────────────────────────────────────────────────
+        HBox body = new HBox(16, leftSection, sepV, rightSection);
+        body.setAlignment(Pos.TOP_LEFT);
+
         card = new VBox(8);
         card.setStyle(
             "-fx-background-color: " + Theme.CARD + "; -fx-border-color: #D0D3D8; -fx-border-width: 1;" +
             "-fx-border-radius: 4; -fx-background-radius: 4;" +
             "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 4, 0, 0, 1);");
         card.setPadding(new Insets(12));
-        card.getChildren().addAll(title, grid, resRow, sep, phaseTit, phaseGrid);
+        card.getChildren().addAll(body);
     }
 
     VBox getNode() { return card; }
