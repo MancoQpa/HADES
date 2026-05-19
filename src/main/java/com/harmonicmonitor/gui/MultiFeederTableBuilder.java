@@ -31,29 +31,50 @@ final class MultiFeederTableBuilder {
         tv.setPlaceholder(
             new Label("Sin feeders configurados. Agregue un feeder con + Demo."));
 
-        TableColumn<FeederRow, Integer> colNum  = colInt("#",           "index",         38);
-        TableColumn<FeederRow, String>  colConn = colStr("Con.",        "connLed",       46);
-        colConn.setMaxWidth(46);
+        // ── Identificación ────────────────────────────────────────────────────
+        TableColumn<FeederRow, Integer> colNum  = colInt("#",      "index",    36);
+        TableColumn<FeederRow, String>  colConn = colStr("●",      "connLed",  40);
+        colConn.setMaxWidth(44);
         colConn.setCellFactory(col -> connLedCell());
 
-        TableColumn<FeederRow, String>  colName   = colStr("ID. Feeder",  "feederId",     160);
-        TableColumn<FeederRow, String>  colStatus = colStr("Estado",      "status",        80);
+        TableColumn<FeederRow, String> colName   = colStr("Feeder",  "feederId",  140);
+        TableColumn<FeederRow, String> colStatus = colStr("Estado",  "status",     68);
         colStatus.setCellFactory(col -> statusCell());
 
-        TableColumn<FeederRow, String>  colVolt  = colStr("Va (kV)",    "voltageKv",      75);
-        TableColumn<FeederRow, String>  colCurr  = colStr("Ia (A)",     "currentA",       75);
-        TableColumn<FeederRow, String>  colP     = colStr("P (kW)",     "activePower",    80);
-        TableColumn<FeederRow, String>  colQ     = colStr("Q (kVAR)",   "reactivePower",  85);
-        TableColumn<FeederRow, String>  colFP    = colStr("FP",         "powerFactor",    60);
-        TableColumn<FeederRow, String>  colTHDi  = colStr("THDi %",     "thdi",           70);
+        // ── MMXU — Tensiones de fase (kV) ─────────────────────────────────────
+        TableColumn<FeederRow, String> colVL1 = colStr("VL1 (kV)", "voltageL1Kv", 68);
+        TableColumn<FeederRow, String> colVL2 = colStr("VL2 (kV)", "voltageL2Kv", 68);
+        TableColumn<FeederRow, String> colVL3 = colStr("VL3 (kV)", "voltageL3Kv", 68);
+
+        // ── MMXU — Corrientes de fase (A) ─────────────────────────────────────
+        TableColumn<FeederRow, String> colIL1 = colStr("IL1 (A)", "currentL1", 68);
+        TableColumn<FeederRow, String> colIL2 = colStr("IL2 (A)", "currentL2", 68);
+        TableColumn<FeederRow, String> colIL3 = colStr("IL3 (A)", "currentL3", 68);
+
+        // ── MMXU — Potencias totales 3φ ───────────────────────────────────────
+        TableColumn<FeederRow, String> colP = colStr("P (kW)",   "activePower",   72);
+        TableColumn<FeederRow, String> colQ = colStr("Q (kVAR)", "reactivePower", 72);
+        TableColumn<FeederRow, String> colS = colStr("S (kVA)",  "apparentPower", 72);
+
+        // ── MMTR — Energías totales ───────────────────────────────────────────
+        TableColumn<FeederRow, String> colEKwh   = colStr("Wh (k)",   "energyKwh",   76);
+        TableColumn<FeederRow, String> colEKvarh = colStr("VArh (k)", "energyKvarh", 76);
+        TableColumn<FeederRow, String> colEKvah  = colStr("VAh (k)",  "energyKvah",  76);
+
+        // ── THDi + Alarmas ────────────────────────────────────────────────────
+        TableColumn<FeederRow, String>  colTHDi  = colStr("THDi%", "thdi",       62);
         colTHDi.setCellFactory(col -> thdiCell());
+        TableColumn<FeederRow, Integer> colAlarm = colInt("⚑",    "alarmCount",  44);
+        colAlarm.setMaxWidth(52);
 
-        TableColumn<FeederRow, String>  colTHDv  = colStr("THDv %",     "thdv",           70);
-        TableColumn<FeederRow, String>  colLoad  = colStr("Tipo Carga", "loadType",      140);
-        TableColumn<FeederRow, Integer> colAlarm = colInt("Alrm.",      "alarmCount",     55);
-
-        tv.getColumns().addAll(colNum, colConn, colName, colStatus,
-            colVolt, colCurr, colP, colQ, colFP, colTHDi, colTHDv, colLoad, colAlarm);
+        tv.getColumns().addAll(
+            colNum, colConn, colName, colStatus,
+            colVL1, colVL2, colVL3,
+            colIL1, colIL2, colIL3,
+            colP, colQ, colS,
+            colEKwh, colEKvarh, colEKvah,
+            colTHDi, colAlarm
+        );
 
         tv.setRowFactory(t -> buildRow());
         return tv;

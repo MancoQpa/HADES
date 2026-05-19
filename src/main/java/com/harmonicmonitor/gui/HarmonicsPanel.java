@@ -16,11 +16,6 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * HarmonicsPanel — Harmonic spectrum analysis with bar chart, summary cards, and data table.
@@ -56,8 +51,10 @@ public class HarmonicsPanel {
     TableView<HarmonicRow> table;
     ObservableList<HarmonicRow> tableData;
 
-    // Package-private: toggled by HarmonicsDisplayUpdater.
-    Label estimatedLabel;
+    // No-harmonics panel (shown when IED doesn't expose individual harmonic arrays)
+    private VBox harmonicContent;
+    private VBox noHarmonicsPane;
+    private Label lblNhTHDi, lblNhTHDv, lblNhIrms, lblNhVrms, lblNhFP, lblNhFreq, lblNhKfactor;
 
     private final HarmonicsDisplayUpdater updater = new HarmonicsDisplayUpdater(this);
 
@@ -77,17 +74,19 @@ public class HarmonicsPanel {
         // Top: header with controls
         pane.setTop(buildHeader());
 
-        // Center: degraded-mode banner + chart + cards + table
+        // Center: harmonic content OR no-harmonics info panel
         VBox center = new VBox(10);
         center.setPadding(new Insets(12, 16, 16, 16));
         center.setStyle("-fx-background-color: " + Theme.BG + ";");
 
-        center.getChildren().addAll(
-            buildDegradedBanner(),
-            buildBarChart(),
-            buildSummaryCards(),
-            buildTable()
-        );
+        harmonicContent = new VBox(10);
+        harmonicContent.getChildren().addAll(buildBarChart(), buildSummaryCards(), buildTable());
+
+        noHarmonicsPane = buildNoHarmonicsPane();
+        noHarmonicsPane.setVisible(false);
+        noHarmonicsPane.setManaged(false);
+
+        center.getChildren().addAll(noHarmonicsPane, harmonicContent);
 
         ScrollPane scroll = new ScrollPane(center);
         scroll.setFitToWidth(true);
@@ -171,24 +170,97 @@ public class HarmonicsPanel {
         return comboText;
     }
 
-    // ── Degraded mode banner ──────────────────────────────────────────────────
+    // ── No-harmonics panel (replaces spectrum when IED doesn't expose HarA/B/C) ──
 
-    private HBox buildDegradedBanner() {
-        estimatedLabel = new Label(
-            "⚠  MODO DEGRADADO — El IED no expone el array de armónicos (MHAI.HarA/B/C). " +
-            "El espectro mostrado es una ESTIMACIÓN genérica, no una medición real del instrumento.");
-        estimatedLabel.setWrapText(true);
-        estimatedLabel.setStyle(
-            "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #1a1a00;" +
-            "-fx-background-color: #fff3cd; -fx-border-color: #ffc107;" +
-            "-fx-border-width: 2; -fx-border-radius: 4; -fx-background-radius: 4;" +
-            "-fx-padding: 8 12 8 12;");
+    private VBox buildNoHarmonicsPane() {
+        VBox pane = new VBox(20);
+        pane.setPadding(new Insets(32, 40, 32, 40));
+        pane.setAlignment(Pos.TOP_CENTER);
 
-        HBox banner = new HBox(estimatedLabel);
-        HBox.setHgrow(estimatedLabel, Priority.ALWAYS);
-        banner.setVisible(false);
-        banner.setManaged(false);
-        return banner;
+        // Info message
+        Label icon = new Label("ℹ");
+        icon.setStyle("-fx-font-size: 36px; -fx-text-fill: #0078D4;");
+
+        Label title = new Label("Este medidor no expone los valores de armónicos individuales");
+        title.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + ";");
+        title.setWrapText(true);
+
+        Label subtitle = new Label("El IED no publica el nodo MHAI.HarA / HarB / HarC en su modelo IEC 61850.");
+        subtitle.setStyle("-fx-font-size: 12px; -fx-text-fill: #888; ");
+        subtitle.setWrapText(true);
+
+        VBox header = new VBox(6, icon, title, subtitle);
+        header.setAlignment(Pos.CENTER);
+
+        // Real measured values grid
+        Label sectionLbl = new Label("VALORES MEDIDOS DISPONIBLES");
+        sectionLbl.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888; -fx-padding: 0 0 4 0;");
+
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(24);
+        grid.setVgap(10);
+        grid.setAlignment(Pos.CENTER);
+        grid.setStyle("-fx-background-color: " + Theme.CARD + "; -fx-border-color: " + Theme.BORDER +
+            "; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 16 24 16 24;");
+
+        lblNhTHDi    = nhValueLabel("—");
+        lblNhTHDv    = nhValueLabel("—");
+        lblNhIrms    = nhValueLabel("—");
+        lblNhVrms    = nhValueLabel("—");
+        lblNhFP      = nhValueLabel("—");
+        lblNhFreq    = nhValueLabel("—");
+        lblNhKfactor = nhValueLabel("—");
+
+        int row = 0;
+        addNhRow(grid, row++, "THD Corriente",  lblNhTHDi,    "THD_I  (medido por el IED)");
+        addNhRow(grid, row++, "THD Tensión",    lblNhTHDv,    "THD_V  (medido por el IED)");
+        addNhRow(grid, row++, "Corriente RMS",  lblNhIrms,    "Promedio 3φ");
+        addNhRow(grid, row++, "Tensión RMS",    lblNhVrms,    "Promedio 3φ");
+        addNhRow(grid, row++, "Factor de Potencia", lblNhFP,  "Medido por el IED");
+        addNhRow(grid, row++, "Frecuencia",     lblNhFreq,    "Hz");
+        addNhRow(grid, row,   "K-factor",       lblNhKfactor, "Si el IED lo expone");
+
+        // Recommendation
+        Label rec = new Label(
+            "Para obtener el espectro armónico completo, habilite el nodo MHAI.HarA/HarB/HarC " +
+            "en la configuración del IED (consulte el manual del equipo).");
+        rec.setWrapText(true);
+        rec.setStyle("-fx-font-size: 11px; -fx-text-fill: #888; -fx-font-style: italic;");
+        rec.setMaxWidth(560);
+
+        pane.getChildren().addAll(header, sectionLbl, grid, rec);
+        return pane;
+    }
+
+    private Label nhValueLabel(String text) {
+        Label l = new Label(text);
+        l.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: " + Theme.TEXT + "; -fx-min-width: 100;");
+        return l;
+    }
+
+    private void addNhRow(javafx.scene.layout.GridPane grid, int row, String name, Label valueLabel, String note) {
+        Label nameLbl = new Label(name);
+        nameLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + Theme.TEXT + "; -fx-min-width: 160;");
+        Label noteLbl = new Label(note);
+        noteLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #888; -fx-min-width: 180;");
+        grid.add(nameLbl,   0, row);
+        grid.add(valueLabel, 1, row);
+        grid.add(noteLbl,   2, row);
+    }
+
+    private void updateNoHarmonicsValues(FeederMeasurement m) {
+        javafx.application.Platform.runLater(() -> {
+            if (lblNhTHDi == null) return;
+            lblNhTHDi.setText(String.format("%.1f %%", m.getThdCurrentAvg()));
+            lblNhTHDv.setText(String.format("%.1f %%", m.getThdVoltageAvg()));
+            lblNhIrms.setText(String.format("%.2f A",  m.getCurrentAvg()));
+            lblNhVrms.setText(String.format("%.2f V",  m.getVoltageAvg()));
+            double fp = Math.min(1.0, Math.max(-1.0, m.getPowerFactor()));
+            lblNhFP.setText(String.format("%.3f", fp));
+            lblNhFreq.setText(String.format("%.2f Hz", m.getFrequency()));
+            double kf = m.getKFactorL1();
+            lblNhKfactor.setText(kf > 0.01 ? String.format("%.2f", kf) : "—");
+        });
     }
 
     // ── Bar chart ─────────────────────────────────────────────────────────────
@@ -348,19 +420,16 @@ public class HarmonicsPanel {
         return card;
     }
 
-    // ── Degraded mode control (called from FeederLifecycleManager at connect) ──
+    // ── No-harmonics mode control (called from FeederLifecycleManager at connect) ──
 
-    /** Activa o desactiva el banner de MODO DEGRADADO. Puede llamarse desde cualquier hilo. */
-    public void setDegradedMode(boolean degraded) {
+    /** Muestra el panel informativo cuando el IED no expone armónicos individuales. */
+    public void setDegradedMode(boolean noHarmonics) {
         javafx.application.Platform.runLater(() -> {
-            if (estimatedLabel == null) return;
-            javafx.scene.layout.HBox banner =
-                (javafx.scene.layout.HBox) estimatedLabel.getParent();
-            if (banner != null) {
-                banner.setManaged(degraded);
-                banner.setVisible(degraded);
-            }
-            estimatedLabel.setVisible(degraded);
+            if (harmonicContent == null || noHarmonicsPane == null) return;
+            harmonicContent.setVisible(!noHarmonics);
+            harmonicContent.setManaged(!noHarmonics);
+            noHarmonicsPane.setVisible(noHarmonics);
+            noHarmonicsPane.setManaged(noHarmonics);
         });
     }
 
@@ -386,6 +455,11 @@ public class HarmonicsPanel {
         if (!m.getFeederId().equals(selectedFeederId)) return;
 
         lastMeasurement = m;
+
+        if (m.isSpectrumEstimated()) {
+            updateNoHarmonicsValues(m);
+            return;
+        }
 
         // Update harmonic frequency labels using actual measured frequency
         double freq = m.getFrequency();

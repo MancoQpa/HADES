@@ -18,14 +18,24 @@ public class FeederRow {
     /** LED de conexión: CONNECTED | CONNECTING | ERROR | DISCONNECTED | SIM */
     private String connLed;
     private String status;
-    private String voltageKv;
-    private String currentA;
-    private String activePower;
-    private String reactivePower;
-    private String powerFactor;
+    // Per-phase voltages (kV)
+    private String voltageL1Kv;
+    private String voltageL2Kv;
+    private String voltageL3Kv;
+    // Per-phase currents (A)
+    private String currentL1;
+    private String currentL2;
+    private String currentL3;
+    // Total 3-phase powers
+    private String activePower;    // kW
+    private String reactivePower;  // kVAR
+    private String apparentPower;  // kVA
+    // Metering energies (MMTR)
+    private String energyKwh;
+    private String energyKvarh;
+    private String energyKvah;
+    // THDi and alarms
     private String thdi;
-    private String thdv;
-    private String loadType;
     private int    alarmCount;
 
     public FeederRow(int index, FeederConfig feeder, boolean simulated) {
@@ -34,38 +44,53 @@ public class FeederRow {
         this.feederName     = feeder.getFeederName();
         this.connLed        = simulated ? "SIM" : "CONNECTING";
         this.status         = "\u25CF ESPERANDO";
-        this.voltageKv      = "\u2014";
-        this.currentA       = "\u2014";
+        this.voltageL1Kv    = "\u2014";
+        this.voltageL2Kv    = "\u2014";
+        this.voltageL3Kv    = "\u2014";
+        this.currentL1      = "\u2014";
+        this.currentL2      = "\u2014";
+        this.currentL3      = "\u2014";
         this.activePower    = "\u2014";
         this.reactivePower  = "\u2014";
-        this.powerFactor    = "\u2014";
+        this.apparentPower  = "\u2014";
+        this.energyKwh      = "\u2014";
+        this.energyKvarh    = "\u2014";
+        this.energyKvah     = "\u2014";
         this.thdi           = "\u2014";
-        this.thdv           = "\u2014";
-        this.loadType       = "\u2014";
         this.alarmCount     = 0;
     }
 
     public void clear() {
-        this.voltageKv     = "\u2014";
-        this.currentA      = "\u2014";
+        this.voltageL1Kv   = "\u2014";
+        this.voltageL2Kv   = "\u2014";
+        this.voltageL3Kv   = "\u2014";
+        this.currentL1     = "\u2014";
+        this.currentL2     = "\u2014";
+        this.currentL3     = "\u2014";
         this.activePower   = "\u2014";
         this.reactivePower = "\u2014";
-        this.powerFactor   = "\u2014";
+        this.apparentPower = "\u2014";
+        this.energyKwh     = "\u2014";
+        this.energyKvarh   = "\u2014";
+        this.energyKvah    = "\u2014";
         this.thdi          = "\u2014";
-        this.thdv          = "\u2014";
-        this.loadType      = "\u2014";
         this.status        = "\u25CF ESPERANDO";
     }
 
     public void update(FeederMeasurement m, int alarms) {
-        this.voltageKv     = String.format("%.3f", m.getVoltageAvg() / 1000.0);
-        this.currentA      = String.format("%.1f", m.getCurrentAvg());
-        this.activePower   = String.format("%.0f", m.getActivePower());
-        this.reactivePower = String.format("%.0f", m.getReactivePower());
-        this.powerFactor   = String.format("%.3f", Math.min(1.0, Math.max(-1.0, m.getPowerFactor())));
+        this.voltageL1Kv   = String.format("%.3f", m.getVoltageL1() / 1000.0);
+        this.voltageL2Kv   = String.format("%.3f", m.getVoltageL2() / 1000.0);
+        this.voltageL3Kv   = String.format("%.3f", m.getVoltageL3() / 1000.0);
+        this.currentL1     = String.format("%.1f", m.getCurrentL1());
+        this.currentL2     = String.format("%.1f", m.getCurrentL2());
+        this.currentL3     = String.format("%.1f", m.getCurrentL3());
+        this.activePower   = String.format("%.1f", m.getActivePower());
+        this.reactivePower = String.format("%.1f", m.getReactivePower());
+        this.apparentPower = String.format("%.1f", m.getApparentPower());
+        this.energyKwh     = String.format("%.1f", m.getTotalEnergyKWh());
+        this.energyKvarh   = String.format("%.1f", m.getTotalEnergyKVArh());
+        this.energyKvah    = String.format("%.1f", m.getTotalEnergyKVAh());
         this.thdi          = String.format("%.1f", m.getThdCurrentAvg());
-        this.thdv          = String.format("%.1f", m.getThdVoltageAvg());
-        this.loadType      = m.getDetectedLoadType().getDisplayName();
         this.alarmCount    = alarms;
 
         double thdiv = m.getThdCurrentAvg();
@@ -74,20 +99,30 @@ public class FeederRow {
         else                         this.status = "\u25CF OK";
     }
 
-    public FeederConfig getFeeder()       { return feeder; }
-    public int    getIndex()              { return index; }
-    public String getFeederId()           { return feeder.getFeederId(); }
-    public String getFeederName()         { return feederName; }
-    public String getConnLed()            { return connLed; }
-    public void   setConnLed(String s)    { this.connLed = s; }
-    public String getStatus()             { return status; }
-    public String getVoltageKv()          { return voltageKv; }
-    public String getCurrentA()           { return currentA; }
-    public String getActivePower()        { return activePower; }
-    public String getReactivePower()      { return reactivePower; }
-    public String getPowerFactor()        { return powerFactor; }
-    public String getThdi()               { return thdi; }
-    public String getThdv()               { return thdv; }
-    public String getLoadType()           { return loadType; }
-    public int    getAlarmCount()         { return alarmCount; }
+    public FeederConfig getFeeder()        { return feeder; }
+    public int    getIndex()               { return index; }
+    public String getFeederId()            { return feeder.getFeederId(); }
+    public String getFeederName()          { return feederName; }
+    public String getConnLed()             { return connLed; }
+    public void   setConnLed(String s)     { this.connLed = s; }
+    public String getStatus()              { return status; }
+    // Per-phase voltages
+    public String getVoltageL1Kv()         { return voltageL1Kv; }
+    public String getVoltageL2Kv()         { return voltageL2Kv; }
+    public String getVoltageL3Kv()         { return voltageL3Kv; }
+    // Per-phase currents
+    public String getCurrentL1()           { return currentL1; }
+    public String getCurrentL2()           { return currentL2; }
+    public String getCurrentL3()           { return currentL3; }
+    // Powers
+    public String getActivePower()         { return activePower; }
+    public String getReactivePower()       { return reactivePower; }
+    public String getApparentPower()       { return apparentPower; }
+    // Energies (MMTR)
+    public String getEnergyKwh()           { return energyKwh; }
+    public String getEnergyKvarh()         { return energyKvarh; }
+    public String getEnergyKvah()          { return energyKvah; }
+    // Quality / alarms
+    public String getThdi()                { return thdi; }
+    public int    getAlarmCount()          { return alarmCount; }
 }
