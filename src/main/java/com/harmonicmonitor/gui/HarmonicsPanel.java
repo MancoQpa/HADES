@@ -55,6 +55,7 @@ public class HarmonicsPanel {
     private VBox harmonicContent;
     private VBox noHarmonicsPane;
     private Label lblNhTHDi, lblNhTHDv, lblNhIrms, lblNhVrms, lblNhFP, lblNhFreq, lblNhKfactor;
+    private Label noHarmonicsNotice;
 
     private final HarmonicsDisplayUpdater updater = new HarmonicsDisplayUpdater(this);
 
@@ -297,7 +298,19 @@ public class HarmonicsPanel {
         }
         barChart.getData().add(currentSeries);
 
-        card.getChildren().addAll(title, barChart);
+        noHarmonicsNotice = new Label(
+            "\u26A0  El IED no expone arm\u00F3nicos individuales \u2014 solo THD disponible");
+        noHarmonicsNotice.setStyle(
+            "-fx-font-size: 11px; -fx-font-weight: bold;" +
+            "-fx-text-fill: #7A5200;" +
+            "-fx-background-color: #FFF3CD;" +
+            "-fx-border-color: #FFCA28;" +
+            "-fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4;" +
+            "-fx-padding: 6 12 6 12;");
+        noHarmonicsNotice.setVisible(false);
+        noHarmonicsNotice.setManaged(false);
+
+        card.getChildren().addAll(title, noHarmonicsNotice, barChart);
         return card;
     }
 
@@ -422,14 +435,12 @@ public class HarmonicsPanel {
 
     // ── No-harmonics mode control (called from FeederLifecycleManager at connect) ──
 
-    /** Muestra el panel informativo cuando el IED no expone armónicos individuales. */
+    /** Muestra el aviso en el gráfico cuando el IED no expone armónicos individuales. */
     public void setDegradedMode(boolean noHarmonics) {
         javafx.application.Platform.runLater(() -> {
-            if (harmonicContent == null || noHarmonicsPane == null) return;
-            harmonicContent.setVisible(!noHarmonics);
-            harmonicContent.setManaged(!noHarmonics);
-            noHarmonicsPane.setVisible(noHarmonics);
-            noHarmonicsPane.setManaged(noHarmonics);
+            if (noHarmonicsNotice == null) return;
+            noHarmonicsNotice.setVisible(noHarmonics);
+            noHarmonicsNotice.setManaged(noHarmonics);
         });
     }
 
@@ -455,11 +466,6 @@ public class HarmonicsPanel {
         if (!m.getFeederId().equals(selectedFeederId)) return;
 
         lastMeasurement = m;
-
-        if (m.isSpectrumEstimated()) {
-            updateNoHarmonicsValues(m);
-            return;
-        }
 
         // Update harmonic frequency labels using actual measured frequency
         double freq = m.getFrequency();

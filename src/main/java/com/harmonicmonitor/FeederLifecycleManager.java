@@ -11,13 +11,9 @@ import com.harmonicmonitor.model.FeederMeasurement;
 import com.harmonicmonitor.model.SimProfile;
 
 import javafx.application.Platform;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -163,44 +159,10 @@ class FeederLifecycleManager {
             }
 
             if (ev.type == IEC61850Communicator.CommEvent.Type.MODEL_LOADED) {
-                // Advertir si el IED no expone el array de armonicos
-                if (!comm.isHarmonicArrayInModel()) {
-                    Alert warn = new Alert(Alert.AlertType.WARNING);
-                    warn.setTitle("Modo degradado \u2014 arm\u00F3nicos no disponibles");
-                    warn.setHeaderText("El IED \"" + cfg.getIedName() + "\" no expone el array de arm\u00F3nicos (MHAI.HA)");
-                    warn.setContentText(
-                        "Sin el array H1\u2013H13, las dimensiones espectrales del clasificador\n" +
-                        "(H5/H1, H7/H1, H11/H1) ser\u00E1n ESTIMADAS con un perfil SMPS gen\u00E9rico,\n" +
-                        "no medidas desde el IED.\n\n" +
-                        "En modo degradado solo THD_I, CV y FP son observables reales.\n" +
-                        "Los resultados de clasificaci\u00F3n de tipo de carga tienen validez reducida\n" +
-                        "y el espectro mostrado NO proviene del instrumento.\n\n" +
-                        "\u00BFDesea continuar de todas formas?");
-                    ButtonType btnContinuar = new ButtonType("Continuar en modo degradado", ButtonBar.ButtonData.OK_DONE);
-                    ButtonType btnCancelar  = new ButtonType("Cancelar conexi\u00F3n",       ButtonBar.ButtonData.CANCEL_CLOSE);
-                    warn.getButtonTypes().setAll(btnContinuar, btnCancelar);
-                    Optional<ButtonType> res = warn.showAndWait();
-                    if (res.isEmpty() || res.get().getButtonData() == ButtonBar.ButtonData.CANCEL_CLOSE) {
-                        comm.disconnect();
-                        communicators.remove(comm);
-                        feederConfigs.remove(cfg);
-                        app.setStatusMessage(cfg.getFeederId() + ": conexi\u00F3n cancelada \u2014 el IED no provee arm\u00F3nicos");
-                        if (app.multiFeederPanel != null) {
-                            app.multiFeederPanel.updateConnectionState(cfg.getFeederId(),
-                                IEC61850Communicator.State.DISCONNECTED);
-                            app.multiFeederPanel.refreshFeeders();
-                        }
-                        app.updateFeedersIndicator();
-                        return;
-                    }
-                    // Usuario eligió continuar en modo degradado — activar banner
-                    if (app.harmonicsPanel != null)
-                        app.harmonicsPanel.setDegradedMode(true);
-                } else {
-                    // Tiene armónicos completos — asegurar que el banner esté apagado
-                    if (app.harmonicsPanel != null)
-                        app.harmonicsPanel.setDegradedMode(false);
-                }
+                // Indicar en el panel si el IED no expone el array de armónicos
+                boolean hasHarmonics = comm.isHarmonicArrayInModel();
+                if (app.harmonicsPanel != null)
+                    app.harmonicsPanel.setDegradedMode(!hasHarmonics);
                 startPoller(comm, cfg);
                 app.updateFeedersIndicator();
                 if (app.multiFeederPanel != null) app.multiFeederPanel.refreshFeeders();
