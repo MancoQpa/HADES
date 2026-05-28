@@ -36,11 +36,58 @@ public class FeederConfig {
     private double maxVoltageUnbalPct = 2.0;   // %  Desbalance de tensión (EN 50160)
     private double maxCurrentUnbalPct = 10.0;  // %  Desbalance de corriente
 
-    // --- Umbrales de detección de carga electrónica ---
+    // --- Umbrales de detección de carga electrónica (rectificadores clásicos) ---
     private double maxCvElectronicThreshold  = 0.05; // CV < 5% → carga estable (electrónica)
-    private double minThdICryptoThreshold    = 15.0; // % THDi para clasificar como cripto/datacenter
-    private double minH5h1CryptoThreshold    = 0.15; // H5/H1 > 15% → firma de rectificador
+    private double minThdICryptoThreshold    = 15.0; // % THDi para clasificar como cripto/datacenter sin PFC
+    private double minH5h1CryptoThreshold    = 0.15; // H5/H1 > 15% → firma de rectificador sin PFC
     private double minH7h1CryptoThreshold    = 0.10; // H7/H1 > 10%
+
+    // --- Umbrales de detección CRYPTO_MINING_PFC (PFC activo — ASIC miners) ---
+    // Derivados de medición de campo ION7400-0d5885, alimentador exclusivo
+    // de criptominería ASIC, 23 kV / 50 Hz, 26/05/2026.
+    //
+    // Justificación de cada umbral:
+    //
+    //   pfCryptoMinThreshold = 0.998
+    //     El PFC boost converter en modo CCM produce FP > 0.99 a plena carga.
+    //     Ninguna carga industrial convencional (motores, iluminación, hornos)
+    //     alcanza FP > 0.998 de forma sostenida. Valor medido: 1.0000.
+    //     Margen de tolerancia: ±0.002 para variaciones de carga y medición.
+    //     Ref: Mohan, Undeland, Robbins, "Power Electronics" §16 (PFC converters).
+    //
+    //   qsRatioCryptoMaxThreshold = 0.012
+    //     Relación Q/S < 0.012 (ángulo φ < 0.69°). Valor medido: 0.006/1.875 = 0.0032.
+    //     El PFC activo anula la reactiva inyectando corriente en fase con la tensión.
+    //     Margen: 0.012 cubre variaciones de carga parcial y errores de medición.
+    //     Ref: IEEE Std 1459-2010, definiciones de potencia con cargas no lineales.
+    //
+    //   kFactorCryptoMaxThreshold = 1.12
+    //     K = 1 + Σ(n² × Iₙ²) / Σ(Iₙ²)  (IEEE C57.110-2018, Ec. 1).
+    //     Con THD ≈ 4% y H5 dominante: K ≈ 1 + (25 × 0.039²) / 1 ≈ 1.038.
+    //     Valor medido: 1.05. Umbral 1.12 deja margen para THD hasta 6%.
+    //     Cualquier carga con distorsión significativa sin PFC tiene K > 1.5.
+    //
+    //   h5h7RatioCryptoMinThreshold = 8.0
+    //     El PFC boost suprime H7, H11, H13 de forma más agresiva que H5.
+    //     Valor medido: H5/H7 = 3.9% / 0.2% = 19.5.
+    //     Un rectificador de 6 pulsos clásico tiene H5/H7 ≈ 25%/14% = 1.8.
+    //     Umbral conservador: 8.0 separa PFC (≥8) de 6-pulsos clásico (≤3).
+    //
+    //   thdCryptoPfcMaxThreshold = 6.5
+    //     Límite superior del rango de THD esperado para ASIC con PFC.
+    //     Rango medido: 3.0%–4.4%. Margen hasta 6.5% cubre carga parcial
+    //     y modelos más antiguos con PFC de menor eficiencia.
+    //
+    //   thdCryptoPfcMinThreshold = 1.5
+    //     Límite inferior: un THD < 1.5% indicaría carga verdaderamente lineal
+    //     (motores síncronos, resistencias puras). El PFC siempre deja un residual
+    //     de H5 detectable (≥2% típico).
+    private double pfCryptoMinThreshold          = 0.998;  // FP mínimo (PFC activo)
+    private double qsRatioCryptoMaxThreshold     = 0.012;  // Q/S máximo (reactiva nula)
+    private double kFactorCryptoMaxThreshold     = 1.12;   // K-factor máximo
+    private double h5h7RatioCryptoMinThreshold   = 8.0;    // H5/H7 mínimo (PFC suprime H7)
+    private double thdCryptoPfcMaxThreshold      = 6.5;    // THD máximo (%)
+    private double thdCryptoPfcMinThreshold      = 1.5;    // THD mínimo (%)
 
     // --- Umbrales de resonancia ---
     private double resonanceAmplificationMax = 3.0;  // veces la corriente fundamental
@@ -95,11 +142,17 @@ public class FeederConfig {
     public double getMaxVoltageUnbalPct()    { return maxVoltageUnbalPct; }
     public double getMaxCurrentUnbalPct()    { return maxCurrentUnbalPct; }
 
-    public double getMaxCvElectronicThreshold()  { return maxCvElectronicThreshold; }
-    public double getMinThdICryptoThreshold()    { return minThdICryptoThreshold; }
-    public double getMinH5h1CryptoThreshold()    { return minH5h1CryptoThreshold; }
-    public double getMinH7h1CryptoThreshold()    { return minH7h1CryptoThreshold; }
-    public double getResonanceAmplificationMax() { return resonanceAmplificationMax; }
+    public double getMaxCvElectronicThreshold()      { return maxCvElectronicThreshold; }
+    public double getMinThdICryptoThreshold()        { return minThdICryptoThreshold; }
+    public double getMinH5h1CryptoThreshold()        { return minH5h1CryptoThreshold; }
+    public double getMinH7h1CryptoThreshold()        { return minH7h1CryptoThreshold; }
+    public double getPfCryptoMinThreshold()          { return pfCryptoMinThreshold; }
+    public double getQsRatioCryptoMaxThreshold()     { return qsRatioCryptoMaxThreshold; }
+    public double getKFactorCryptoMaxThreshold()     { return kFactorCryptoMaxThreshold; }
+    public double getH5h7RatioCryptoMinThreshold()   { return h5h7RatioCryptoMinThreshold; }
+    public double getThdCryptoPfcMaxThreshold()      { return thdCryptoPfcMaxThreshold; }
+    public double getThdCryptoPfcMinThreshold()      { return thdCryptoPfcMinThreshold; }
+    public double getResonanceAmplificationMax()     { return resonanceAmplificationMax; }
 
     public NetworkTopology getTopology()       { return topology; }
     public SimProfile getSimProfile()          { return simProfile; }
@@ -132,11 +185,17 @@ public class FeederConfig {
     public void setMaxVoltageUnbalPct(double v)     { maxVoltageUnbalPct     = v; }
     public void setMaxCurrentUnbalPct(double v)     { maxCurrentUnbalPct     = v; }
 
-    public void setMaxCvElectronicThreshold(double v)  { maxCvElectronicThreshold  = v; }
-    public void setMinThdICryptoThreshold(double v)    { minThdICryptoThreshold    = v; }
-    public void setMinH5h1CryptoThreshold(double v)    { minH5h1CryptoThreshold    = v; }
-    public void setMinH7h1CryptoThreshold(double v)    { minH7h1CryptoThreshold    = v; }
-    public void setResonanceAmplificationMax(double v) { resonanceAmplificationMax = v; }
+    public void setMaxCvElectronicThreshold(double v)      { maxCvElectronicThreshold      = v; }
+    public void setMinThdICryptoThreshold(double v)        { minThdICryptoThreshold        = v; }
+    public void setMinH5h1CryptoThreshold(double v)        { minH5h1CryptoThreshold        = v; }
+    public void setMinH7h1CryptoThreshold(double v)        { minH7h1CryptoThreshold        = v; }
+    public void setPfCryptoMinThreshold(double v)          { pfCryptoMinThreshold          = v; }
+    public void setQsRatioCryptoMaxThreshold(double v)     { qsRatioCryptoMaxThreshold     = v; }
+    public void setKFactorCryptoMaxThreshold(double v)     { kFactorCryptoMaxThreshold     = v; }
+    public void setH5h7RatioCryptoMinThreshold(double v)   { h5h7RatioCryptoMinThreshold   = v; }
+    public void setThdCryptoPfcMaxThreshold(double v)      { thdCryptoPfcMaxThreshold      = v; }
+    public void setThdCryptoPfcMinThreshold(double v)      { thdCryptoPfcMinThreshold      = v; }
+    public void setResonanceAmplificationMax(double v)     { resonanceAmplificationMax     = v; }
     public void setTopology(NetworkTopology v)          { topology         = v; }
     public void setSimProfile(SimProfile v)            { simProfile       = v; }
     public void setPowerScaleFactor(double v)          { powerScaleFactor   = v; }

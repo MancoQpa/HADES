@@ -89,11 +89,25 @@ public class FeederMeasurement {
 
     // --- Clasificación de carga ---
     private LoadType detectedLoadType = LoadType.UNKNOWN;
-    private double cvCurrent = 0.0;   // Coeficiente de variación de corriente
-    private double h5h1Ratio = 0.0;   // Relación H5/H1 de corriente
-    private double h7h1Ratio = 0.0;   // Relación H7/H1 de corriente
-    private double h11h1Ratio = 0.0;  // Relación H11/H1 de corriente
-    private double h13h1Ratio = 0.0;  // Relación H13/H1 de corriente
+    private double cvCurrent  = 0.0;   // Coeficiente de variación de corriente
+    private double h5h1Ratio  = 0.0;   // Relación H5/H1 de corriente
+    private double h7h1Ratio  = 0.0;   // Relación H7/H1 de corriente
+    private double h11h1Ratio = 0.0;   // Relación H11/H1 de corriente
+    private double h13h1Ratio = 0.0;   // Relación H13/H1 de corriente
+
+    // --- Indicadores derivados para detección CRYPTO_MINING_PFC ---
+    // Calculados en ElectronicLoadDetector.classify() y expuestos
+    // para visualización en dashboard y exportación a base de datos.
+    //
+    //   h5h7Ratio : H5/H7 — ratio de dominancia espectral del PFC.
+    //               PFC activo: > 8 (H7 casi nulo). 6-pulsos clásico: ≈ 1.8.
+    //   qsRatio   : |Q|/S  — fracción de potencia reactiva sobre aparente.
+    //               PFC: < 0.005. Motores: 0.3-0.5. Inductivo genérico: 0.1-0.6.
+    //   pfcCryptoScore : puntaje 0-100 de la firma PFC. Permite mostrar
+    //               un indicador gradual en lugar de una clasificación binaria.
+    private double h5h7Ratio      = 0.0;   // H5/H7 de corriente L1
+    private double qsRatio        = 0.0;   // |Q|/S
+    private double pfcCryptoScore = 0.0;   // 0-100
 
     // --- Resonancia ---
     private double resonanceFrequency = 0.0;  // Hz (estimada)
@@ -270,6 +284,12 @@ public class FeederMeasurement {
     public void setH7h1Ratio(double v)            { h7h1Ratio   = v; }
     public void setH11h1Ratio(double v)           { h11h1Ratio  = v; }
     public void setH13h1Ratio(double v)           { h13h1Ratio  = v; }
+    public double getH5h7Ratio()                  { return h5h7Ratio; }
+    public double getQsRatio()                    { return qsRatio; }
+    public double getPfcCryptoScore()             { return pfcCryptoScore; }
+    public void setH5h7Ratio(double v)            { h5h7Ratio      = v; }
+    public void setQsRatio(double v)              { qsRatio        = v; }
+    public void setPfcCryptoScore(double v)       { pfcCryptoScore = v; }
 
     public void setResonanceFrequency(double v)  { resonanceFrequency = v; }
     public void setResonanceOrder(int v)          { resonanceOrder     = v; }
