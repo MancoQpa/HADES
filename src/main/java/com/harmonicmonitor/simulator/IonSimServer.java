@@ -2,12 +2,19 @@ package com.harmonicmonitor.simulator;
 
 import com.beanit.iec61850bean.*;
 
+import org.w3c.dom.*;
+import javax.xml.parsers.*;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
+import java.util.regex.*;
 
 /**
  * Servidor IEC 61850 de escritorio que simula un ION 7400.
@@ -29,8 +36,6 @@ public class IonSimServer {
     private String mmxuPrefix;
     private float  noiseFactor;   // e.g. 0.03 = ±3 %
     private String cidPath;       // guardado para recargar perfil en caliente
-
-    private volatile boolean setValuesWarnedOnce = false; // evitar spam en log
 
     // Perfil cargado (volatile para cambio desde hilo stdin)
     private volatile Profile profile;
@@ -141,61 +146,48 @@ public class IonSimServer {
         String mmtr = ld + "MMTR1.";
         String msta = ld + "MSTA1.";
 
-        // ── MMXU: tensiones (WYE cVal.mag.f) ────────────────────────────────
-        setMx(mmx + "PhV.phsA.cVal.mag.f", n(profile.phVL1), changed);
-        setMx(mmx + "PhV.phsB.cVal.mag.f", n(profile.phVL2), changed);
-        setMx(mmx + "PhV.phsC.cVal.mag.f", n(profile.phVL3), changed);
+        // ── MMXU: tensiones (WYE, phsX = BdaFloat32 directo) ────────────────
+        setMx(mmx + "PhV.phsA", n(profile.phVL1), changed);
+        setMx(mmx + "PhV.phsB", n(profile.phVL2), changed);
+        setMx(mmx + "PhV.phsC", n(profile.phVL3), changed);
 
         // ── MMXU: corrientes ──────────────────────────────────────────────
-        setMx(mmx + "A.phsA.cVal.mag.f", n(profile.aL1), changed);
-        setMx(mmx + "A.phsB.cVal.mag.f", n(profile.aL2), changed);
-        setMx(mmx + "A.phsC.cVal.mag.f", n(profile.aL3), changed);
+        setMx(mmx + "A.phsA", n(profile.aL1), changed);
+        setMx(mmx + "A.phsB", n(profile.aL2), changed);
+        setMx(mmx + "A.phsC", n(profile.aL3), changed);
 
-        // ── MMXU: potencias / FP / Hz ────────────────────────────────────
-        setMx(mmx + "TotW.mag.f",   n(profile.totW),   changed);
-        setMx(mmx + "TotVAr.mag.f", n(profile.totVAr), changed);
-        setMx(mmx + "TotVA.mag.f",  n(profile.totVA),  changed);
-        setMx(mmx + "TotPF.mag.f",  n(profile.totPF),  changed);
-        setMx(mmx + "Hz.mag.f",     n(profile.hz),     changed);
+        // ── MMXU: potencias / FP / Hz (MV, mag = BdaFloat32 directo) ────
+        setMx(mmx + "TotW.mag",   n(profile.totW),   changed);
+        setMx(mmx + "TotVAr.mag", n(profile.totVAr), changed);
+        setMx(mmx + "TotVA.mag",  n(profile.totVA),  changed);
+        setMx(mmx + "TotPF.mag",  n(profile.totPF),  changed);
+        setMx(mmx + "Hz.mag",     n(profile.hz),     changed);
 
         // ── MHAI: THD corriente ───────────────────────────────────────────
-        setMx(mhai + "ThdA.phsA.cVal.mag.f", n(profile.thdAL1), changed);
-        setMx(mhai + "ThdA.phsB.cVal.mag.f", n(profile.thdAL2), changed);
-        setMx(mhai + "ThdA.phsC.cVal.mag.f", n(profile.thdAL3), changed);
+        setMx(mhai + "ThdA.phsA", n(profile.thdAL1), changed);
+        setMx(mhai + "ThdA.phsB", n(profile.thdAL2), changed);
+        setMx(mhai + "ThdA.phsC", n(profile.thdAL3), changed);
 
         // ── MHAI: THD tensión línea (DEL) ─────────────────────────────────
-        setMx(mhai + "ThdPPV.phsAB.cVal.mag.f", n(profile.thdPpvL12), changed);
-        setMx(mhai + "ThdPPV.phsBC.cVal.mag.f", n(profile.thdPpvL23), changed);
-        setMx(mhai + "ThdPPV.phsCA.cVal.mag.f", n(profile.thdPpvL31), changed);
+        setMx(mhai + "ThdPPV.phsAB", n(profile.thdPpvL12), changed);
+        setMx(mhai + "ThdPPV.phsBC", n(profile.thdPpvL23), changed);
+        setMx(mhai + "ThdPPV.phsCA", n(profile.thdPpvL31), changed);
 
         // ── MHAI: K-factor ────────────────────────────────────────────────
-        setMx(mhai + "HKf.phsA.cVal.mag.f", n(profile.hKfL1), changed);
-        setMx(mhai + "HKf.phsB.cVal.mag.f", n(profile.hKfL2), changed);
-        setMx(mhai + "HKf.phsC.cVal.mag.f", n(profile.hKfL3), changed);
+        setMx(mhai + "HKf.phsA", n(profile.hKfL1), changed);
+        setMx(mhai + "HKf.phsB", n(profile.hKfL2), changed);
+        setMx(mhai + "HKf.phsC", n(profile.hKfL3), changed);
 
         // ── MHAI: THD impar/par ───────────────────────────────────────────
-        setMx(mhai + "ThdOddA.phsA.cVal.mag.f", n(profile.thdOddA), changed);
-        setMx(mhai + "ThdEvnA.phsA.cVal.mag.f", n(profile.thdEvnA), changed);
-
-        // ── MHAI: espectro armónico HarA/HarB/HarC (HAR50_t, DAs únicos h01..h50) ─
-        // h01=H1 (fundamental), h02=H2, ..., h50=H50
-        // Ruta: MHAI1.HarA.h03.mag.f  (H3 fase A)
-        for (int k = 1; k <= 50; k++) {
-            String hn = String.format("h%02d", k);
-            float ha = k <= profile.harA.length ? profile.harA[k - 1] : 0f;
-            float hb = k <= profile.harB.length ? profile.harB[k - 1] : 0f;
-            float hc = k <= profile.harC.length ? profile.harC[k - 1] : 0f;
-            setMx(mhai + "HarA." + hn + ".mag.f", n(ha), changed);
-            setMx(mhai + "HarB." + hn + ".mag.f", n(hb), changed);
-            setMx(mhai + "HarC." + hn + ".mag.f", n(hc), changed);
-        }
+        setMx(mhai + "ThdOddA.phsA", n(profile.thdOddA), changed);
+        setMx(mhai + "ThdEvnA.phsA", n(profile.thdEvnA), changed);
 
         // ── MSQI: componentes simétricas ──────────────────────────────────
-        setMx(msqi + "SeqA.c1.cVal.mag.f", n(profile.seqAPos),  changed);
-        setMx(msqi + "SeqA.c2.cVal.mag.f", n(profile.seqANeg),  changed);
-        setMx(msqi + "SeqA.c3.cVal.mag.f", n(profile.seqAZero), changed);
-        setMx(msqi + "SeqV.c1.cVal.mag.f", n(profile.seqVPos),  changed);
-        setMx(msqi + "SeqV.c2.cVal.mag.f", n(profile.seqVNeg),  changed);
+        setMx(msqi + "SeqA.c1", n(profile.seqAPos),  changed);
+        setMx(msqi + "SeqA.c2", n(profile.seqANeg),  changed);
+        setMx(msqi + "SeqA.c3", n(profile.seqAZero), changed);
+        setMx(msqi + "SeqV.c1", n(profile.seqVPos),  changed);
+        setMx(msqi + "SeqV.c2", n(profile.seqVNeg),  changed);
 
         // ── MMTR: energía acumulada (se incrementa cada ciclo) ────────────
         long dWh  = (long)(profile.avW  / 3600.0 + 0.5);  // Wh por segundo ~ W/3600
@@ -214,11 +206,11 @@ public class IonSimServer {
         setSt(mmtr + "SupVArh.actVal", supVArhAcc, changed);
 
         // ── MSTA: demanda ──────────────────────────────────────────────────
-        setMx(msta + "AvW.mag.f",   n(profile.avW),   changed);
-        setMx(msta + "MaxW.mag.f",  n(profile.maxW),  changed);
-        setMx(msta + "MinW.mag.f",  n(profile.minW),  changed);
-        setMx(msta + "AvVAr.mag.f", n(profile.avVAr), changed);
-        setMx(msta + "AvVA.mag.f",  n(profile.avVA),  changed);
+        setMx(msta + "AvW.mag",   n(profile.avW),   changed);
+        setMx(msta + "MaxW.mag",  n(profile.maxW),  changed);
+        setMx(msta + "MinW.mag",  n(profile.minW),  changed);
+        setMx(msta + "AvVAr.mag", n(profile.avVAr), changed);
+        setMx(msta + "AvVA.mag",  n(profile.avVA),  changed);
 
         // Publicar todos los valores cambiados al buffer activo del ServerSap.
         // Necesario en iec61850bean incluso para polling: setFloat() escribe en el
@@ -228,14 +220,11 @@ public class IonSimServer {
             try {
                 serverSap.setValues(changed);
             } catch (Exception e) {
-                // En CIDs sin ReportControl, bdaMirror=null causa esta excepcion.
-                // Los valores escritos con setFloat() siguen siendo servidos a clientes
-                // MMS en respuesta a GetDataValues (iec61850bean lee del modelo directamente).
-                if (!setValuesWarnedOnce) {
-                    LOG.warning("setValues: " + e.getMessage() +
-                        " — sin ReportControl en CID; valores siguen siendo legibles por polling");
-                    setValuesWarnedOnce = true;
-                }
+                // Loguear SIEMPRE para diagnóstico (sin setValuesWarnedOnce)
+                LOG.warning("[setValues ERROR] " + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
+                if (e.getCause() != null)
+                    LOG.warning("[setValues CAUSE] " + e.getCause());
             }
         }
     }
@@ -271,10 +260,21 @@ public class IonSimServer {
     private ServerModel parseCid(String cidPath, String targetIedName) throws Exception {
         String cid = Files.readString(Path.of(cidPath), StandardCharsets.UTF_8);
 
-        // Sustituir IED name si el CID tiene "SIM1" y se pide otro
-        if (!targetIedName.equals("SIM1")) {
-            cid = cid.replace("name=\"SIM1\"", "name=\"" + targetIedName + "\"");
+        // Expandir arrays SCL con count> 1 (ej: armónicos en CIDs reales ION7400)
+        cid = expandSclArraysInMemory(cid);
+
+        // Auto-detectar el IED name en el CID y reemplazarlo si se pidió otro
+        Matcher m = Pattern.compile("<IED[^>]+\\bname=\"([^\"]+)\"").matcher(cid);
+        if (m.find()) {
+            String originalName = m.group(1);
+            if (!originalName.equals(targetIedName)) {
+                LOG.info("Reemplazando IED name '" + originalName + "' → '" + targetIedName + "'");
+                cid = cid.replace("name=\"" + originalName + "\"",
+                                  "name=\"" + targetIedName + "\"");
+            }
         }
+        // Garantizar que this.iedName coincide con lo que está en el CID
+        this.iedName = targetIedName;
 
         try (InputStream is = new ByteArrayInputStream(cid.getBytes(StandardCharsets.UTF_8))) {
             List<ServerModel> models = SclParser.parse(is);
@@ -282,6 +282,79 @@ public class IonSimServer {
                 throw new IOException("El CID no contiene ningún modelo de servidor");
             }
             return models.get(0);
+        }
+    }
+
+    /**
+     * Expande en memoria los elementos SDO/DA/BDA con atributo count>1.
+     * Ej: {@code <SDO count="51" name="phsAHar"/>} se expande en 51 SDOs
+     * individuales phsAHar00..phsAHar50.
+     * Idéntico a IEC61850Server.expandSclArrays() pero sin archivo temporal.
+     */
+    private String expandSclArraysInMemory(String xmlContent) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            // Suprimir mensajes de validación DTD
+            builder.setErrorHandler(null);
+            Document doc = builder.parse(
+                new ByteArrayInputStream(xmlContent.getBytes(StandardCharsets.UTF_8)));
+
+            int totalExpanded = 0;
+            for (String tag : new String[]{"SDO", "DA", "BDA"}) {
+                NodeList nodes = doc.getElementsByTagNameNS("*", tag);
+                List<Element> toExpand = new ArrayList<>();
+                for (int i = 0; i < nodes.getLength(); i++) {
+                    Element el = (Element) nodes.item(i);
+                    String countStr = el.getAttribute("count").trim();
+                    if (!countStr.isEmpty()) {
+                        try {
+                            if (Integer.parseInt(countStr) > 1) toExpand.add(el);
+                        } catch (NumberFormatException ignore) {}
+                    }
+                }
+                for (Element el : toExpand) {
+                    int count    = Integer.parseInt(el.getAttribute("count").trim());
+                    String name  = el.getAttribute("name");
+                    Node parent  = el.getParentNode();
+                    String nsUri = el.getNamespaceURI();
+                    NamedNodeMap attrs = el.getAttributes();
+                    int digits = Math.max(2, String.valueOf(count).length());
+                    for (int i = 0; i < count; i++) {
+                        String indexedName = name + String.format("%0" + digits + "d", i);
+                        Element newEl = (nsUri != null)
+                            ? doc.createElementNS(nsUri, tag)
+                            : doc.createElement(tag);
+                        for (int a = 0; a < attrs.getLength(); a++) {
+                            Attr attr = (Attr) attrs.item(a);
+                            String an = attr.getName();
+                            if (!an.equals("count") && !an.startsWith("xmlns"))
+                                newEl.setAttribute(an, attr.getValue());
+                        }
+                        newEl.setAttribute("name", indexedName);
+                        parent.insertBefore(newEl, el);
+                    }
+                    parent.removeChild(el);
+                    totalExpanded++;
+                }
+            }
+
+            if (totalExpanded == 0) return xmlContent;
+
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer transformer = tf.newTransformer();
+            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+            StringWriter sw = new StringWriter();
+            transformer.transform(new DOMSource(doc), new StreamResult(sw));
+            LOG.info("SCL array expansion: " + totalExpanded + " arrays expandidos en memoria");
+            return sw.toString();
+
+        } catch (Exception e) {
+            LOG.warning("SCL array expansion fallida: " + e.getMessage()
+                + " — usando CID sin expandir");
+            return xmlContent;
         }
     }
 

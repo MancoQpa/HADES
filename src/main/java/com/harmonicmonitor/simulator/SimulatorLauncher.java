@@ -127,7 +127,7 @@ public class SimulatorLauncher {
             String logJson = "[" + String.join(",",
                 q.stream().map(l -> "\"" + l.replace("\\","\\\\")
                     .replace("\"","\\\"").replace("\n","") + "\"")
-                 .toList()) + "]";
+                 .collect(java.util.stream.Collectors.toList())) + "]";
             sb.append("\"").append(ied).append("\":{")
               .append("\"running\":").append(alive)
               .append(",\"pid\":").append(alive ? pid : -1)
