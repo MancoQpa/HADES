@@ -10,6 +10,10 @@ public enum SimProfile {
         "Cripto-Miner / SMPS sin PFC",
         "THD ~45%, H5/H7 dominantes, muy estable (CV<1%), FP ~0.99"),
 
+    CRYPTO_MINER_PFC(
+        "Cripto-Miner ASIC con PFC activo",
+        "THD ~3-5%, FP ~1.000, Q/S~0.003, H5/H7>8, K~1.05, CV<1% — validado ION7400-0d5885 26/05/2026"),
+
     DATACENTER(
         "Datacenter (servidores con PFC activo)",
         "THD ~18%, H3 reducido por PFC, muy estable, FP ~0.99, alta densidad de potencia"),

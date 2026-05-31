@@ -286,6 +286,38 @@ final class SimProfileLoader {
         // crypto_mining points to the fallback
         m.put("crypto_mining", FALLBACK_CRYPTO_JSON);
 
+        // crypto_mining_pfc: I=47A, FP=1.0000, THD=3.0%, H5=3.9%, H7=0.2%
+        // Datos de campo: ION7400-0d5885 (10.200.142.125), feeder exclusivo criptominería ASIC
+        // 23 kV / 50 Hz, 26/05/2026. H5/H7 = 19.5, Q/S = 0.0032, K = 1.05.
+        // Activa nodo [2] del árbol: CRYPTO_MINING_PFC (las 6 condiciones AND se cumplen).
+        String h_pfc = "[1.000,0.001,0.002,0.001,0.039,0.000,0.002,0.000,0.000,0.000,0.009,0.000,0.000" + H0;
+        m.put("crypto_mining_pfc",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":47.0,\"aL2\":47.0,\"aL3\":47.0," +
+            "\"totW\":1875000.0,\"totVAr\":6000.0,\"totVA\":1875010.0,\"totPF\":1.0000,\"hz\":50.0," +
+            "\"thdAL1\":3.0,\"thdAL2\":3.1,\"thdAL3\":3.0," +
+            "\"thdPpvL12\":1.91,\"thdPpvL23\":1.85,\"thdPpvL31\":1.89," +
+            "\"hKfL1\":1.05,\"hKfL2\":1.05,\"hKfL3\":1.05,\"thdOddA\":3.0,\"thdEvnA\":0.1," +
+            "\"harA\":" + h_pfc + ",\"harB\":" + h_pfc + ",\"harC\":" + h_pfc + "," +
+            "\"seqAPos\":47.0,\"seqANeg\":1.3,\"seqAZero\":0.1,\"seqVPos\":13280.0,\"seqVNeg\":25.0," +
+            "\"totWh\":45000000,\"totVAh\":45001000,\"totVArh\":144000,\"supWh\":40500000,\"supVArh\":130000," +
+            "\"avW\":1875000.0,\"maxW\":1895000.0,\"minW\":1860000.0,\"avVAr\":6000.0,\"avVA\":1875010.0}");
+
+        // upstream_distortion: tensión distorsionada (THD_V=6.5%) con corriente limpia (THD_I=3.5%)
+        // Activa nodo [1] del árbol: UPSTREAM_DISTORTION (thdV>5% AND thdI<8% AND h5<8%).
+        String h_ups = "[1.000,0.001,0.010,0.001,0.025,0.001,0.015,0.000,0.005,0.000,0.005,0.000,0.003" + H0;
+        m.put("upstream_distortion",
+            "{\"phVL1\":13280.0,\"phVL2\":13280.0,\"phVL3\":13280.0," +
+            "\"aL1\":80.0,\"aL2\":80.0,\"aL3\":80.0," +
+            "\"totW\":3336000.0,\"totVAr\":1749600.0,\"totVA\":3790400.0,\"totPF\":0.880,\"hz\":50.0," +
+            "\"thdAL1\":3.5,\"thdAL2\":3.5,\"thdAL3\":3.5," +
+            "\"thdPpvL12\":6.5,\"thdPpvL23\":6.5,\"thdPpvL31\":6.5," +
+            "\"hKfL1\":1.10,\"hKfL2\":1.10,\"hKfL3\":1.10,\"thdOddA\":3.4,\"thdEvnA\":0.4," +
+            "\"harA\":" + h_ups + ",\"harB\":" + h_ups + ",\"harC\":" + h_ups + "," +
+            "\"seqAPos\":80.0,\"seqANeg\":0.8,\"seqAZero\":0.2,\"seqVPos\":13280.0,\"seqVNeg\":40.0," +
+            "\"totWh\":18000000,\"totVAh\":20460000,\"totVArh\":9447000,\"supWh\":16200000,\"supVArh\":8500000," +
+            "\"avW\":3336000.0,\"maxW\":3500000.0,\"minW\":3150000.0,\"avVAr\":1749600.0,\"avVA\":3790400.0}");
+
         EMBEDDED_PROFILES = Collections.unmodifiableMap(m);
     }
 }
