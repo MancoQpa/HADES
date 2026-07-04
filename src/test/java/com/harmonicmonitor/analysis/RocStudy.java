@@ -239,9 +239,14 @@ public final class RocStudy {
         md.append("**Excluidos**: feeders AL-xx y de campo/banco (103k+ filas) — sin verdad de terreno por fila; ");
         md.append("BCP-1, MET-01, AL-07, SLO-1 — escala de potencia corrupta (FP fuera de [-1,1]); ");
         md.append("filas sin espectro (h5h1 = 0).\n\n");
-        md.append("> ⚠ **Circularidad declarada**: los datos etiquetados provienen del simulador, cuyos perfiles\n");
-        md.append("> comparten diseño con los umbrales del clasificador. Este estudio mide separabilidad de\n");
-        md.append("> características y coherencia interna; **no** sustituye la calibración con campo real mixto.\n\n");
+        md.append("> ⚠ **Naturaleza del dataset (confirmada por el autor, jul-2026)**: la TOTALIDAD de\n");
+        md.append("> `harmonic_monitor.db` (~103 MB, 240k+ mediciones, incluidos los feeders AL-xx de larga\n");
+        md.append("> duración) proviene de sesiones de **simulador**, no de campo. Consecuencias:\n");
+        md.append("> (a) este estudio mide separabilidad de características y coherencia interna árbol↔perfiles,\n");
+        md.append("> nada más; (b) ningún umbral empírico (CV, FP, Q/S) puede calibrarse con esta base;\n");
+        md.append("> (c) el valor de la base actual para ML es de **validación de tubería** (esquema, exportación,\n");
+        md.append("> regresión), no de entrenamiento. El dataset de entrenamiento real empieza con la primera\n");
+        md.append("> campaña de campo etiquetada.\n\n");
 
         md.append("## ROC por característica (positivo = firma SMPS densa: cripto + datacenter)\n\n");
         md.append("| Característica | AUC | Óptimo de Youden | Umbral actual (`FeederConfig`) → desempeño |\n|---|---|---|---|\n");

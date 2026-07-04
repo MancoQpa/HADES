@@ -44,6 +44,8 @@ public class HelpPanel {
         {"📼 Registros COMTRADE — Generación",   loadResource("help_20_comtrade_generation.txt")},
         {"📖 Sobre HADES",                        loadResource("help_21_about_hades.txt")},
         {"⚠ Modo Degradado — IED sin espectro",  loadResource("help_22_degraded_mode.txt")},
+        {"📐 Fórmulas del Clasificador",          loadResource("help_23_formulas.txt")},
+        {"📚 Bibliografía y Fundamentos",         loadResource("help_24_bibliografia.txt")},
     };
 
     private static String loadResource(String name) {
@@ -95,7 +97,8 @@ public class HelpPanel {
                 setText(item);
                 boolean isTheory   = item.startsWith("📐") || item.startsWith("🔋")
                     || item.startsWith("🖥")  || item.startsWith("🔥")
-                    || item.startsWith("⚙")  || item.startsWith("🏭");
+                    || item.startsWith("⚙")  || item.startsWith("🏭")
+                    || item.startsWith("📚");
                 boolean isComtrade   = item.startsWith("📁") || item.startsWith("📼");
                 boolean isDisclaimer = item.startsWith("⚖");
                 if (isSelected()) {

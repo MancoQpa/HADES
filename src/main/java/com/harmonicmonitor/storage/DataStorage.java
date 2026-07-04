@@ -73,8 +73,9 @@ public class DataStorage {
             "p_kw, q_kvar, s_kva, pf, freq_hz, " +
             "thd_v_l1, thd_v_l2, thd_v_l3, thd_i_l1, thd_i_l2, thd_i_l3, " +
             "cv_current, h5h1, h7h1, h11h1, h13h1, " +
-            "resonance_freq, resonance_order, load_type) " +
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            "resonance_freq, resonance_order, load_type, " +
+            "raw_load_type, load_type_stability) " +
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (PreparedStatement ps = db.prepareStatement(sql)) {
             ps.setString(1, TS_FMT.format(m.getTimestamp()));
             ps.setString(2, m.getFeederId());
@@ -103,6 +104,8 @@ public class DataStorage {
             ps.setDouble(25, m.getResonanceFrequency());
             ps.setInt   (26, m.getResonanceOrder());
             ps.setString(27, m.getDetectedLoadType().name());
+            ps.setString(28, m.getRawLoadType().name());
+            ps.setDouble(29, m.getLoadTypeStability());
             ps.executeUpdate();
         } catch (SQLException e) {
             LOG.warning("Error almacenando medición: " + e.getMessage());
@@ -288,7 +291,14 @@ public class DataStorage {
                 "thd_v_l1 REAL, thd_v_l2 REAL, thd_v_l3 REAL," +
                 "thd_i_l1 REAL, thd_i_l2 REAL, thd_i_l3 REAL," +
                 "cv_current REAL, h5h1 REAL, h7h1 REAL, h11h1 REAL, h13h1 REAL," +
-                "resonance_freq REAL, resonance_order INTEGER, load_type TEXT)");
+                "resonance_freq REAL, resonance_order INTEGER, load_type TEXT," +
+                "raw_load_type TEXT, load_type_stability REAL)");
+
+            // Migración de bases anteriores a v1.2: añadir columnas del smoother.
+            // SQLite no soporta ADD COLUMN IF NOT EXISTS; el error de columna
+            // duplicada se ignora (base ya migrada).
+            addColumnIfMissing("measurements", "raw_load_type", "TEXT");
+            addColumnIfMissing("measurements", "load_type_stability", "REAL");
 
             st.execute("CREATE TABLE IF NOT EXISTS alarms (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -305,6 +315,18 @@ public class DataStorage {
                 "ON harmonic_spectra(session_id, timestamp)");
             st.execute("CREATE INDEX IF NOT EXISTS idx_spectra_feeder " +
                 "ON harmonic_spectra(feeder_id, timestamp)");
+        }
+    }
+
+    /** ALTER TABLE ADD COLUMN tolerante: ignora el error si la columna existe. */
+    private void addColumnIfMissing(String table, String column, String type) {
+        try (Statement st = db.createStatement()) {
+            st.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type);
+        } catch (SQLException e) {
+            // "duplicate column name" → base ya migrada; cualquier otro error se loguea
+            if (!String.valueOf(e.getMessage()).contains("duplicate column")) {
+                LOG.warning("Migración " + table + "." + column + ": " + e.getMessage());
+            }
         }
     }
 }

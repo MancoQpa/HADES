@@ -48,6 +48,45 @@ class HarmonicAnalyzerTest {
     }
 
     @Test
+    void ratiosUsanLaFaseDeMayorDistorsion() {
+        // Selección de fase peor (práctica IEEE 519 / EN 50160): la carga
+        // distorsionante está concentrada en L2; L1 casi limpia.
+        FeederMeasurement m = new FeederMeasurement("F1", "IED1");
+        double[] l1 = new double[50];
+        l1[0] = 100.0; l1[4] = 2.0;                 // L1: THD 2%
+        double[] l2 = new double[50];
+        l2[0] = 100.0; l2[4] = 25.0; l2[6] = 11.0;  // L2: firma 6 pulsos
+        m.setHarmonicCurrentL1(l1);
+        m.setHarmonicCurrentL2(l2);
+
+        analyzer.calculateHarmonicRatios(m);
+
+        assertEquals(0.25, m.getH5h1Ratio(), 1e-9, "H5 debe salir de L2 (fase peor)");
+        assertEquals(0.11, m.getH7h1Ratio(), 1e-9, "H7 debe salir de L2 (fase peor)");
+    }
+
+    @Test
+    void ratiosMantienenCoherenciaIntraFase() {
+        // Contraejemplo contra el "máximo por orden": L1 tiene firma PFC
+        // (H5/H7 = 19.5) y L2 tiene THD apenas mayor con otra forma.
+        // TODOS los ratios deben salir de la misma fase (L2, la peor);
+        // mezclar órdenes entre fases fabricaría un vector que no existe.
+        FeederMeasurement m = new FeederMeasurement("F1", "IED1");
+        double[] l1 = new double[50];
+        l1[0] = 100.0; l1[4] = 3.9; l1[6] = 0.2;    // PFC: THD ~3.9%
+        double[] l2 = new double[50];
+        l2[0] = 100.0; l2[4] = 4.2; l2[6] = 1.0;    // THD ~4.3% (peor)
+        m.setHarmonicCurrentL1(l1);
+        m.setHarmonicCurrentL2(l2);
+
+        analyzer.calculateHarmonicRatios(m);
+
+        assertEquals(0.042, m.getH5h1Ratio(), 1e-9);
+        assertEquals(0.010, m.getH7h1Ratio(), 1e-9,
+            "H7 debe ser el de L2, no el 0.002 de L1 (coherencia intra-fase)");
+    }
+
+    @Test
     void thdPercentCalculaSegunIec61000_4_7() {
         // THD = 100·√(ΣHn²)/H1 = 100·√(40²+30²)/100 = 50%
         double[] spec = new double[50];

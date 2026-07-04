@@ -54,6 +54,29 @@ public class HarmonicAnalyzer {
      * Calcula las relaciones de armónicos individuales respecto al fundamental.
      * Actualiza los campos h3h1Ratio, h5h1Ratio, h7h1Ratio, h11h1Ratio, h13h1Ratio.
      *
+     * <h3>Selección de fase: fase peor COHERENTE (v1.2)</h3>
+     * Las normas de medición tratan cada fase como un canal independiente
+     * (IEC 61000-4-7 mide por fase; IEC 61000-4-30 agrega por canal, no entre
+     * fases) y la práctica de evaluación de IEEE 519 / EN 50160 juzga el
+     * cumplimiento sobre la fase más desfavorable. Siguiendo ese criterio,
+     * los ratios se toman TODOS de una misma fase: la de mayor distorsión
+     * (mayor THD espectral), con L1 como desempate.
+     *
+     * <p>Por qué no las alternativas:
+     * <ul>
+     *   <li><b>Solo L1 (comportamiento anterior)</b>: un desequilibrio o un
+     *       canal defectuoso en L1 sesga todo el vector; la carga puede estar
+     *       concentrada en otra fase.</li>
+     *   <li><b>Promedio entre fases</b>: sin base normativa (las normas no
+     *       promedian espectros entre fases) y diluye la firma de cargas
+     *       monofásicas concentradas en una fase.</li>
+     *   <li><b>Máximo por orden (mezclando fases)</b>: rompe la coherencia
+     *       intra-fase que necesitan los indicadores de forma. Ejemplo real:
+     *       L1 con H5=3.9%, H7=0.2% (PFC, H5/H7=19.5) y L2 con H5=4.2%,
+     *       H7=1.0%; el máximo por orden daría H5=4.2%, H7=1.0% → H5/H7=4.2,
+     *       destruyendo la firma PFC que sí existe en cada fase.</li>
+     * </ul>
+     *
      * Estos ratios son la firma característica de los rectificadores de potencia:
      *   - Rectificador 6-pulsos: H5, H7, H11, H13 dominantes
      *   - Fuentes SMPS (crypto/datacenter): H3, H5, H7 dominantes
@@ -64,7 +87,7 @@ public class HarmonicAnalyzer {
      * residuo por desequilibrio de carga y magnetización del transformador.
      */
     public void calculateHarmonicRatios(FeederMeasurement m) {
-        double[] spec = m.getHarmonicCurrentL1();  // usar L1 como referencia
+        double[] spec = worstPhaseSpectrum(m);
         if (spec == null || spec.length < 14) return;
         double h1 = spec[0];
         if (h1 < 1e-9) return;
@@ -74,6 +97,31 @@ public class HarmonicAnalyzer {
         m.setH7h1Ratio (spec[6]  / h1);   // H7  (índice 6)
         m.setH11h1Ratio(spec[10] / h1);   // H11 (índice 10)
         m.setH13h1Ratio(spec[12] / h1);   // H13 (índice 12)
+    }
+
+    /**
+     * Devuelve el espectro de la fase con mayor distorsión (THD espectral),
+     * considerando solo fases con fundamental medible. Desempate: orden
+     * L1, L2, L3 (una fase posterior debe SUPERAR a la mejor actual).
+     * Si ninguna fase tiene fundamental, devuelve el espectro de L1
+     * (la guarda de la llamada dejará los ratios en 0).
+     */
+    private static double[] worstPhaseSpectrum(FeederMeasurement m) {
+        double[][] phases = {
+            m.getHarmonicCurrentL1(),
+            m.getHarmonicCurrentL2(),
+            m.getHarmonicCurrentL3()
+        };
+        double[] best = phases[0];
+        double bestThd = -1.0;
+        for (double[] spec : phases) {
+            if (spec == null || spec.length < 14 || spec[0] < 1e-9) continue;
+            double sumSq = 0;
+            for (int i = 1; i < spec.length; i++) sumSq += spec[i] * spec[i];
+            double thd = Math.sqrt(sumSq) / spec[0];
+            if (thd > bestThd) { bestThd = thd; best = spec; }
+        }
+        return best;
     }
 
     /**

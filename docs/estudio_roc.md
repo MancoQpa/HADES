@@ -19,9 +19,14 @@ estadística exacta de cada feeder contra `docs/tabla_patrones_armonicos.md`:
 
 **Excluidos**: feeders AL-xx y de campo/banco (103k+ filas) — sin verdad de terreno por fila; BCP-1, MET-01, AL-07, SLO-1 — escala de potencia corrupta (FP fuera de [-1,1]); filas sin espectro (h5h1 = 0).
 
-> ⚠ **Circularidad declarada**: los datos etiquetados provienen del simulador, cuyos perfiles
-> comparten diseño con los umbrales del clasificador. Este estudio mide separabilidad de
-> características y coherencia interna; **no** sustituye la calibración con campo real mixto.
+> ⚠ **Naturaleza del dataset (confirmada por el autor, jul-2026)**: la TOTALIDAD de
+> `harmonic_monitor.db` (~103 MB, 240k+ mediciones, incluidos los feeders AL-xx de larga
+> duración) proviene de sesiones de **simulador**, no de campo. Consecuencias:
+> (a) este estudio mide separabilidad de características y coherencia interna árbol↔perfiles,
+> nada más; (b) ningún umbral empírico (CV, FP, Q/S) puede calibrarse con esta base;
+> (c) el valor de la base actual para ML es de **validación de tubería** (esquema, exportación,
+> regresión), no de entrenamiento. El dataset de entrenamiento real empieza con la primera
+> campaña de campo etiquetada.
 
 ## ROC por característica (positivo = firma SMPS densa: cripto + datacenter)
 

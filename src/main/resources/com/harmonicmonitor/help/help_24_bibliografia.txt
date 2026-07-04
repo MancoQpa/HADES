@@ -1,0 +1,160 @@
+BIBLIOGRAFÍA Y FUNDAMENTOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada referencia declara QUÉ SOSTIENE dentro de HADES y cuáles son sus
+LÍMITES (lo que no debe atribuírsele). Las afirmaciones propias del
+proyecto sin respaldo externo están declaradas al final — esa
+transparencia es lo que hace el conjunto técnicamente defendible.
+Versión extendida: docs/bibliografia_fundamentos.md en el repositorio.
+
+
+1. NORMAS
+
+IEEE Std 519-2022 — Recommended Practice for Harmonic Control in
+Electric Power Systems.
+    Sostiene: frontera THD_I ≈ 5% de carga lineal (nodo LINEAR);
+    límites de la pantalla Normas.
+    Límites: regula TDD (no THD_I) en el PCC; sus espectros típicos
+    de convertidores son informativos, no normativos.
+
+IEC 61000-3-6:2008 — Assessment of emission limits for distorting
+loads in MV and HV power systems.
+    Sostiene: THD_V > 5% del nodo UPSTREAM_DISTORTION (nivel de
+    planificación MT); límites por armónico (H5 ≤ 4%...); ley de suma
+    exponencial α usada por el estudio de dominancia.
+    Límites: niveles de planificación internos de la distribuidora,
+    no límites contractuales ni de inmunidad.
+
+IEC 61000-3-2 (Clase C) — Limits for harmonic current emissions,
+equipment ≤ 16 A per phase.
+    Sostiene: H3 como armónico característico de la iluminación (la
+    norma dedica la Clase C a limitar el H3 de lámparas: 30·λ % del
+    fundamental).
+    Límites: aplica al equipo individual en BT; no dice nada de la
+    propagación del H3 a MT (ver tema Fórmulas §3, trafos Dyn).
+
+IEC 61000-3-12:2011 — Limits for harmonic currents, equipment
+> 16 A and ≤ 75 A per phase.
+    Sostiene: marco de emisión para equipos trifásicos del rango de
+    potencia de drivers y cargadores.
+    Límites: por equipo en el punto de conexión BT, no por feeder MT.
+
+EN 50160:2010 — Voltage characteristics of public distribution
+networks.
+    Sostiene: THD_V 8% (percentil 95 semanal MT) en el índice de
+    electrónica; desbalance de tensión ≤ 2%.
+    Límites: caracteriza la tensión de suministro con estadística de
+    10 min/semana que HADES no implementa formalmente.
+
+IEEE Std 1459-2010 — Definitions for the Measurement of Electric
+Power Quantities under Nonsinusoidal Conditions.
+    Sostiene: validez del indicador Q/S bajo distorsión (vector PFC);
+    separación P / Q / D (potencia de distorsión).
+    Límites: define magnitudes; el umbral Q/S ≤ 0.012 es empírico de
+    HADES y la "Q" reportada varía según el fabricante del IED.
+
+IEEE Std C57.110-2018 — Transformer capability when supplying
+nonsinusoidal load currents.
+    Sostiene: definición y fórmula del K-Factor.
+    Límites: el rango K ∈ [1.0, 1.12] como firma PFC es empírico.
+
+IEC 61000-4-7 e IEC 61000-4-30 — Medición de armónicos y calidad de
+energía (clases de instrumento).
+    Sostienen: la cadena de medición (ventanas DFT, agrupación) y el
+    disclaimer de HADES: el ION 7400 (clase 0.2S) no es un analizador
+    Clase A; los resultados son exploratorios, no normativos.
+
+
+2. LIBROS DE REFERENCIA
+
+Mohan, Undeland, Robbins — Power Electronics: Converters,
+Applications, and Design (3ª ed., Wiley, 2003).
+    Sostiene: teoría del rectificador de 6 pulsos (h = 6k±1,
+    Iₕ = I₁/h) y del PFC boost activo (FP → 1).
+    Límites: valores ideales (en campo 15–30% menores); no trata el
+    ratio H5/H7 como discriminador.
+
+Erickson & Maksimović — Fundamentals of Power Electronics
+(3ª ed., Springer, 2020).
+    Sostiene: dinámica del lazo de control del PFC boost — el
+    mecanismo físico detrás de la hipótesis H5/H7.
+    Límites: explica el mecanismo; no publica umbrales de detección.
+
+Arrillaga & Watson — Power System Harmonics (2ª ed., Wiley, 2003;
+1ª ed. con Bradley y Bodger, 1985).
+    Sostiene: sistematización de armónicos característicos (kp±1),
+    cancelación en 12 pulsos (base del Flatness), y el comportamiento
+    de los triplens en devanados delta (limitación LIGHTING en MT).
+    Límites: no cubre cargas TI modernas (SMPS con PFC, ASIC).
+
+Kimbark — Direct Current Transmission, Vol. I (Wiley, 1971).
+    Sostiene: tratamiento canónico original de los armónicos de
+    convertidores polifásicos y del efecto del ángulo de conmutación.
+
+Dugan, McGranaghan, Santoso, Beaty — Electrical Power Systems
+Quality (3ª ed., McGraw-Hill, 2012).
+    Sostiene: espectros típicos MEDIDOS de convertidores (VFD 6P:
+    H5 ≈ 17–20%) que sitúan los perfiles del simulador; resonancia
+    paralela; triplens.
+    Límites: valores típicos con dispersión amplia.
+
+
+3. PAPERS DE APLICACIÓN DIRECTA
+
+Hart, G.W. — "Nonintrusive appliance load monitoring", Proceedings
+of the IEEE, 80(12), 1992.
+    Sostiene: el fundamento NILM del enfoque temporal de HADES
+    (separar componente constante y variable del espectro acumulado).
+    Límites: NILM clásico opera en BT con eventos de conmutación; la
+    extrapolación a cabecera MT es la hipótesis de HADES, no de Hart.
+
+"A Power Quality and Load Analysis of a Cryptocurrency Mine" —
+IEEE Rural Electric Power Conference, 2019 (Xplore 8598358).
+    Sostiene: FP estacionario 0.994–0.995 y carga plana 24/7 medidos
+    en una mina real — condiciones B y F del vector PFC.
+    Límites: una instalación; FP algo menor que el umbral 0.998 de
+    HADES (diferencia entre generaciones de fuentes).
+
+"A Comparative Power Quality Analysis of Cryptocurrency Mining
+Loads" — IEEE, 2020 (Xplore 9052404).
+    Sostiene: modelado de fuentes de miners como PFC-boost; efecto
+    del devanado delta del transformador sobre lo que se mide.
+
+García, Cobos, Prieto, Alou, Uceda — "Single phase power factor
+correction: a survey", IEEE Trans. Power Electronics, 18(3), 2003.
+    Sostiene: desempeño alcanzable de topologías PFC (FP > 0.99,
+    THD de pocos %).
+
+
+4. METODOLOGÍA DE MEDICIÓN
+
+Ocho papers adicionales (Dalali 2015, Tarasiuk 2009, Xie 2004,
+Gunther 2006, Prieto 2007, Aiello 2004, Neumann 2007, Bellan 2011)
+sostienen la cadena de medición IEC 61000-4-7 / 61000-4-30 — cómo se
+calculan THD y armónicos y qué significa la clase del instrumento.
+
+⚠ NINGUNO de ellos estudia firmas armónicas de tipos de carga: no
+respaldan las tablas del clasificador. Enlaces DOI oficiales en
+docs/papers hades.txt del repositorio.
+
+
+5. AFIRMACIONES PROPIAS DEL PROYECTO (SIN RESPALDO EXTERNO)
+
+Declaradas para que nadie les atribuya autoridad normativa:
+
+  • H5/H7 > 8 como firma PFC — hipótesis original, validada con UNA
+    campaña de campo (N=1). Candidata a publicación si se replica.
+  • FP ≥ 0.998 sostenido — coherente con la literatura (0.994–0.995)
+    pero calibrado con una única campaña propia.
+  • Q/S ≤ 0.012 y K ∈ [1.0, 1.12] — fórmulas normativas, umbrales
+    empíricos N=1.
+  • CV < 5% para SMPS regulado — estimación de ingeniería; el estudio
+    ROC demostró que no es calibrable con datos de simulador.
+  • FP = 0.92 para separar CRYPTO de DATA_CENTER — criterio empírico
+    admitido, dudoso con fuentes de servidor modernas (80Plus).
+  • Dominancia mínima por clase — MEDIDA en mezcla sintética (ley de
+    suma IEC 61000-3-6): PFC ~97–98%, espectrales ~52–71%. Ver
+    docs/estudio_dominancia.md. Pendiente de contraste con campo.
+
+Campaña de campo de referencia: ION7400-0d5885, feeder exclusivo de
+criptominería ASIC, 23 kV / 50 Hz, 26/05/2026.

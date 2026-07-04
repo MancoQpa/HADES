@@ -175,13 +175,19 @@ final class MlXlsxWriter {
         {"res_order",   "—",  "Orden armonico de resonancia  (h = f_res / f1)",
          "Si coincide con H5 o H7 activos - riesgo de amplificacion de tension"},
         // Etiqueta
-        {"label", "—", "Clasificacion de tipo de carga detectada por el algoritmo",
+        {"label", "—", "Clase ESTABLE (suavizada por ventana+histeresis, LoadTypeSmoother)",
          "LINEAR: THDi<5%, H5<5% | ELECTRONIC_LIGHT: THDi>8%, H5>8% o H7>5% | " +
          "CRYPTO_MINING: CV<5%, THDi>15%, H5>15%, H7>10%, PF>0.92 | " +
          "DATA_CENTER: idem cripto pero PF<=0.92 | " +
          "INDUSTRIAL: firma 6-pulsos (H5>12%, H7>8%, H11>5%, H13>4%) | " +
          "MIXED_ELECTRONIC: 5%<THDi<15%, sin firma especifica | " +
-         "LIGHTING: THDi>10%, H3 dominante"},
+         "LIGHTING: THDi>10%, H3/H1>15% medido (raro en 23 kV tras trafos Dyn)"},
+        {"raw_label", "—", "Clase CRUDA del arbol para esta muestra (sin suavizado)",
+         "Salida directa de classifyInternal(). Para ML usar esta columna como " +
+         "feature/label fino; 'label' arrastra la histeresis temporal"},
+        {"label_stability", "0-1", "Fraccion de la ventana del smoother que coincide con 'label'",
+         "1.0 = clasificacion unanime | ~0.5 = carga en borde de umbral o en " +
+         "transicion. Ventana N=15, conmutacion con supermayoria >= 2/3"},
     };
 
     /**

@@ -1,0 +1,217 @@
+FÓRMULAS Y TEORÍA DEL CLASIFICADOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Todas las magnitudes que HADES calcula, con su fórmula exacta (la del
+código), su fundamento teórico y su fuente. Las etiquetas indican el tipo
+de respaldo: [NORMATIVO] estándar publicado, [TEÓRICO] derivación
+matemática, [EMPÍRICO] criterio de ingeniería propio del proyecto.
+
+
+1. ARMÓNICOS CARACTERÍSTICOS DE CONVERTIDORES
+
+La corriente idealizada de un rectificador de p pulsos (conducción
+rectangular de 120°, inductancia DC infinita, conmutación instantánea)
+solo contiene los órdenes armónicos:
+
+h = k·p ± 1      (k = 1, 2, 3, ...)
+
+Iₕ = I₁ / h      (amplitud ideal de cada armónico)
+
+Para 6 pulsos: H₅ = 20%, H₇ = 14.3%, H₁₁ = 9.1%, H₁₃ = 7.7% del
+fundamental. Para 12 pulsos (dos puentes desfasados 30°): H₅ y H₇ se
+cancelan y emergen H₁₁/H₁₃ como dominantes.
+
+En campo los valores son 15–30% menores que los ideales, por el
+solapamiento de conmutación (ángulo μ), el rizado del bus DC y la
+impedancia de fuente. Por eso los umbrales del árbol son conservadores
+(H₅ > 15% en lugar del 20% teórico; H₇ > 10% en lugar de 14.3%).
+
+  Es una derivación exacta de la serie de Fourier, no un dato empírico.
+  Refs: Kimbark, "Direct Current Transmission" (1971); Arrillaga &
+  Watson, "Power System Harmonics" (2003); Mohan et al., "Power
+  Electronics"; espectros típicos medidos en Dugan et al., "Electrical
+  Power Systems Quality". [TEÓRICO]
+
+
+2. THD — DISTORSIÓN ARMÓNICA TOTAL
+
+THD_I (%) = 100 × √(H₂² + H₃² + ... + H₅₀²) / H₁
+
+Definición normalizada de IEC 61000-4-7 §3.2.1, aplicada al array
+MHAI.HA cuando el IED no reporta ThdA directamente. [NORMATIVO]
+
+El promedio trifásico combina fases por RMS cuadrático, ignorando
+las fases en cero (IEC 61000-4-30):
+
+THD_avg = √( (THD_L1² + THD_L2² + THD_L3²) / 3 )
+
+⚠ IEEE 519 NO limita THD_I: limita TDD (referida a la corriente de
+máxima demanda I_L). La comparación de HADES contra sus límites es
+orientativa (ver Disclaimer).
+
+
+3. RATIOS ARMÓNICOS INDIVIDUALES
+
+Hₙ/H₁ = espectro[n] / espectro[1]      (fase peor coherente)
+
+Selección de fase: las normas miden cada fase como canal independiente
+(IEC 61000-4-7; IEC 61000-4-30 agrega por canal, no entre fases) y la
+práctica de evaluación IEEE 519 / EN 50160 juzga la fase más
+desfavorable. HADES toma TODOS los ratios de la fase con mayor THD
+espectral (desempate: L1). No se promedia entre fases (sin base
+normativa; diluiría cargas monofásicas) ni se toma el máximo por orden
+(mezclar fases fabrica un vector que no existe y destruye indicadores
+de forma como H₅/H₇).
+
+Significado de cada orden en el árbol de decisión:
+  • H₃/H₁  — triplen (secuencia cero): drivers LED y SMPS monofásicos.
+  • H₅/H₁ y H₇/H₁ — firma de rectificador trifásico de 6 pulsos.
+  • H₁₁/H₁ y H₁₃/H₁ — firma extendida 6P y dominantes en 12 pulsos.
+
+⚠ H3 Y TRANSFORMADORES Dyn (23 kV): el H3 balanceado es de secuencia
+cero. En un transformador delta/estrella (23000/380 V) esa corriente
+circula atrapada en el devanado delta y NO llega al medidor de
+cabecera MT. Solo se mide el residuo por desequilibrio de carga y la
+magnetización del transformador. Por eso la clase LIGHTING exige
+H₃/H₁ > 15% MEDIDO y rara vez es alcanzable desde 23 kV.
+Refs: Arrillaga & Watson (triplens en devanados delta); Dugan et al.
+
+
+4. FLATNESS — FORMA DEL ESPECTRO
+
+Flatness = (H₅ + H₇) / (H₁₁ + H₁₃)
+
+  • > 2.0   espectro frontal: SMPS / cripto / datacenter
+  • 1.3–2.0 rectificador de 6 pulsos equilibrado (drives industriales)
+  • < 1.2   H₁₁/H₁₃ dominan: rectificador de 12 pulsos
+
+Guardas: si H₁₁+H₁₃ < 0.5% se devuelve 10.0 (frontal) si H₅+H₇ es
+medible, o 1.0 (neutro) si todo el espectro es bajo. [TEÓRICO]
+
+
+5. RATIO H5/H7 — FIRMA DE PFC ACTIVO
+
+H₅/H₇ = (H₅/H₁) / (H₇/H₁)
+
+El lazo de control del PFC boost tiene mayor ganancia en frecuencias
+bajas: suprime H₇ más agresivamente que H₅. Resultado medido en campo
+(feeder cripto exclusivo): H₅ = 3.9%, H₇ = 0.2% → ratio 19.5.
+Un 6 pulsos clásico da ≈ 1.8 (20%/14.3%). Umbral de detección: ≥ 8.
+
+Guarda: si H₇ < 0.001 se devuelve 20.0 ("PFC puro") con H₅ medible,
+o 1.0 (neutro) sin espectro.
+
+⚠ HIPÓTESIS ORIGINAL DEL PROYECTO: el mecanismo es plausible
+(Erickson & Maksimović, dinámica del compensador de corriente) pero
+ninguna publicación tabula este ratio como discriminador. Validado
+con UNA campaña de campo (N=1). [EMPÍRICO]
+
+
+6. CV — COEFICIENTE DE VARIACIÓN DE CORRIENTE
+
+CV = σ(Ī) / μ(Ī)      con  σ = √( Σ(Īᵢ − μ)² / N )
+
+Ī es la corriente promedio trifásica; la ventana es de hasta 60
+muestras (≈ 5 min a 5 s/ciclo). Es la única dimensión temporal del
+vector: discrimina carga persistente 24/7 (SMPS densa, CV < 5%) de
+carga variable (residencial/comercial, CV > 15%).
+
+⚠ El umbral CV < 5% es estimación de ingeniería sin estándar formal,
+y el estudio ROC demostró que NO es calibrable con datos de simulador
+(todas las sesiones simuladas son estables): requiere campo. [EMPÍRICO]
+
+
+7. RATIO Q/S — REACTIVA RELATIVA (VECTOR PFC)
+
+Q/S = |Q| / S      →      φ = arccos(FP) ≈ arctan(Q/P)
+
+El PFC activo inyecta corriente en fase con la tensión y anula la
+reactiva. Q/S ≤ 0.012 equivale a φ < 0.69° — inalcanzable para
+motores (FP 0.85–0.95 → Q/S ≈ 0.3–0.5) o transformadores en carga.
+Medido en campo: Q/S = 0.0032.
+
+Base conceptual: IEEE 1459-2010 (definiciones de potencia bajo
+distorsión). El umbral 0.012 es empírico (N=1) y sensible a cómo el
+IED define Q (Budeanu / fundamental / vectorial). [NORMATIVO + EMPÍRICO]
+
+
+8. K-FACTOR — ESTRÉS ARMÓNICO EN TRANSFORMADORES
+
+K = Σ(h² · Iₕ²) / Σ(Iₕ²)      (h = 1..50)
+
+Pondera cada armónico por h² porque las pérdidas por corrientes de
+eddy crecen con el cuadrado de la frecuencia. Con THD = 4% y H₅ = 3.9%:
+K ≈ 1.04. Un rectificador sin PFC (H₅ > 15%) da K > 1.5.
+Rango de detección PFC: K ∈ [1.0, 1.12] (empírico, N=1).
+Ref: IEEE C57.110-2018, Ec. 1. [NORMATIVO]
+
+
+9. SCORE PFC 0–100 (GAUGE DEL DASHBOARD)
+
+Score = C_FP + C_QS + C_H5H7 + C_K + C_CV      (máx 100)
+
+  • C_FP   (30 pts): lineal de FP = 0.95 (0) a FP = 1.000 (30)
+  • C_QS   (25 pts): lineal de Q/S = 0.05 (0) a Q/S = 0 (25)
+  • C_H5H7 (20 pts): lineal de ratio 0 (0) a ratio 20 (20)
+  • C_K    (15 pts): lineal de K = 1.12 (0) a K = 1.00 (15);
+                     si el IED no reporta K: 7.5 pts (neutro)
+  • C_CV   (10 pts): lineal de CV = 0.25 (0) a CV = 0 (10)
+
+Se calcula y persiste SIEMPRE, aunque la clase final no sea PFC:
+un score ≥ 75 con clase LINEAR es señal de alerta. [EMPÍRICO]
+
+
+10. ÍNDICE DE ELECTRÓNICA 0–100
+
+Índice = C_CV + C_THDi + C_Ratios + C_Flatness + C_THDv      (máx 100)
+
+  • C_CV       (25 pts): inversa del CV normalizado a 5×umbral
+  • C_THDi     (35 pts): THD_I normalizado a 40%
+  • C_Ratios   (20 pts): (H₅/H₁ + H₇/H₁) normalizado a 0.5
+  • C_Flatness  (5 pts): bonus de espectro frontal (flatness 1–6)
+  • C_THDv     (15 pts): THD_V normalizado al 8% de EN 50160
+
+En modo degradado (sin espectro) C_Ratios y C_Flatness quedan en 0:
+el máximo efectivo es 75 pts. [EMPÍRICO, normalizaciones normativas]
+
+
+11. SUAVIZADO TEMPORAL — VENTANA + HISTÉRESIS
+
+La clase publicada es la ESTABLE, no la de la última muestra:
+
+N_conmutación = ⌈0.67 × N⌉ = 10 muestras      (N = 15 por defecto)
+
+  • Ventana deslizante de las últimas N clasificaciones crudas.
+  • Adopción inicial: mayoría simple (arranque reactivo).
+  • Conmutación: solo cuando otra clase alcanza N_conmutación.
+  • Estabilidad (%) = fracción de la ventana que coincide con la
+    clase estable — visible en el KPI del dashboard.
+
+Motivación empírica: una carga clavada en un borde de umbral
+(THD = 5.0%) oscilaba 50.7/49.3 entre dos clases muestra a muestra
+(estudio ROC sobre 2 251 mediciones). Con histéresis, una oscilación
+50/50 nunca alcanza supermayoría: cero parpadeo. Costo: un cambio
+real de carga tarda ~10 ciclos de polling en reflejarse. [EMPÍRICO]
+
+
+12. LEY DE SUMA DE ARMÓNICOS (ESTUDIO DE DOMINANCIA)
+
+I_n,total = ( Σᵢ I_n,i^α )^(1/α)
+
+Con α = 1.0 para n < 5, α = 1.4 para 5 ≤ n ≤ 10, α = 2.0 para n > 10.
+Modela la diversidad de fase entre fuentes armónicas independientes
+del mismo feeder. Usada por el estudio sintético de dominancia que
+midió la dominancia mínima por clase (PFC ~97–98%; espectrales
+~52–71%). Ref: IEC 61000-3-6:2008 §4.4. [NORMATIVO]
+
+
+13. DESBALANCE DE TENSIÓN Y CORRIENTE
+
+Desbalance (%) = 100 × max|V_fase − V_media| / V_media
+
+Criterio de máxima desviación (EN 50160 §4.3.4). Cuando el IED expone
+MSQI (componentes simétricas), el método Fortescue es más preciso:
+
+Desbalance_F (%) = 100 × V₂ / V₁      (secuencia negativa / positiva)
+
+Límite de alarma: 2% (EN 50160, promedio 10 min). [NORMATIVO]

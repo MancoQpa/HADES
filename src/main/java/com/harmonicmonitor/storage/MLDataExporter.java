@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  * Por cada feeder genera un único archivo CSV que crece en cada ciclo de 1 minuto:
  *   records/BPA/BPA-15/BPA-15_dataset.csv
  *
- * Columnas exportadas (65 features + label):
+ * Columnas exportadas (65 features + 3 etiquetas: label, raw_label, label_stability):
  *
  * IDENTIFICACIÓN:
  *   timestamp, feeder_id, spectrum_estimated, quality_flag
@@ -86,8 +86,9 @@ public class MLDataExporter {
         "V_unbal_pct,I_unbal_pct," +
         // Resonancia
         "res_freq_Hz,res_order," +
-        // Etiqueta
-        "label";
+        // Etiquetas: label = clase estable (suavizada); raw_label = clase cruda
+        // del árbol por muestra; label_stability = fracción de ventana coincidente
+        "label,raw_label,label_stability";
 
     // ── API pública ───────────────────────────────────────────────────────────
 
@@ -105,6 +106,12 @@ public class MLDataExporter {
         feederDir.mkdirs();
         File csv  = new File(feederDir, m.getFeederId() + "_dataset.csv");
         File xlsx = new File(feederDir, m.getFeederId() + "_dataset.xlsx");
+
+        // Protección de formato: si el CSV existente tiene un encabezado de una
+        // versión anterior (distinto número/orden de columnas), se rota a
+        // *_dataset_v1.csv y se arranca un archivo nuevo con el header actual.
+        // Evita filas desalineadas en datasets acumulados.
+        rotateIfHeaderMismatch(csv);
 
         boolean writeHeader = !csv.exists() || csv.length() == 0;
 
@@ -199,8 +206,10 @@ public class MLDataExporter {
         f(sb, m.getResonanceFrequency());
         sb.append(m.getResonanceOrder()).append(',');
 
-        // ── Etiqueta (sin coma al final) ──────────────────────────────────────
-        sb.append(m.getDetectedLoadType().name());
+        // ── Etiquetas ─────────────────────────────────────────────────────────
+        sb.append(m.getDetectedLoadType().name()).append(',');
+        sb.append(m.getRawLoadType().name()).append(',');
+        sb.append(String.format(Locale.US, "%.3f", m.getLoadTypeStability()));
 
         return sb.toString();
     }
@@ -208,5 +217,33 @@ public class MLDataExporter {
     /** Agrega un double formateado con 4 decimales seguido de coma. */
     private void f(StringBuilder sb, double v) {
         sb.append(String.format(Locale.US, "%.4f", v)).append(',');
+    }
+
+    /**
+     * Si el CSV existe con un encabezado distinto al actual, lo renombra a
+     * {@code *_dataset_v1.csv} (o v2, v3... si ya existen) para preservar los
+     * datos antiguos sin mezclar formatos.
+     */
+    private void rotateIfHeaderMismatch(File csv) {
+        if (!csv.exists() || csv.length() == 0) return;
+        try (java.io.BufferedReader br = new java.io.BufferedReader(
+                new java.io.InputStreamReader(
+                    new java.io.FileInputStream(csv), StandardCharsets.UTF_8))) {
+            String first = br.readLine();
+            if (first == null || first.equals(HEADER)) return;
+        } catch (IOException ex) {
+            return;   // ilegible: dejar que la escritura normal falle y loguee
+        }
+        String base = csv.getName().replaceFirst("\\.csv$", "");
+        for (int v = 1; v < 100; v++) {
+            File dst = new File(csv.getParentFile(), base + "_v" + v + ".csv");
+            if (!dst.exists()) {
+                if (csv.renameTo(dst)) {
+                    LOG.info("[MLExporter] Formato de dataset anterior detectado: " +
+                             csv.getName() + " rotado a " + dst.getName());
+                }
+                return;
+            }
+        }
     }
 }

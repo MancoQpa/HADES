@@ -234,7 +234,12 @@ Son el gold standard técnico, pero realizan mediciones puntuales. Si la carga s
 
 ### Frente a modelos ML de caja negra
 
-Un modelo ML necesita un dataset de entrenamiento etiquetado en condiciones de campo reales. HADES **está construyendo ese dataset** (SQLite, H1–H50 + indicadores derivados cada 60 s, exportable a CSV/XLSX via `MLDataExporter`). La caracterización determinista de hoy es la tubería de datos que habilita el ML de mañana.
+Un modelo ML necesita un dataset de entrenamiento etiquetado en condiciones de campo reales. HADES **está construyendo la tubería para ese dataset** (SQLite, H1–H50 + indicadores derivados cada 60 s, exportable a CSV/XLSX via `MLDataExporter`, ahora con `label` estable, `raw_label` cruda y `label_stability`). La caracterización determinista de hoy es la tubería de datos que habilita el ML de mañana.
+
+> ⚠ **Estado del dataset acumulado (jul-2026)**: la base actual (~103 MB, 240k mediciones) proviene
+> íntegramente de sesiones de **simulador** — sirve para validar la tubería (esquema, exportación,
+> regresión del clasificador), no para entrenar ni calibrar umbrales. El dataset de entrenamiento
+> real empieza con la primera campaña de campo etiquetada.
 
 ---
 
