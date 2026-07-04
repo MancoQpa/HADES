@@ -69,6 +69,16 @@ de la distorsión, no solo su presencia:
 TIPOS DE CARGA DETECTADOS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  NOTA — CLASE ESTABLE Y ESTABILIDAD:
+  La clase mostrada es la ESTABLE: mayoría de una ventana deslizante de
+  15 muestras con histéresis (cambiar de clase exige que la nueva alcance
+  10 de 15 muestras). Esto elimina el parpadeo cuando una carga queda en
+  el borde de un umbral, a costa de ~10 ciclos de latencia ante un cambio
+  real. El porcentaje "estab." del dashboard indica qué fracción de la
+  ventana coincide con la clase estable: 100% = unánime; cercano a 50% =
+  carga en un borde de umbral o en transición (se muestra entre paréntesis
+  la clase cruda de la última muestra).
+
   UPSTREAM_DISTORTION  (prioridad máxima)
   THDv > 5% y THDi < 8% y H5/H1 < 8%
   La distorsión se origina fuera del alimentador monitoreado.
@@ -78,8 +88,14 @@ TIPOS DE CARGA DETECTADOS
   Sin patrón armónico característico. Carga lineal.
 
   LIGHTING  (lámparas LED masivas)
-  THDi > 10%, H5/H1 < 8%, FP 0.75–0.95
-  H3 dominante; efecto de masa de drivers LED sin PFC.
+  THDi > 10%, H3/H1 > 15%, H5/H1 < 8%, FP 0.75–0.95
+  H3 dominante MEDIDO; efecto de masa de drivers LED sin PFC.
+  NOTA 23 kV: los transformadores de distribución Dyn (23000/380 V)
+  atrapan el H3 balanceado en el devanado delta (secuencia cero) —
+  no llega al medidor de cabecera. Desde MT la iluminación pierde
+  su firma triplen y se clasifica como ELECTRONIC_LIGHT o
+  MIXED_ELECTRONIC. LIGHTING solo se activa midiendo aguas abajo
+  del delta, con bancos Yy o con desequilibrio fuerte.
 
   CRYPTO_MINING  (minería / HPC)
   THDi > 15%, CV < 5%, H5/H1 > 15%, H7/H1 > 10%, FP > 0.92

@@ -4,10 +4,11 @@ Evaluación automática contra tres normas internacionales.
 
 ADVERTENCIA — MODO DEGRADADO:
   Si el IED opera en modo degradado (banner amarillo en pestaña Armónicos),
-  los valores de armónicos individuales Hn que aparecen en esta pantalla
-  son ESTIMADOS, no medidos. La comparación contra límites de IEC 61000-3-6
-  (H5 ≤ 4%, H7 ≤ 4%, etc.) NO tiene validez normativa en ese caso.
-  Solo el THD total comparado orientativamente mantiene valor informativo.
+  los armónicos individuales Hn NO están disponibles — HADES no los estima.
+  Esta pantalla no puede evaluar los límites por armónico de IEC 61000-3-6
+  (H5 ≤ 4%, H7 ≤ 4%, etc.) en ese caso; las filas correspondientes quedan
+  sin datos. Solo el THD total (medido por el IED) comparado
+  orientativamente mantiene valor informativo.
   Ver ayuda: "Modo Degradado — IED sin espectro".
 
   IEC 61000-3-6:2008

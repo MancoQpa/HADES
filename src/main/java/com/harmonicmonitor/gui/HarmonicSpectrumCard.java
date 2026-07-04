@@ -106,15 +106,14 @@ class HarmonicSpectrumCard {
         double pct      = (order == 1) ? 100.0 : (hnA / h1A * 100.0);
         double freqHz   = lastMeasurement.getFrequency() > 0 ? lastMeasurement.getFrequency() : 50.0;
         double harmFreq = order * freqHz;
-        String estimated = lastMeasurement.isSpectrumEstimated() ? "  [espectro estimado]" : "";
 
         String txt;
         if (order == 1) {
-            txt = String.format("H1 (fundamental %.0f Hz):  %.2f A  |  100%%  (referencia)%s",
-                freqHz, h1A, estimated);
+            txt = String.format("H1 (fundamental %.0f Hz):  %.2f A  |  100%%  (referencia)",
+                freqHz, h1A);
         } else {
-            txt = String.format("H%d  (%.0f Hz):  %.3f A  |  %.1f%% de fundamental  |  H1=%.2f A%s",
-                order, harmFreq, hnA, pct, h1A, estimated);
+            txt = String.format("H%d  (%.0f Hz):  %.3f A  |  %.1f%% de fundamental  |  H1=%.2f A",
+                order, harmFreq, hnA, pct, h1A);
         }
         harmonicInfoLabel.setText(txt);
     }

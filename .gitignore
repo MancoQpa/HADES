@@ -4,6 +4,7 @@
 
 # Clases compiladas y JARs de salida
 classes/
+classes_test/
 target/
 *.class
 *.jar

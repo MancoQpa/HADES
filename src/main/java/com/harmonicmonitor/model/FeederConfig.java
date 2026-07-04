@@ -89,6 +89,13 @@ public class FeederConfig {
     private double thdCryptoPfcMaxThreshold      = 6.5;    // THD máximo (%)
     private double thdCryptoPfcMinThreshold      = 1.5;    // THD mínimo (%)
 
+    // --- Suavizado temporal de clasificación (LoadTypeSmoother) ---
+    // Ventana deslizante de clasificaciones crudas y fracción de supermayoría
+    // necesaria para conmutar la clase estable. Con 15 y 0.67: conmutar exige
+    // 10 de 15 muestras de la clase nueva; una oscilación 50/50 nunca conmuta.
+    private int    loadTypeWindowSize     = 15;
+    private double loadTypeSwitchFraction = 0.67;
+
     // --- Umbrales de resonancia ---
     private double resonanceAmplificationMax = 3.0;  // veces la corriente fundamental
 
@@ -152,6 +159,8 @@ public class FeederConfig {
     public double getH5h7RatioCryptoMinThreshold()   { return h5h7RatioCryptoMinThreshold; }
     public double getThdCryptoPfcMaxThreshold()      { return thdCryptoPfcMaxThreshold; }
     public double getThdCryptoPfcMinThreshold()      { return thdCryptoPfcMinThreshold; }
+    public int    getLoadTypeWindowSize()            { return loadTypeWindowSize; }
+    public double getLoadTypeSwitchFraction()        { return loadTypeSwitchFraction; }
     public double getResonanceAmplificationMax()     { return resonanceAmplificationMax; }
 
     public NetworkTopology getTopology()       { return topology; }
@@ -195,6 +204,8 @@ public class FeederConfig {
     public void setH5h7RatioCryptoMinThreshold(double v)   { h5h7RatioCryptoMinThreshold   = v; }
     public void setThdCryptoPfcMaxThreshold(double v)      { thdCryptoPfcMaxThreshold      = v; }
     public void setThdCryptoPfcMinThreshold(double v)      { thdCryptoPfcMinThreshold      = v; }
+    public void setLoadTypeWindowSize(int v)               { loadTypeWindowSize            = v; }
+    public void setLoadTypeSwitchFraction(double v)        { loadTypeSwitchFraction        = v; }
     public void setResonanceAmplificationMax(double v)     { resonanceAmplificationMax     = v; }
     public void setTopology(NetworkTopology v)          { topology         = v; }
     public void setSimProfile(SimProfile v)            { simProfile       = v; }

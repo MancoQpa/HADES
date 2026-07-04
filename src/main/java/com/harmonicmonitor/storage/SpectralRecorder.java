@@ -36,7 +36,8 @@ import java.util.logging.Logger;
  *   thd_i_rms_window                     ← RMS del THD promedio trifásico
  *                                           acumulado en la ventana de campaña
  *   cv_current, p_kw, pf, freq_hz
- *   spectrum_estimated                   ← 1 si el espectro fue estimado, 0 si medido
+ *   spectrum_estimated                   ← siempre 0 desde v1.2 (estimación suprimida);
+ *                                           columna conservada por compatibilidad de esquema
  *   ion_update_lag_s                     ← segundos desde último cambio detectado en THD
  *                                           (detecta si el ION actualizó su ventana 10-min)
  *

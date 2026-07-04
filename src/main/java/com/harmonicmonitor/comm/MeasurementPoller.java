@@ -24,6 +24,7 @@ public class MeasurementPoller {
     private final ElectronicLoadDetector loadDetector;
     private final ResonanceAnalyzer     resonanceAnalyzer;
     private final LoadStabilityAnalyzer stabilityAnalyzer;
+    private final LoadTypeSmoother      loadTypeSmoother;
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?>        pollTask;
@@ -46,6 +47,8 @@ public class MeasurementPoller {
         this.loadDetector      = new ElectronicLoadDetector();
         this.resonanceAnalyzer = new ResonanceAnalyzer();
         this.stabilityAnalyzer = new LoadStabilityAnalyzer();
+        this.loadTypeSmoother  = new LoadTypeSmoother(
+            config.getLoadTypeWindowSize(), config.getLoadTypeSwitchFraction());
     }
 
     public void addListener(MeasurementListener l)    { listeners.add(l); }
@@ -119,8 +122,14 @@ public class MeasurementPoller {
             double cv = stabilityAnalyzer.calculateCV(currentHistory);
             m.setCvCurrent(cv);
 
-            // 5. Detectar y clasificar tipo de carga
+            // 5. Detectar y clasificar tipo de carga.
+            //    El árbol clasifica la muestra (rawLoadType); el smoother aplica
+            //    ventana + histéresis y produce la clase estable que consumen
+            //    GUI, alarmas y storage (detectedLoadType).
             loadDetector.classify(m, config);
+            m.setRawLoadType(m.getDetectedLoadType());
+            m.setDetectedLoadType(loadTypeSmoother.add(m.getRawLoadType()));
+            m.setLoadTypeStability(loadTypeSmoother.stability());
 
             // 6. Análisis de resonancia
             resonanceAnalyzer.analyze(m, config);

@@ -8,7 +8,7 @@ Registra el espectro armónico H1–H50, THD de tensión y corriente, secuencias
 
 La caracterización espectral se realiza mediante capturas de espectro completo cada 60 segundos, acumuladas en una base de datos SQLite local. Esta colección continua está diseñada para alimentar en el futuro un modelo de aprendizaje automático que esperamos sea capaz de identificar patrones de carga en condiciones de campo reales, incluyendo composiciones mixtas de usuarios.
 
-> **Nota de alcance**: para cargas **solapadas** (varios usuarios en el mismo feeder), la firma espectral resultante es la superposición de todas ellas. La clasificación es confiable solo cuando la carga de interés representa ≥80% de la demanda total del alimentador. Los umbrales del clasificador fueron replicados en laboratorio con patrones controlados; no sustituyen una campaña de medición en campo bajo IEC 61000-4-30.
+> **Nota de alcance**: para cargas **solapadas** (varios usuarios en el mismo feeder), la firma espectral resultante es la superposición de todas ellas. La dominancia mínima necesaria **depende de la clase** (medida en mezcla sintética bajo la ley de suma de IEC 61000-3-6, ver `docs/estudio_dominancia.md`): ~97% para CRYPTO_MINING_PFC (la reactiva del fondo contamina Q/S), ~52–71% para las clases espectrales (CRYPTO_MINING, DATA_CENTER, INDUSTRIAL). Los umbrales del clasificador fueron replicados en laboratorio con patrones controlados; no sustituyen una campaña de medición en campo bajo IEC 61000-4-30.
 
 De uso libre bajo licencia GPL v3.
 
@@ -29,9 +29,15 @@ Desarrollado por **Emilio Medina**.
 - Si el IED no expone el array MHAI.HA, el gráfico de barras muestra un aviso y solo THD/CV/FP están disponibles
 
 ### Clasificación de firma espectral
-- Árbol de decisión multivariable: CV = σ(I)/μ(I), THD_I, H5/H1, H7/H1, H11/H1, FP
+- Árbol de decisión multivariable: CV = σ(I)/μ(I), THD_I, H3/H1, H5/H1, H7/H1, H11/H1, FP
+- Nota 23 kV: los transformadores Dyn (23000/380 V) atrapan el H3 balanceado (secuencia cero)
+  en el delta; la clase LIGHTING requiere H3 medido y desde MT rara vez es alcanzable —
+  la iluminación masiva vista de cabecera se reporta como electrónica ligera/mixta
 - Patrones implementados: carga lineal, iluminación LED, SMPS alta densidad, rectificador 6-pulsos, electrónica ligera, mixta
 - Clasificación en pocos ciclos de red; validada en laboratorio con patrones de energía replicados
+- Suavizado temporal con histéresis: la clase reportada es la mayoría de una ventana deslizante
+  (15 muestras por defecto) y solo conmuta con supermayoría ≥2/3 — elimina el parpadeo de clase
+  en bordes de umbral (cuantificado en `docs/estudio_roc.md`); la GUI muestra la estabilidad (%)
 - Índice de electrónica 0–100 (score compuesto)
 - Análisis de resonancia LC por feeder
 - Requiere array MHAI.HA para las dimensiones H5/H1, H7/H1, H11/H1; sin él la clasificación opera solo sobre CV, THD_I y FP
@@ -97,6 +103,16 @@ No requiere Java instalado (JRE embebido).
 
     .\compile_ps2.ps1       # compila fuentes
     .\run.bat               # ejecuta
+
+### Tests
+
+El árbol de decisión del clasificador tiene tests JUnit 5 (los 10 perfiles de
+`docs/tabla_patrones_armonicos.md` más casos de borde del vector PFC):
+
+    .\compile_ps2.ps1       # compilar fuentes principales primero
+    .\run_tests.ps1         # compila y ejecuta los tests (descarga JUnit si falta)
+
+Con Maven: `mvn test`.
 
 ---
 

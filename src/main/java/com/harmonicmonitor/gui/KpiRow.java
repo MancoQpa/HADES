@@ -104,7 +104,15 @@ class KpiRow {
 
         double conf = computeConfidence(m);
         String confTxt = String.format("%.0f%% confianza", conf);
-        if (m.isSpectrumEstimated()) confTxt += "  ~ espectro estimado";
+        if (m.getLoadTypeStability() > 0) {
+            confTxt += String.format("  ·  estab. %.0f%%", m.getLoadTypeStability() * 100);
+            // Estabilidad < 100%: la carga está en un borde de umbral o en
+            // transición; la ventana del smoother contiene clases mezcladas.
+            if (m.getLoadTypeStability() < 0.999
+                && m.getRawLoadType() != m.getDetectedLoadType()) {
+                confTxt += "  (~" + m.getRawLoadType().getDisplayName() + ")";
+            }
+        }
         kpiLoadConf.setText(confTxt);
         kpiLoadConf.setStyle("-fx-font-size: 11px; -fx-text-fill: " + lt.getColorHex() + ";");
     }

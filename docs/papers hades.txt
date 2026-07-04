@@ -1,20 +1,29 @@
-https://sci-hub.box/10.1049/iet-gtd.2015.0366
+BIBLIOGRAFIA DE HADES
+=====================
 
-https://sci-hub.box/10.1109/tim.2009.2019308
+La bibliografia completa, con el fundamento tecnico y los limites de cada
+referencia (que sostiene cada una en HADES y que NO sostiene), esta en:
 
-https://sci-hub.box/10.1109/iecon.2004.1431792
+    docs/bibliografia_fundamentos.md
 
-https://sci-hub.box/10.1109/tdc.2006.1668490
+NOTA DE AUDITORIA (jul-2026): la lista anterior de este archivo contenia
+9 DOI de papers de METODOLOGIA DE MEDICION (IEC 61000-4-7 / 61000-4-30),
+que no respaldan las firmas armonicas tabuladas del clasificador. Se
+conservan como respaldo de la cadena de medicion, con enlaces oficiales:
 
+  https://doi.org/10.1049/iet-gtd.2015.0366    (Dalali 2015 - indices IEC 61000-4-7)
+  https://doi.org/10.1109/TIM.2009.2019308     (Tarasiuk 2009 - metodos DFT)
+  https://doi.org/10.1109/IECON.2004.1431792   (Xie 2004 - medicion carga traccion)
+  https://doi.org/10.1109/TDC.2006.1668490     (Gunther 2006 - IEEE 519 vs IEC 61000-4-7)
+  https://doi.org/10.1109/AUPEC.2007.4548082   (Prieto 2007 - errores en hornos de arco)
+  https://doi.org/10.1109/IMTC.2004.1351420    (Aiello 2004 - instrumento PQ bajo costo)
+  https://doi.org/10.1109/EPQU.2007.4424226    (Neumann 2007 - IEC 61000-4-30 Clase A)
+  https://doi.org/10.1109/IMCCC.2011.259       (Bellan 2011 - estadistica de indices)
 
-https://sci-hub.box/10.1109/aupec.2007.4548082
+Retirado: 10.1109/ICEMIC.2003.238091 (Kunkel 2003, transitorios IEC 61000-4-4;
+sin relacion con armonicos).
 
-https://sci-hub.box/10.1109/icemic.2003.238091
-
-https://sci-hub.box/10.1109/imtc.2004.1351420
-
-https://sci-hub.box/10.1109/epqu.2007.4424226
-
-https://sci-hub.box/10.1109/imccc.2011.259
-
-
+Las referencias que SI sostienen las firmas del clasificador (Arrillaga & Watson,
+Kimbark, Dugan et al., Mohan et al., Erickson & Maksimovic, Hart 1992, y los dos
+papers IEEE de mineria de criptomonedas 2019/2020) estan detalladas en
+bibliografia_fundamentos.md, secciones 2 y 3.

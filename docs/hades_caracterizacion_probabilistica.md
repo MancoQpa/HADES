@@ -91,7 +91,7 @@ ASIC miner SIN PFC:        THD_I > 15%,   FP ≈ 0.70,   CV muy bajo,  H5/H1 > 1
 ASIC miner CON PFC:        THD_I 3–5%,    FP ≈ 1.000,  CV muy bajo,  H5/H7 > 8,   Q/S < 0.012,  K ∈ [1.0,1.12]
 Rectificador 6P industria: THD_I > 8%,    FP ≈ 0.85,   H5+H7 altos,  H11/H13 presentes, flatness 1.3–2.0
 Datacenter (sin PFC):      THD_I > 15%,   FP < 0.92,   CV bajo,      H5/H1 > 15%
-LED iluminación:           THD_I > 10%,   FP 0.75–0.95, H3 dominante
+LED iluminación:           THD_I > 10%,   FP 0.75–0.95, H3 dominante (visible solo aguas abajo del delta — los trafos Dyn 23/0.38 kV lo atrapan)
 ```
 
 ---
@@ -99,6 +99,17 @@ LED iluminación:           THD_I > 10%,   FP 0.75–0.95, H3 dominante
 ## El árbol de decisión completo (9 nodos)
 
 El orden de evaluación es crítico: los nodos más restrictivos van primero para evitar capturas prematuras.
+
+> **Capa de suavizado temporal (v1.2+)**: el árbol clasifica cada muestra (salida cruda,
+> `rawLoadType`), pero la clase que consumen GUI, alarmas y storage (`detectedLoadType`) pasa por
+> `LoadTypeSmoother`: ventana deslizante de N=15 clasificaciones con **histéresis de conmutación**
+> (cambiar de clase estable exige supermayoría ⌈0.67·N⌉ = 10 muestras de la clase nueva).
+> Motivación empírica: `docs/estudio_roc.md` cuantificó que una carga clavada en un borde de umbral
+> (THD=5.0%) oscilaba 50.7/49.3 entre LINEAR y MIXED_ELECTRONIC muestra a muestra. Con el smoother
+> esa oscilación nunca alcanza supermayoría y la clase estable no parpadea; un cambio real de carga
+> conmuta tras ~10 ciclos de polling. La fracción de ventana coincidente se expone como
+> `loadTypeStability` (0–1) en cada medición. Parámetros: `FeederConfig.loadTypeWindowSize` /
+> `loadTypeSwitchFraction`.
 
 ```
 ENTRADA: medición { thdI, thdV, cv, h5h1, h7h1, h11h1, h13h1, pf, h5h7, qsR, kAvg }
@@ -118,9 +129,14 @@ ENTRADA: medición { thdI, thdV, cv, h5h1, h7h1, h11h1, h13h1, pf, h5h7, qsR, kA
         └─→  LINEAR
              (ya no captura ASIC miners con PFC, interceptados en [2])
 
-[4] thdI > 10%  AND  h5h1 < 8%  AND  pf ∈ (0.75, 0.95)
+[4] thdI > 10%  AND  h3h1 > 15%  AND  h5h1 < 8%  AND  pf ∈ (0.75, 0.95)
         └─→  LIGHTING
-             (H3 dominante — lámparas LED masivas)
+             (H3 dominante MEDIDO — lámparas LED masivas)
+             ⚠ En feeders 23 kV tras transformadores Dyn (23000/380 V) el H3
+             balanceado queda atrapado en el delta (secuencia cero) y no llega
+             al medidor: esta clase solo se activa con medición aguas abajo del
+             delta, bancos Yy o desequilibrio fuerte. La iluminación vista
+             desde MT cae en ELECTRONIC_LIGHT / MIXED_ELECTRONIC.
 
 [5] thdI > 8%  AND  h5h1 > 12%  AND  h7h1 > 8%  AND
     h11h1 > 5%  AND  h13h1 > 4%  AND  flatness ∈ [1.3, 3.5)
@@ -239,7 +255,16 @@ Un modelo ML necesita un dataset de entrenamiento etiquetado en condiciones de c
 
 ### Limitación crítica: dominancia de carga
 
-El clasificador trabaja sobre la señal agregada del feeder. Si la carga de interés (e.g., miner ASIC) representa menos del ~80% de la demanda total, su firma se diluye con la de otras cargas. En ese escenario:
+El clasificador trabaja sobre la señal agregada del feeder. Si la carga de interés (e.g., miner ASIC) representa menos de cierta fracción de la demanda total, su firma se diluye con la de otras cargas.
+
+> **Actualización — dominancia medida, no asumida**: el estudio sintético `docs/estudio_dominancia.md`
+> (mezclas bajo la ley de suma de IEC 61000-3-6) reemplazó el "~80%" genérico por valores por clase:
+> `CRYPTO_MINING_PFC` requiere **~97–98%** de dominancia (la reactiva del fondo rompe Q/S ≤ 0.012 mucho
+> antes de que se diluya el espectro); `CRYPTO_MINING` ~52–69%; `DATA_CENTER` ~53–70%; `INDUSTRIAL` ~69–71%.
+> Consecuencia operativa: la detección PFC solo es concluyente en feeders casi exclusivos; por debajo,
+> usar el `pfcCryptoScore` continuo y el análisis temporal.
+
+En el escenario de baja dominancia:
 
 - El árbol de decisión producirá resultados de menor confianza.
 - El `pfcCryptoScore` puede ser útil como indicador continuo incluso cuando la clase no es `CRYPTO_MINING_PFC`.

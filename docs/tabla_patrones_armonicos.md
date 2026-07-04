@@ -3,6 +3,12 @@
 > Referencia para configurar perfiles de simulación y verificar la detección de `ElectronicLoadDetector`.
 > Cada fila es un perfil completo con los valores exactos a usar en el JSON del simulador.
 > **Validado trazando cada perfil contra el árbol de decisión de `classifyInternal()`.**
+>
+> ⚙ **Esta tabla es ejecutable**: los 10 perfiles están codificados como tests JUnit en
+> `src/test/java/com/harmonicmonitor/analysis/ElectronicLoadDetectorTest.java`
+> (ejecutar con `.\run_tests.ps1` o `mvn test`). Si cambias un umbral en `FeederConfig`
+> o una regla del árbol, corre los tests: cualquier divergencia con esta tabla fallará.
+> Si el cambio es intencional, actualiza tabla y tests juntos.
 
 ---
 
@@ -72,7 +78,7 @@ CONDICIONES del árbol (ver ElectronicLoadDetector.classifyInternal):
   [2] CRYPTO_PFC:     thdI ∈ [1.5,6.5] AND pf ≥ 0.998 AND qsR ≤ 0.012
                       AND kAvg ∈ [1.0,1.12] AND h5h7 ≥ 8.0 AND cv < 0.05
   [3] LINEAR:         thdI < 5.0 AND h5h1 < 0.05
-  [4] LIGHTING:       thdI > 10.0 AND h5h1 < 0.08 AND pf ∈ (0.75,0.95)
+  [4] LIGHTING:       thdI > 10.0 AND h3h1 > 0.15 AND h5h1 < 0.08 AND pf ∈ (0.75,0.95)
   [5] INDUSTRIAL 6P:  thdI > 8.0 AND h5>12% AND h7>8% AND h11>5% AND h13>4% AND flatness∈[1.3,3.5)
   [6] CRYPTO/DC:      cv<5% AND thdI>15% AND h5>15% AND h7>10%  → CRYPTO si pf>0.92 else DC
   [7] INDUSTRIAL 12P: thdI > 8.0 AND h11>7% AND h13>6% AND flatness<1.2
@@ -85,7 +91,7 @@ CONDICIONES del árbol (ver ElectronicLoadDetector.classifyInternal):
 |---|---|---|---|---|---|---|---|---|---|---|
 | `normal_load` | ✗ thdV=2.5 | ✗ pf=0.98 | ✗ thdI=5.0 | ✗ thdI<10 | ✗ h5<12% | ✗ thdI<15 | ✗ | ✗ | ✗ | **default→LINEAR** |
 | `linear_load` | ✗ | ✗ | ✓ thdI=4<5 h5=3%<5% | — | — | — | — | — | — | **LINEAR** |
-| `lighting` | ✗ | ✗ thdI>6.5 | ✗ | ✓ thdI=12>10 h5<8% pf=0.85 | — | — | — | — | — | **LIGHTING** |
+| `lighting` | ✗ | ✗ thdI>6.5 | ✗ | ✓ thdI=12>10 h3=40%>15% h5<8% pf=0.85 | — | — | — | — | — | **LIGHTING** |
 | `electronic_light` | ✗ | ✗ thdI>6.5 | ✗ | ✗ thdI=10 no>10 | ✗ h5=10%<12% | ✗ | ✗ | ✓ thdI=10>8 h5=10%>8% | — | **ELECTRONIC\_LIGHT** |
 | `industrial` | ✗ | ✗ thdI>6.5 | ✗ | ✗ | ✓ 6P completo | — | — | — | — | **INDUSTRIAL** |
 | `data_center` | ✗ | ✗ thdI>6.5 | ✗ | ✗ | ✗ flatness=7.7 | ✓ pf=0.88<0.92 | — | — | — | **DATA\_CENTER** |
@@ -93,6 +99,14 @@ CONDICIONES del árbol (ver ElectronicLoadDetector.classifyInternal):
 | `crypto_mining` | ✗ | ✗ thdI=42>6.5 | ✗ | ✗ | ✗ flatness=4.8 | ✓ pf=0.985>0.92 | — | — | — | **CRYPTO\_MINING** |
 | **`crypto_mining_pfc`** | ✗ thdV=1.9 | **✓ 6/6 cond** | — | — | — | — | — | — | — | **CRYPTO\_MINING\_PFC** |
 | `upstream_distortion` | **✓** thdV=6.5>5 thdI=3.5<8 h5=2.5%<8% | — | — | — | — | — | — | — | — | **UPSTREAM\_DISTORTION** |
+
+> ⚠ **LIGHTING y transformadores Dyn en 23 kV**: el perfil `lighting` (H3 = 40%) representa una medición
+> **aguas abajo del delta** (BT) o un feeder con fuerte desequilibrio. En feeders MT de 23 kV los
+> transformadores de distribución 23000/380 V son **Dyn**: el H3 balanceado es secuencia cero y queda
+> atrapado circulando en el devanado delta — no llega al medidor de cabecera. Desde MT, la iluminación
+> masiva pierde su firma triplen y se clasifica como `ELECTRONIC_LIGHT` o `MIXED_ELECTRONIC`
+> (comportamiento correcto: sin H3 no hay evidencia que la distinga de otra electrónica monofásica).
+> El nodo [4] exige por eso `h3h1 > 0.15` **medido** — nunca se activa sin espectro.
 
 ---
 

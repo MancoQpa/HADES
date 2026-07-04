@@ -88,8 +88,16 @@ public class FeederMeasurement {
     private double currentUnbalancePct; // % desbalance corriente = (Ineg/Ipos)*100
 
     // --- Clasificación de carga ---
+    // detectedLoadType: clase ESTABLE (suavizada por LoadTypeSmoother: ventana
+    // deslizante + histéresis). Es la que consumen GUI, alarmas y storage.
+    // rawLoadType: salida cruda del árbol para esta muestra (diagnóstico/ML).
+    // loadTypeStability: fracción de la ventana que coincide con la estable (0-1).
     private LoadType detectedLoadType = LoadType.UNKNOWN;
+    private LoadType rawLoadType      = LoadType.UNKNOWN;
+    private double   loadTypeStability = 0.0;
     private double cvCurrent  = 0.0;   // Coeficiente de variación de corriente
+    private double h3h1Ratio  = 0.0;   // Relación H3/H1 de corriente (triplen; visible solo
+                                       // si la medición está aguas abajo del delta o hay desequilibrio)
     private double h5h1Ratio  = 0.0;   // Relación H5/H1 de corriente
     private double h7h1Ratio  = 0.0;   // Relación H7/H1 de corriente
     private double h11h1Ratio = 0.0;   // Relación H11/H1 de corriente
@@ -116,7 +124,9 @@ public class FeederMeasurement {
     // --- Calidad de la medición ---
     private boolean dataValid = true;
     private String  qualityFlag = "GOOD";
-    private boolean spectrumEstimated = false;  // true si el espectro fue estimado (IED no lo provee)
+    private boolean spectrumEstimated = false;  // siempre false desde v1.2 (estimación de espectro suprimida);
+                                                // se conserva por compatibilidad de esquema SQLite/CSV y para
+                                                // interpretar datos históricos de versiones <= v1.1
 
     public FeederMeasurement(String feederId, String iedName) {
         this.feederId  = feederId;
@@ -165,6 +175,7 @@ public class FeederMeasurement {
 
     public LoadType getDetectedLoadType()  { return detectedLoadType; }
     public double   getCvCurrent()         { return cvCurrent; }
+    public double   getH3h1Ratio()         { return h3h1Ratio; }
     public double   getH5h1Ratio()         { return h5h1Ratio; }
     public double   getH7h1Ratio()         { return h7h1Ratio; }
     public double   getH11h1Ratio()        { return h11h1Ratio; }
@@ -279,7 +290,12 @@ public class FeederMeasurement {
     public void setCurrentUnbalancePct(double v)  { currentUnbalancePct = v; }
 
     public void setDetectedLoadType(LoadType t)  { detectedLoadType = t; }
+    public LoadType getRawLoadType()              { return rawLoadType; }
+    public void setRawLoadType(LoadType t)        { rawLoadType = t; }
+    public double getLoadTypeStability()          { return loadTypeStability; }
+    public void setLoadTypeStability(double v)    { loadTypeStability = v; }
     public void setCvCurrent(double v)            { cvCurrent   = v; }
+    public void setH3h1Ratio(double v)            { h3h1Ratio   = v; }
     public void setH5h1Ratio(double v)            { h5h1Ratio   = v; }
     public void setH7h1Ratio(double v)            { h7h1Ratio   = v; }
     public void setH11h1Ratio(double v)           { h11h1Ratio  = v; }

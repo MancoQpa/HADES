@@ -29,6 +29,12 @@ import com.harmonicmonitor.model.LoadType;
  *       Umbral 5% (UPSTREAM): IEC 61000-3-6:2008 §5, nivel de planif. MT.
  *       Umbral 8% (EN 50160): EN 50160:2010 §4.3.4, percentil 95% MT.</li>
  *
+ *   <li><b>H3/H1</b> — Firma triplen (drivers LED / SMPS monofásicos).
+ *       Umbral 15% para LIGHTING: el H3 debe estar medido y visible.
+ *       <em>Advertencia MT:</em> los transformadores Dyn (23000/380 V)
+ *       atrapan el H3 balanceado (secuencia cero) en el delta; en 23 kV
+ *       solo se ve el residuo por desequilibrio. Ver nodo [4].</li>
+ *
  *   <li><b>H5/H1, H7/H1</b> — Ratios de armónicos de rectificador 6-pulsos.
  *       Valores teóricos: H5 = 1/5 = 20%, H7 = 1/7 ≈ 14.3% (Fourier ideal).
  *       Fuente: teoría estándar de convertidores (Mohan, Undeland, Robbins,
@@ -69,7 +75,8 @@ import com.harmonicmonitor.model.LoadType;
  *   <li>CRYPTO_MINING_PFC   — PFC activo: evaluar ANTES que LINEAR para evitar
  *                             captura prematura por la regla THDi &lt; 5%</li>
  *   <li>LINEAR              — THDi &lt; 5% y H5 &lt; 5%</li>
- *   <li>LIGHTING            — H3 dominante, FP medio</li>
+ *   <li>LIGHTING            — H3 dominante medido (&gt;15%), FP medio;
+ *                             en 23 kV tras Dyn rara vez alcanzable</li>
  *   <li>INDUSTRIAL          — 6-pulsos clásico (H5+H7+H11+H13 altos)</li>
  *   <li>CRYPTO_MINING       — 6-pulsos con THD &gt; 15% (sin PFC)</li>
  *   <li>DATA_CENTER         — similar pero FP &lt; 0.92</li>
@@ -100,6 +107,7 @@ public class ElectronicLoadDetector {
         double thdI  = m.getThdCurrentAvg();
         double thdV  = m.getThdVoltageAvg();
         double cv    = m.getCvCurrent();
+        double h3h1  = m.getH3h1Ratio();
         double h5h1  = m.getH5h1Ratio();
         double h7h1  = m.getH7h1Ratio();
         double h11h1 = m.getH11h1Ratio();
@@ -116,12 +124,13 @@ public class ElectronicLoadDetector {
         m.setQsRatio(qsR);
         m.setPfcCryptoScore(calculatePfcScore(pf, qsR, kAvg, h5h7, cv, thdI, cfg));
 
-        LoadType type = classifyInternal(thdI, thdV, cv, h5h1, h7h1, h11h1, h13h1,
+        LoadType type = classifyInternal(thdI, thdV, cv, h3h1, h5h1, h7h1, h11h1, h13h1,
                                          pf, h5h7, qsR, kAvg, cfg);
         m.setDetectedLoadType(type);
     }
 
     private LoadType classifyInternal(double thdI, double thdV, double cv,
+                                      double h3h1,
                                       double h5h1,  double h7h1,
                                       double h11h1, double h13h1,
                                       double pf, double h5h7, double qsR,
@@ -239,8 +248,27 @@ public class ElectronicLoadDetector {
         }
 
         // ── [4] Iluminación (lámparas LED masivas) ────────────────────────────────
-        // H3 dominante, H5/H1 < 10%, factor de potencia medio
-        if (thdI > 10.0 && h5h1 < 0.08 && pf > 0.75 && pf < 0.95) {
+        // Firma triplen: THD alto impulsado por H3 (drivers LED monofásicos),
+        // H5 bajo (no es rectificador trifásico) y FP medio.
+        //
+        // H3 debe estar MEDIDO Y VISIBLE (h3h1 > 0.15). La versión anterior de
+        // esta regla no verificaba H3 y asumía que "THD alto sin H5" implicaba
+        // triplen — lo que capturaba erróneamente mediciones sin espectro.
+        //
+        // LIMITACIÓN FÍSICA en feeders MT 23 kV: los transformadores de
+        // distribución 23000/380 V son Dyn (delta/estrella). El H3 balanceado
+        // es secuencia cero y queda atrapado circulando en el devanado delta:
+        // NO llega al punto de medición en 23 kV (solo el residuo por
+        // desequilibrio de carga y la magnetización del transformador).
+        // Consecuencia: en 23 kV esta clase solo se activa con desequilibrio
+        // fuerte, bancos Yy, o medición aguas abajo del delta. La iluminación
+        // masiva vista desde MT pierde su H3 y se clasifica como
+        // ELECTRONIC_LIGHT o MIXED_ELECTRONIC — comportamiento correcto:
+        // sin H3 no hay evidencia espectral que la distinga de otra
+        // electrónica monofásica.
+        // Ref: Arrillaga & Watson, "Power System Harmonics" (triplens y
+        // devanados delta); Dugan et al., "Electrical Power Systems Quality".
+        if (thdI > 10.0 && h3h1 > 0.15 && h5h1 < 0.08 && pf > 0.75 && pf < 0.95) {
             return LoadType.LIGHTING;
         }
 

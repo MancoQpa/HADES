@@ -33,7 +33,7 @@ final class MlXlsxWriter {
         {"feeder_id",          "—",     "Identificador unico del alimentador",
          "Configurado en Gestion de Alimentadores"},
         {"spectrum_estimated", "0/1",   "Indica si el espectro fue estimado por SW (1) o medido en el IED (0)",
-         "1 si el IED no dispone de MHAI; espectro calculado a partir de THDi y firma tipica"},
+         "Siempre 0 desde v1.2 (estimacion suprimida); 1 solo en datos historicos <= v1.1"},
         {"quality_flag",       "—",     "Calidad de la medicion",
          "GOOD | COMM_ERROR | SIMULATED"},
         // Tensiones

@@ -6,6 +6,7 @@ import com.harmonicmonitor.model.FeederMeasurement;
 import com.harmonicmonitor.model.SimProfile;
 import com.harmonicmonitor.analysis.HarmonicAnalyzer;
 import com.harmonicmonitor.analysis.ElectronicLoadDetector;
+import com.harmonicmonitor.analysis.LoadTypeSmoother;
 import com.harmonicmonitor.analysis.ResonanceAnalyzer;
 import com.harmonicmonitor.analysis.LoadStabilityAnalyzer;
 
@@ -34,6 +35,7 @@ public class SimulatedPoller extends MeasurementPoller {
     private final ElectronicLoadDetector loadDetector     = new ElectronicLoadDetector();
     private final ResonanceAnalyzer      resonanceAnalyzer = new ResonanceAnalyzer();
     private final LoadStabilityAnalyzer  stabilityAnalyzer = new LoadStabilityAnalyzer();
+    private final LoadTypeSmoother       loadTypeSmoother;
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?>       task;
@@ -54,6 +56,8 @@ public class SimulatedPoller extends MeasurementPoller {
     public SimulatedPoller(FeederConfig cfg) {
         super(cfg, null);
         this.cfg = cfg;
+        this.loadTypeSmoother = new LoadTypeSmoother(
+            cfg.getLoadTypeWindowSize(), cfg.getLoadTypeSwitchFraction());
     }
 
     @Override public void addListener(MeasurementPoller.MeasurementListener l) { simListeners.add(l); }
@@ -98,6 +102,9 @@ public class SimulatedPoller extends MeasurementPoller {
         if (currentHistory.size() > 60) currentHistory.remove(0);
         m.setCvCurrent(stabilityAnalyzer.calculateCV(currentHistory));
         loadDetector.classify(m, cfg);
+        m.setRawLoadType(m.getDetectedLoadType());
+        m.setDetectedLoadType(loadTypeSmoother.add(m.getRawLoadType()));
+        m.setLoadTypeStability(loadTypeSmoother.stability());
         resonanceAnalyzer.analyze(m, cfg);
         m.setDataValid(true);
         m.setQualityFlag("SIMULATED");

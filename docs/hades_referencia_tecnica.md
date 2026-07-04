@@ -14,7 +14,7 @@
 | `[EMPÍRICO]` | Umbral o criterio sin respaldo de estándar formal; basado en literatura o experiencia de ingeniería |
 | `[NORMATIVO]` | Umbral con respaldo explícito en IEEE, IEC o EN |
 | `[TEÓRICO]` | Valor derivado de análisis matemático de circuitos (Fourier, teoría de convertidores) |
-| `[ESTIMACIÓN-DEGRADADA]` | Valor generado por un modelo interno cuando el IED no provee el dato. **No es una medición independiente; las conclusiones basadas en él tienen validez reducida.** |
+| `[ESTIMACIÓN-DEGRADADA]` | **Etiqueta histórica (versiones ≤ v1.1)**: valor generado por un modelo interno cuando el IED no proveía el dato. La estimación de espectro fue **suprimida en v1.2**; en la versión actual ningún valor lleva esta etiqueta. Se conserva en este documento para interpretar datos antiguos (columna `spectrum_estimated = 1`). |
 
 ---
 
@@ -103,43 +103,40 @@ En este modo, las seis dimensiones del vector de caracterización provienen de m
 | H11/H1 | `[MEDICIÓN]` — ídem |
 | FP | `[MEDICIÓN]` directa desde `MMXU.TotPF` |
 
-### Modo degradado — espectro estimado (harmonicArrayInModel = false)
+### Modo degradado — espectro no disponible (harmonicArrayInModel = false)
 
 **Condición:** el IED expone `MHAI.ThdA` pero no el array `MHAI.HA`. Se da en medidores con modelo MMS simplificado.
 
-En este modo, `MeasurementPoller` ejecuta la siguiente secuencia:
+**Comportamiento actual (v1.2+): HADES no estima el espectro.** El array armónico queda en ceros y la secuencia del `MeasurementPoller` es:
 
 ```java
-// Paso 1: el IED solo provee THD_I; el array HA está en ceros
-if (!comm.isHarmonicArrayInModel()) {
-    harmonicAnalyzer.estimateMissingSpectrum(m);
-    // → genera espectro con H5=35%, H7=20%, H11=8% relativos (template SMPS fijo)
-    // → escala para que THD_estimado = THD_medido
-    // → m.setSpectrumEstimated(true)
+// Paso 1: calcular THD desde el espectro SOLO si el espectro existe
+if (m.getThdCurrentL1() == 0 && m.getHarmonicCurrentL1()[0] > 0) {
+    harmonicAnalyzer.calculateThd(m);
 }
 
-// Paso 2: calcula ratios desde el espectro (que puede ser estimado)
+// Paso 2: calcular ratios armónicos — la guarda interna retorna sin hacer
+// nada si el espectro está en ceros (H1 < 1e-9); los ratios quedan en 0
 harmonicAnalyzer.calculateHarmonicRatios(m);
-// → H5/H1, H7/H1, H11/H1 derivados del template, NO del IED
 
-// Paso 3: clasifica
+// Paso 3: clasificar — con ratios en 0, el árbol opera sobre CV/THD/FP
 loadDetector.classify(m, config);
 ```
-
-**Problema de circularidad:** el template `estimateCryptoSpectrum` asigna por construcción H5/H1 ≈ 0.35 y H7/H1 ≈ 0.20 (normalizados al THD medido). Cuando el clasificador verifica `H5/H1 > 0.15` y `H7/H1 > 0.10`, la condición es trivialmente verdadera para cualquier carga con THD_I > 15%, **independientemente del tipo real de carga**. Las dimensiones H5/H1, H7/H1 y H11/H1 del vector no aportan poder discriminante en este modo; son byproducts del THD.
 
 | Dimensión | Origen en modo degradado | Validez para clasificación |
 |---|---|---|
 | CV | `[DERIVACIÓN]` desde `MMXU.A` — no afectado | Válida |
 | THD_I | `[MEDICIÓN]` directa desde `MHAI.ThdA` — no afectado | Válida |
-| H5/H1 | `[ESTIMACIÓN-DEGRADADA]` — template SMPS | **No válida como observable independiente** |
-| H7/H1 | `[ESTIMACIÓN-DEGRADADA]` — template SMPS | **No válida como observable independiente** |
-| H11/H1 | `[ESTIMACIÓN-DEGRADADA]` — template SMPS | **No válida como observable independiente** |
+| H5/H1 | **No disponible** — queda en 0, no se estima | No participa (neutra) |
+| H7/H1 | **No disponible** — queda en 0, no se estima | No participa (neutra) |
+| H11/H1 | **No disponible** — queda en 0, no se estima | No participa (neutra) |
 | FP | `[MEDICIÓN]` directa desde `MMXU.TotPF` — no afectado | Válida |
 
-**Consecuencia práctica:** en modo degradado, el clasificador opera efectivamente como un umbral de dos dimensiones: `CV < 5% AND THD_I > 15%`. Las otras dimensiones del vector no contribuyen información nueva. Esto reduce la capacidad discriminante respecto al modo primario y aumenta el riesgo de falsos positivos.
+**Consecuencia práctica:** el clasificador opera con las dimensiones medidas disponibles (CV, THD_I, THD_V, FP, Q/S, K-factor). Las clases que requieren firma espectral (INDUSTRIAL 6/12 pulsos, CRYPTO_MINING clásico, DATA_CENTER) no son alcanzables; la detección `CRYPTO_MINING_PFC` conserva la mayor parte de su vector (pierde solo el ratio H5/H7). Menor capacidad discriminante que el modo primario, pero **todas las conclusiones se apoyan en mediciones reales** — no hay valores fabricados.
 
-La GUI marca visualmente las mediciones con espectro estimado (`m.spectrumEstimated = true`) para que el operador pueda identificar este modo.
+La GUI muestra un banner en la pestaña Armónicos ("El IED no expone armónicos individuales — solo THD disponible") y la gráfica de espectro queda vacía.
+
+> **Nota histórica:** las versiones ≤ v1.1 estimaban el espectro faltante con un perfil SMPS fijo (H5=35%, H7=20%) escalado al THD medido. Eso introducía circularidad: el clasificador "confirmaba" trivialmente el perfil que se había asumido. La estimación fue **suprimida en v1.2** (`estimateMissingSpectrum` / `estimateCryptoSpectrum` eliminados de `HarmonicAnalyzer`). Los datos históricos afectados se identifican con `spectrum_estimated = 1` en SQLite/CSV.
 
 **El ION 7400 de campo expone el array HA** (`harmonicArrayInModel = true`) en el esquema de LN del proyecto. El modo degradado se presenta principalmente con IEDs de terceros o con versiones de firmware simplificadas.
 
@@ -194,7 +191,7 @@ IEDName + LDInst + "/" + LNClass + LNInst + "." + DOName + "." + DAName
 
 **Escala per-unit del ION 7400:** el ION 7400 reporta el array HA en valores per-unit (H1 = 1.0, H3 = 0.05, etc.). HADES detecta si `HA[0] ≤ 1.01` y en ese caso escala el array por la corriente real medida en `MMXU.A` para obtener valores en Amperios. Esto es una conversión de unidades, no una estimación del valor.
 
-**Modo degradado (IED sin array HA):** si `harmonicArrayInModel = false`, HADES genera un espectro con el perfil fijo SMPS escalado al THD medido. Las implicaciones de rigor de este modo están documentadas en la Sección 3.
+**Modo degradado (IED sin array HA):** si `harmonicArrayInModel = false`, el espectro queda en ceros y los ratios armónicos no se calculan (permanecen en 0). No se genera ninguna estimación. Ver Sección 3.
 
 ---
 
@@ -256,13 +253,14 @@ v = [ CV ,  THD_I ,  H5/H1 ,  H7/H1 ,  H11/H1 ,  FP ]
 
 **Matriz de validez según modo:**
 
-| Dimensión | Modo primario (array HA del IED) | Modo degradado (espectro estimado) |
+| Dimensión | Modo primario (array HA del IED) | Modo degradado (espectro no disponible) |
 |---|---|---|
 | CV | Válida — derivación de medición real | Válida — no afectada |
 | THD_I | Válida — medición directa | Válida — medición directa |
-| H5/H1 | Válida — medición directa del array HA | **No válida** como observable independiente |
-| H7/H1 | Válida — medición directa del array HA | **No válida** como observable independiente |
-| H11/H1 | Válida — medición directa del array HA | **No válida** como observable independiente |
+| H3/H1 | Válida — medición directa del array HA (⚠ en 23 kV tras Dyn solo llega el residuo por desequilibrio) | **No disponible** — queda en 0 (no se estima) |
+| H5/H1 | Válida — medición directa del array HA | **No disponible** — queda en 0 (no se estima) |
+| H7/H1 | Válida — medición directa del array HA | **No disponible** — queda en 0 (no se estima) |
+| H11/H1 | Válida — medición directa del array HA | **No disponible** — queda en 0 (no se estima) |
 | FP | Válida — medición directa | Válida — no afectada |
 
 ---
@@ -318,7 +316,7 @@ del array HA (índice 0 = H1 fundamental, índice k-1 = Hk)
 
 Esta fórmula es la definición normalizada del THD según IEC 61000-4-7 §3.2.1. No hay aproximación ni estimación; es el cálculo exacto aplicado a los valores medidos.
 
-**Distinción importante:** THD_I calculado desde el array HA medido (`[DERIVACIÓN]`) es fundamentalmente diferente del THD_I calculado desde un espectro estimado (`[ESTIMACIÓN-DEGRADADA]`). En el primer caso el resultado es matemáticamente exacto; en el segundo es circular (ver Sección 3).
+**Distinción importante:** el THD_I proviene siempre de una medición directa (`MHAI.ThdA`) o de una derivación exacta desde el array HA medido. Desde v1.2 no existe ningún caso en que el THD se calcule sobre un espectro estimado — la estimación fue suprimida (ver Sección 3).
 
 **Por qué importa:**
 
@@ -474,6 +472,14 @@ El FP refleja simultáneamente el desfase entre tensión y corriente fundamental
 
 El árbol navega el vector de 6 dimensiones en secuencia. Cada umbral está etiquetado con su origen.
 
+**Capa de suavizado temporal (v1.2+):** la salida del árbol por muestra es `rawLoadType`;
+la clase publicada a GUI/alarmas/storage (`detectedLoadType`) la produce `LoadTypeSmoother`
+(`analysis/LoadTypeSmoother.java`): mayoría de una ventana deslizante de N=15 muestras con
+histéresis — conmutar la clase estable exige que otra clase alcance ⌈0.67·N⌉ = 10 muestras.
+Elimina el parpadeo en bordes de umbral (evidencia: `docs/estudio_roc.md`, perfil `normal_load`
+oscilando 50/50 en THD=5.0%) a costa de una latencia de conmutación de ~10 ciclos de polling.
+`loadTypeStability` (0–1) expone la fracción de ventana coincidente como señal de confianza.
+
 ```
 INPUT: [CV, THD_I, THD_V, H5/H1, H7/H1, H11/H1, H13/H1, FP]
 (THD_V y H13 participan en el árbol aunque no son dimensiones del vector 6D principal)
@@ -494,8 +500,10 @@ INPUT: [CV, THD_I, THD_V, H5/H1, H7/H1, H11/H1, H13/H1, FP]
 └─────────────────────────────────────────────────────────────────────────────┘
          ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  ¿THD_I > 10% Y H5/H1 < 8% Y FP entre 0.75 y 0.95?                        │
-│  (H3 dominante, H5 ausente: patrón de carga monofásica no lineal) [EMPÍRICO]│
+│  ¿THD_I > 10% Y H3/H1 > 15% Y H5/H1 < 8% Y FP entre 0.75 y 0.95?          │
+│  (H3 dominante MEDIDO, H5 ausente: carga monofásica no lineal) [EMPÍRICO]   │
+│  ⚠ En 23 kV tras trafos Dyn el H3 balanceado queda atrapado en el delta    │
+│    (secuencia cero): esta clase rara vez es alcanzable desde MT.            │
 │  SÍ → [LIGHTING]  — iluminación LED masiva                                  │
 │  NO ↓                                                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -591,7 +599,7 @@ Score_total = min(suma, 100)
 | H5+H7 (firma espectral) | 25 pts | Discrimina tipo de rectificador dentro de la no-linealidad; válido solo en modo primario |
 | THD_V (propagación a red) | 15 pts | Confirma impacto real en tensión; bajo en redes rígidas sin penalizar detección |
 
-**Advertencia en modo degradado:** cuando `spectrumEstimated = true`, `C_Ratios` se calcula desde el template y no aporta información independiente. El score efectivo en modo degradado depende solo de `C_CV + C_THDi + C_THDv` (máx 75 pts).
+**Advertencia en modo degradado:** cuando el IED no expone el array HA, los ratios armónicos quedan en 0 y `C_Ratios` no aporta puntos. El score efectivo en modo degradado depende solo de `C_CV + C_THDi + C_THDv` (máx 75 pts).
 
 ---
 
@@ -635,7 +643,7 @@ Actualizado cada 1–60 s (polling configurable):
 - Potencia activa, reactiva, aparente y factor de potencia
 - THD de corriente y tensión por fase
 - Clasificación actual de tipo de carga + score 0–100
-- Indicación visual de modo degradado cuando `spectrumEstimated = true`
+- Indicación visual de modo degradado cuando el IED no expone el array HA
 - Color de fondo según nivel de alarma: verde / amarillo / naranja / rojo
 
 ### 9.3 Panel de espectro
@@ -643,7 +651,7 @@ Actualizado cada 1–60 s (polling configurable):
 - Gráfica de barras H1–H50 normalizada (H1 = 100%)
 - Tres barras por armónico (una por fase) o vista de fase promedio
 - Marcadores visuales en H5, H7, H11, H13
-- Indicación visual cuando el espectro es estimado
+- Banner de aviso cuando el IED no expone armónicos individuales (gráfica vacía; no se estima)
 
 ### 9.4 Sistema de alarmas
 
@@ -657,7 +665,7 @@ Actualizado cada 1–60 s (polling configurable):
 ### 9.5 Almacenamiento y exportación
 
 - SQLite automático continuo: sesiones, mediciones, espectros H1–H50, alarmas
-- Exportación CSV por rango de tiempo en formato ML-ready (columna `spectrum_estimated` indica el modo de cada muestra)
+- Exportación CSV por rango de tiempo en formato ML-ready (la columna `spectrum_estimated` se conserva por compatibilidad; siempre 0 en datos de la versión actual)
 - Visor COMTRADE: archivos `.cfg`+`.dat` con gráfica temporal y FFT por canal analógico
 
 ---
@@ -689,7 +697,7 @@ Actualizado cada 1–60 s (polling configurable):
 |---|---|
 | Monitor de calidad de energía vía IEC 61850 | **Implementado y funcional** |
 | Clasificador multivariable en modo primario (espectro medido) | **Implementado** — validado en laboratorio y simulador IEC 61850 |
-| Clasificador en modo degradado (espectro estimado) | **Implementado** pero con validez reducida (circularidad, ver Sección 3) |
+| Clasificador en modo degradado (sin espectro) | **Operación reducida por diseño** — clasifica solo con CV, THD, FP, Q/S y K; la estimación de espectro fue suprimida en v1.2 (sin circularidad) |
 | Índice de electrónica 0–100 | **Implementado** |
 | Acumulación SQLite + exportación CSV | **Implementado** |
 | Multi-feeder simultáneo | **Implementado** |
@@ -703,7 +711,7 @@ Actualizado cada 1–60 s (polling configurable):
 
 ### Limitaciones específicas de rigor
 
-**Modo degradado:** cuando el IED no expone el array HA, las dimensiones H5/H1, H7/H1 y H11/H1 del vector son `[ESTIMACIÓN-DEGRADADA]`. La clasificación en este modo opera efectivamente sobre dos observables independientes (CV y THD_I) y no sobre seis. El riesgo de falsos positivos es significativamente mayor.
+**Modo degradado:** cuando el IED no expone el array HA, las dimensiones H5/H1, H7/H1 y H11/H1 no están disponibles (quedan en 0; no se estiman). La clasificación opera sobre los observables medidos restantes (CV, THD_I, THD_V, FP, Q/S, K-factor). Menor capacidad discriminante que el modo primario — las clases con firma espectral no son alcanzables — pero sin riesgo de circularidad.
 
 **Umbrales empíricos:** CV < 5%, THD_I > 15% para cripto, y FP > 0.92 son estimaciones de ingeniería sin validación con campaña de campo. La tasa real de error del clasificador no es conocida hasta completar esa campaña.
 
@@ -747,7 +755,7 @@ El simulador IonSimServer implementa exactamente el mismo modelo MMS que el medi
 1. Desplegar HADES en feeders con tipos de carga conocidos, **en modo primario**
 2. Operar durante 2–4 semanas (muestreo cada 60 s)
 3. Etiquetar manualmente períodos según tipo de carga predominante
-4. Exportar espectros H1–H50 (SQLite → CSV): ~162 features por fila, ~10 000+ filas, filtrando filas con `spectrum_estimated = true`
+4. Exportar espectros H1–H50 (SQLite → CSV): ~162 features por fila, ~10 000+ filas (si el dataset incluye datos históricos de versiones ≤ v1.1, filtrar filas con `spectrum_estimated = 1`)
 5. Entrenar clasificador estadístico con scikit-learn u otro
 6. Reimplantar coeficientes en `ElectronicLoadDetector.java`
 
@@ -758,7 +766,8 @@ El simulador IonSimServer implementa exactamente el mismo modelo MMS que el medi
 | Prioridad | Mejora | Impacto |
 |---|---|---|
 | Alta | Campaña de campo + calibración de umbrales empíricos | Convierte estimaciones empíricas en umbrales validados |
-| Alta | Inhabilitar clasificación automática en modo degradado (spectrumEstimated) | Elimina la circularidad; solo reportar THD_I y CV como observables válidos |
+| Alta | ✔ **Completado (v1.2)** — Estimación de espectro suprimida en modo degradado | Circularidad eliminada; los ratios quedan en 0 y el clasificador opera solo sobre observables medidos |
+| Alta | ✔ **Completado (v1.2)** — Ventana temporal + histéresis de clase (`LoadTypeSmoother`) | Elimina el parpadeo en bordes de umbral (flapping 50/50 cuantificado en `docs/estudio_roc.md`); expone `loadTypeStability` como confianza |
 | Alta | Informe automático PDF con etiquetado de modo primario/degradado | Permite al receptor evaluar la calidad de los datos |
 | Media | Ratio Flatness (H5+H7)/(H11+H13) en el clasificador | Discriminación adicional cripto vs. datacenter |
 | Media | Análisis temporal de persistencia (ventana sobre historial CV + espectro) | Ataca el problema de solapamiento de cargas |
