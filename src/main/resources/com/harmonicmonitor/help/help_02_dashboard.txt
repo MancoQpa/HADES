@@ -11,6 +11,12 @@ El dashboard muestra en tiempo real el estado del alimentador seleccionado:
     - Ámbar:  8-12% (elevado)
     - Rojo:   > 12% (crítico)
   • Tipo de Carga: clasificación automática del tipo de carga detectada.
+    Se muestra la clase ESTABLE (ventana de 15 muestras con histéresis)
+    junto al indicador "estab. %": qué fracción de la ventana coincide
+    con la clase publicada. 100% = clasificación unánime; cercano a 50% =
+    carga en el borde de un umbral o en transición (entre paréntesis se
+    muestra la clase cruda de la última muestra). Detalle en el tema 9
+    (Detección de carga).
 
   MÉTRICAS ELÉCTRICAS:
   • Q: potencia reactiva en kVAR

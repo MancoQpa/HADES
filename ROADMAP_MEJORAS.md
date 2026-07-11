@@ -1,6 +1,15 @@
 # HADES — Roadmap de Mejoras Técnicas
+
+> ⚠ **DOCUMENTO HISTÓRICO (congelado el 2026-03-25, pre-campaña v1.2).**
+> No refleja el estado actual: no incluye el suavizado temporal, H3/Dyn en
+> LIGHTING, la suite JUnit, los estudios de dominancia/ROC ni las mejoras
+> de cálculo M-001…M-005. **El estado vigente y los pendientes viven en
+> `BITACORA_ESTADO_FINAL.md`.** Además, el rol de PQM logger y generación
+> de datasets se movió a la app hermana **PQMLogger** (repo separado).
+> Se conserva solo como referencia del contexto y análisis de marzo 2026.
+
 **Proyecto:** ANDE-SIGFE · HarmonicMonitor
-**Fecha de última actualización:** 2026-03-25
+**Fecha de última actualización:** 2026-03-25 (histórico)
 **Estado del clasificador actual:** Árbol de decisión determinístico (Opción A/B parcial)
 
 ---

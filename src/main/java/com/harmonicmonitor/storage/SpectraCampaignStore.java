@@ -196,24 +196,27 @@ class SpectraCampaignStore {
                     }
                 }
 
+                // Locale.ROOT: con locale es-* String.format emite decimales
+                // con coma y rompe el CSV (separador = coma).
+                java.util.Locale L = java.util.Locale.ROOT;
                 while (rs.next()) {
                     StringBuilder row = new StringBuilder();
                     row.append(rs.getString("timestamp")).append(',');
                     row.append(rs.getString("feeder_id")).append(',');
                     row.append(rs.getString("session_id")).append(',');
-                    row.append(String.format("%.4f,%.4f,%.4f",
+                    row.append(String.format(L, "%.4f,%.4f,%.4f",
                         rs.getDouble("i1_a"),
                         rs.getDouble("i1_b"),
                         rs.getDouble("i1_c")));
                     for (String col : harmCols) {
-                        row.append(String.format(",%.6f", rs.getDouble(col)));
+                        row.append(String.format(L, ",%.6f", rs.getDouble(col)));
                     }
-                    row.append(String.format(",%.3f,%.3f,%.3f,%.3f",
+                    row.append(String.format(L, ",%.3f,%.3f,%.3f,%.3f",
                         rs.getDouble("thd_i_a"),
                         rs.getDouble("thd_i_b"),
                         rs.getDouble("thd_i_c"),
                         rs.getDouble("thd_i_rms_window")));
-                    row.append(String.format(",%.5f,%.3f,%.4f,%.3f,%d,%d",
+                    row.append(String.format(L, ",%.5f,%.3f,%.4f,%.3f,%d,%d",
                         rs.getDouble("cv_current"),
                         rs.getDouble("p_kw"),
                         rs.getDouble("pf"),

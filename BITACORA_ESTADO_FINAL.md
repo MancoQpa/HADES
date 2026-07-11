@@ -118,3 +118,33 @@ de los propios cambios de la campaña:
 P1+P2 en una sola tanda pequeña (misma mecánica de M-002: columna + migración +
 export), P4+P5 de pasada en el mismo commit. P3 esperar al diseño del análisis
 temporal (ítem 2 estructural) para no duplicar esquema sin necesidad.
+
+---
+
+## Tanda P1+P2+P4+P5 — RESUELTA 2026-07-10
+
+- **P1** ✔: columna `h3h1` en `measurements` (DDL + `addColumnIfMissing`,
+  mecánica M-002) e INSERT desde `m.getH3h1Ratio()`. Filas anteriores quedan
+  en NULL (no se estima).
+- **P2** ✔: `exportToCsv` con header v1.2 completo (30 columnas): `H3/H1`,
+  `TipoCargaCrudo`, `Estabilidad`. NULLs de filas pre-migración se exportan
+  vacíos (no medido ≠ 0.0).
+- **P2b (hallazgo nuevo durante la verificación)** ✔: `exportToCsv` y el
+  export CSV de `SpectraCampaignStore` usaban `printf`/`String.format` con
+  el locale del sistema — en es-* emitían decimales con COMA dentro de un
+  CSV separado por comas, corrompiendo las columnas. Corregido con
+  `Locale.ROOT`. `MLDataExporter` ya usaba `Locale.US` (no afectado); los
+  formatos de GUI y reportes de texto conservan el locale (correcto para
+  display). ⚠ Los CSV exportados ANTES de este fix desde máquinas con
+  locale español están corruptos: re-exportar desde la BD si se necesitan.
+- **P4** ✔: `help_02` explica el indicador "estab. %" del KPI de carga con
+  puntero al tema 9.
+- **P5** ✔: `ROADMAP_MEJORAS.md` marcado como documento histórico con
+  puntero a esta bitácora y a PQMLogger.
+- **Verificación**: compilación 81 fuentes Exit 0; suite 39/39 en verde;
+  round-trip manual en BD temporal (esquema nuevo, migración de esquema
+  viejo, export con NULLs y decimales con punto) — sin tocar la BD real.
+
+Pendiente de deuda técnica queda solo **P3** (esperando el diseño del
+análisis temporal). El rol de logger/dataset de campo vive en **PQMLogger**
+(repo separado, `..\..\PQMLogger`).

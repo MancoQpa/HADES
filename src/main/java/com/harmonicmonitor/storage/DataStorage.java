@@ -72,10 +72,10 @@ public class DataStorage {
             "(timestamp, feeder_id, v_l1, v_l2, v_l3, i_l1, i_l2, i_l3, " +
             "p_kw, q_kvar, s_kva, pf, freq_hz, " +
             "thd_v_l1, thd_v_l2, thd_v_l3, thd_i_l1, thd_i_l2, thd_i_l3, " +
-            "cv_current, h5h1, h7h1, h11h1, h13h1, " +
+            "cv_current, h3h1, h5h1, h7h1, h11h1, h13h1, " +
             "resonance_freq, resonance_order, load_type, " +
             "raw_load_type, load_type_stability) " +
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (PreparedStatement ps = db.prepareStatement(sql)) {
             ps.setString(1, TS_FMT.format(m.getTimestamp()));
             ps.setString(2, m.getFeederId());
@@ -97,15 +97,16 @@ public class DataStorage {
             ps.setDouble(18, m.getThdCurrentL2());
             ps.setDouble(19, m.getThdCurrentL3());
             ps.setDouble(20, m.getCvCurrent());
-            ps.setDouble(21, m.getH5h1Ratio());
-            ps.setDouble(22, m.getH7h1Ratio());
-            ps.setDouble(23, m.getH11h1Ratio());
-            ps.setDouble(24, m.getH13h1Ratio());
-            ps.setDouble(25, m.getResonanceFrequency());
-            ps.setInt   (26, m.getResonanceOrder());
-            ps.setString(27, m.getDetectedLoadType().name());
-            ps.setString(28, m.getRawLoadType().name());
-            ps.setDouble(29, m.getLoadTypeStability());
+            ps.setDouble(21, m.getH3h1Ratio());
+            ps.setDouble(22, m.getH5h1Ratio());
+            ps.setDouble(23, m.getH7h1Ratio());
+            ps.setDouble(24, m.getH11h1Ratio());
+            ps.setDouble(25, m.getH13h1Ratio());
+            ps.setDouble(26, m.getResonanceFrequency());
+            ps.setInt   (27, m.getResonanceOrder());
+            ps.setString(28, m.getDetectedLoadType().name());
+            ps.setString(29, m.getRawLoadType().name());
+            ps.setDouble(30, m.getLoadTypeStability());
             ps.executeUpdate();
         } catch (SQLException e) {
             LOG.warning("Error almacenando medición: " + e.getMessage());
@@ -189,8 +190,8 @@ public class DataStorage {
                 "P(kW),Q(kVAR),S(kVA),FP,Freq(Hz)," +
                 "THDv_L1(%),THDv_L2(%),THDv_L3(%)," +
                 "THDi_L1(%),THDi_L2(%),THDi_L3(%)," +
-                "CV_I,H5/H1,H7/H1,H11/H1,H13/H1," +
-                "FResHz,HResOrden,TipoCarga");
+                "CV_I,H3/H1,H5/H1,H7/H1,H11/H1,H13/H1," +
+                "FResHz,HResOrden,TipoCarga,TipoCargaCrudo,Estabilidad");
 
             if (initialized && db != null) {
                 String sql = "SELECT * FROM measurements WHERE feeder_id=? ORDER BY timestamp";
@@ -207,10 +208,19 @@ public class DataStorage {
                     }
                     ResultSet rs = ps.executeQuery();
                     while (rs.next()) {
-                        pw.printf("%s,%s,%.4f,%.4f,%.4f,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f," +
+                        // Columnas v1.2 en filas anteriores a la migración: NULL.
+                        // h3h1 NULL se exporta vacío (no medido ≠ 0.0); las clases
+                        // NULL se exportan vacías.
+                        Object h3 = rs.getObject("h3h1");
+                        String rawType = rs.getString("raw_load_type");
+                        Object stab = rs.getObject("load_type_stability");
+                        // Locale.ROOT: con locale es-* printf emite decimales con
+                        // coma y rompe el CSV (separador = coma).
+                        pw.printf(java.util.Locale.ROOT,
+                            "%s,%s,%.4f,%.4f,%.4f,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f," +
                             "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f," +
-                            "%.4f,%.4f,%.4f,%.4f,%.4f," +
-                            "%.1f,%d,%s%n",
+                            "%.4f,%s,%.4f,%.4f,%.4f,%.4f," +
+                            "%.1f,%d,%s,%s,%s%n",
                             rs.getString("timestamp"), rs.getString("feeder_id"),
                             rs.getDouble("v_l1") / 1000.0, rs.getDouble("v_l2") / 1000.0,
                             rs.getDouble("v_l3") / 1000.0,
@@ -219,10 +229,16 @@ public class DataStorage {
                             rs.getDouble("pf"), rs.getDouble("freq_hz"),
                             rs.getDouble("thd_v_l1"), rs.getDouble("thd_v_l2"), rs.getDouble("thd_v_l3"),
                             rs.getDouble("thd_i_l1"), rs.getDouble("thd_i_l2"), rs.getDouble("thd_i_l3"),
-                            rs.getDouble("cv_current"), rs.getDouble("h5h1"), rs.getDouble("h7h1"),
+                            rs.getDouble("cv_current"),
+                            h3 == null ? "" : String.format(java.util.Locale.ROOT,
+                                "%.4f", ((Number) h3).doubleValue()),
+                            rs.getDouble("h5h1"), rs.getDouble("h7h1"),
                             rs.getDouble("h11h1"), rs.getDouble("h13h1"),
                             rs.getDouble("resonance_freq"), rs.getInt("resonance_order"),
-                            rs.getString("load_type"));
+                            rs.getString("load_type"),
+                            rawType == null ? "" : rawType,
+                            stab == null ? "" : String.format(java.util.Locale.ROOT,
+                                "%.3f", ((Number) stab).doubleValue()));
                     }
                 } catch (SQLException e) {
                     LOG.warning("Error exportando CSV: " + e.getMessage());
@@ -290,7 +306,7 @@ public class DataStorage {
                 "p_kw REAL, q_kvar REAL, s_kva REAL, pf REAL, freq_hz REAL," +
                 "thd_v_l1 REAL, thd_v_l2 REAL, thd_v_l3 REAL," +
                 "thd_i_l1 REAL, thd_i_l2 REAL, thd_i_l3 REAL," +
-                "cv_current REAL, h5h1 REAL, h7h1 REAL, h11h1 REAL, h13h1 REAL," +
+                "cv_current REAL, h3h1 REAL, h5h1 REAL, h7h1 REAL, h11h1 REAL, h13h1 REAL," +
                 "resonance_freq REAL, resonance_order INTEGER, load_type TEXT," +
                 "raw_load_type TEXT, load_type_stability REAL)");
 
@@ -299,6 +315,10 @@ public class DataStorage {
             // duplicada se ignora (base ya migrada).
             addColumnIfMissing("measurements", "raw_load_type", "TEXT");
             addColumnIfMissing("measurements", "load_type_stability", "REAL");
+            // Migración P1 (jul-2026): h3h1 entra al árbol en v1.2 (nodo LIGHTING)
+            // pero no se persistía — las clasificaciones no eran reproducibles
+            // desde la BD. Filas anteriores quedan en NULL (no se estima).
+            addColumnIfMissing("measurements", "h3h1", "REAL");
 
             st.execute("CREATE TABLE IF NOT EXISTS alarms (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
