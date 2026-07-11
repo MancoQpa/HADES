@@ -1,9 +1,9 @@
 CLASIFICACIÓN DE FIRMA ESPECTRAL DE CARGA
 
 El módulo ElectronicLoadDetector aplica un árbol de decisión multivariable
-sobre señales armónicas (CV, THDi, THDv, H5/H1, H7/H1, H11/H1, H13/H1,
-Flatness, FP) para identificar el patrón espectral predominante en el
-alimentador.
+sobre señales armónicas y de potencia (CV, THDi, THDv, H3/H1, H5/H1, H7/H1,
+H11/H1, H13/H1, H5/H7, Flatness, FP, Q/S, K-Factor) para identificar el
+patrón espectral predominante en el alimentador.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 LIMITACIONES Y CONDICIÓN DE USO
@@ -83,9 +83,27 @@ TIPOS DE CARGA DETECTADOS
   THDv > 5% y THDi < 8% y H5/H1 < 8%
   La distorsión se origina fuera del alimentador monitoreado.
 
+  CRYPTO_MINING_PFC  (minería ASIC con PFC activo — evaluado ANTES que LINEAR)
+  Vector multidimensional, las 6 condiciones en AND:
+    THDi 1.5–6.5%, FP > 0.998, Q/S < 0.012, K-Factor 1.0–1.12,
+    H5/H7 > 8, CV < 5%
+  Si el IED no reporta K-Factor, bastan 4 de las 5 condiciones restantes.
+  El PFC boost en modo CCM suprime la distorsión (THDi ≈ 2–5%) y eleva
+  FP ≈ 1.000: para el espectro clásico parece carga LINEAL. La firma
+  discriminante es ortogonal al THD: reactiva anulada (Q/S ≈ 0) y
+  supresión asimétrica del lazo de control (H7/H11/H13 caen más que H5
+  → H5/H7 alto). Fórmulas en tema 23; bibliografía en tema 24.
+  Validado con medición de campo ION7400 en alimentador exclusivo de
+  criptominería (26/05/2026, N=1).
+  IMPORTANTE: cargas gemelas — cargadores EV de alta potencia, front-ends
+  activos (AFE) y UPS de doble conversión comparten este vector; la
+  confirmación requiere contexto operacional o análisis temporal.
+
   LINEAR
   THDi < 5% y H5/H1 < 5%
   Sin patrón armónico característico. Carga lineal.
+  NOTA: los ASIC miners con PFC ya no caen aquí; los intercepta la
+  regla CRYPTO_MINING_PFC anterior.
 
   LIGHTING  (lámparas LED masivas)
   THDi > 10%, H3/H1 > 15%, H5/H1 < 8%, FP 0.75–0.95
@@ -102,7 +120,10 @@ TIPOS DE CARGA DETECTADOS
   — Criterio adicional: Flatness > 3.0 relaja el requisito de FP.
     Un espectro muy frontal (H5+H7 >> H11+H13) con carga estable es
     firma inequívoca de SMPS de alta densidad aunque FP < 0.92.
-  SMPS de alta densidad con PFC activo. Consumo muy estable.
+  SMPS de alta densidad SIN PFC efectivo (equipos legacy o PFC de baja
+  calidad): la distorsión frontal H5/H7 permanece visible (THDi > 15%).
+  Consumo muy estable. Los miners modernos con PFC activo NO caen aquí:
+  los detecta CRYPTO_MINING_PFC con THDi bajo.
   Flatness típica de miners: 3.5–6.0 (espectro fuertemente frontal).
   IMPORTANTE: No exclusivo de criptomonedas; coincide con UPS
   industriales, cargadores EV de alta potencia y rectificadores
@@ -181,6 +202,9 @@ PARÁMETROS CLAVE
     CV < 5%              — Juicio de ingeniería (SMPS regulado típico)
     THDi > 15% cripto    — Estimación bibliográfica genérica
     FP > 0.92 cripto     — Criterio empírico sin validación formal
+    Vector PFC (FP > 0.998, Q/S < 0.012, K ≤ 1.12, H5/H7 > 8)
+                         — Empírico, N=1 (ION7400, feeder dedicado,
+                           mayo 2026); fundamento teórico en tema 23
     Flatness > 3.0 cripto — Criterio nuevo; relaja FP en espectros muy frontales
     Flatness < 1.2 12p   — Criterio nuevo; detecta VFDs 12-pulsos antes ocultos
     (Fuente: literatura general de SMPS, UPS industriales y Chapman "Electric

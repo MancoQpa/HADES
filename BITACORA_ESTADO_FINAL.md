@@ -1,5 +1,7 @@
 # Bitácora de Estado Final — HADES v1.2 (campaña de auditoría y mejoras, jul-2026)
 
+> **Última revisión de pendientes**: 2026-07-07 (ver sección al final).
+
 > Instantánea del estado del proyecto al cierre de la campaña iniciada con la
 > auditoría del clasificador (análisis, bibliografía, modelo de decisión) y
 > cerrada con las mejoras de cálculo. Detalle por cambio en:
@@ -77,3 +79,42 @@ Baseline de rollback de toda la campaña: `9d4d570`.
 6. Menores: umbrales editables desde GUI; desacoplar ruta JDK de los scripts.
 7. Publicación (ICHQP / IEEE PES T&D): vector PFC + hipótesis H5/H7 + curva de
    dominancia + campaña de campo = paper completo.
+
+---
+
+## Revisión de pendientes — 2026-07-07
+
+Revisión del código contra la lista anterior (working tree limpio y sincronizado
+con `origin/main` en `60d01e8`). Los 7 pendientes estructurales siguen vigentes
+sin cambios. La revisión detectó además **deuda técnica menor nueva**, derivada
+de los propios cambios de la campaña:
+
+### Deuda técnica detectada (verificada en código)
+
+| # | Hallazgo | Impacto | Esfuerzo |
+|---|---|---|---|
+| P1 | **`h3h1` no se persiste en la tabla `measurements`** (sin columna; `grep h3h1 storage/` → 0 resultados). El nodo LIGHTING lo usa desde v1.2: las clasificaciones históricas no son reproducibles desde la BD. Mitigado parcialmente: el CSV ML conserva H3 vía `H3_I_pct` (espectro) y la campaña espectral guarda H1–H50 completo. | Medio — trazabilidad del árbol | Bajo (columna + migración, patrón ya existente de M-002) |
+| P2 | **`DataStorage.exportToCsv`** (exportación clásica por rango, `DataStorage.java:190-225`) quedó con el header de 27 columnas anterior a v1.2: no exporta `raw_load_type`, `load_type_stability` ni H3. El dataset ML (`MLDataExporter`) sí está completo; este es el export "manual" de la GUI. | Bajo — inconsistencia entre exports | Bajo |
+| P3 | `SpectraCampaignStore` no registra clase cruda/estabilidad. Mitigado: su propósito es el espectro (H1–H50); la clase vive en `measurements`. Evaluar si el join por timestamp es suficiente para ML antes de duplicar columnas. | Bajo | Bajo |
+| P4 | `help_02_dashboard.txt` no menciona el indicador "estab. %" del KPI de carga (solo `help_09` lo explica). | Cosmético | Trivial |
+| P5 | **`ROADMAP_MEJORAS.md` desactualizado** (última actualización 2026-03-25, pre-campaña): no refleja smoother, H3/Dyn, estudios ni tests. Marcar como histórico con puntero a esta bitácora, o retirarlo. | Confusión documental | Trivial |
+| P6 | ~~`help_09` sin `CRYPTO_MINING_PFC` en el catálogo de clases~~ **CORREGIDO 2026-07-09**: la clase estrella de v1.2 no figuraba en "TIPOS DE CARGA DETECTADOS", la entrada de `CRYPTO_MINING` aún decía "con PFC activo" (obsoleto tras la separación de clases) y no se mencionaba la variante relajada 4/5 sin K-Factor. Se añadió la entrada completa (vector, cargas gemelas, N=1, punteros a temas 23/24), se corrigió CRYPTO_MINING ("SIN PFC efectivo"), se amplió la lista de señales de entrada y se añadió el vector PFC a "Umbrales de estimación". | Confusión documental | Hecho |
+
+### Verificaciones sin hallazgo (descartadas como pendientes)
+
+- `FeederConfig`: no existe mecanismo de serialización/persistencia de feeders
+  (sin JSON/Properties en `src/`) — los parámetros nuevos del smoother no tienen
+  problema de compatibilidad al reiniciar; toman defaults.
+- `DominanceStudy`: no afectado por M-001 (construye los ratios directamente,
+  no pasa por `calculateHarmonicRatios`); sus resultados siguen válidos.
+- Integración del smoother: instancia por poller, recreada al reconectar —
+  sin arrastre de ventana entre sesiones. Alarmas y storage consumen la clase
+  estable (menos falsas alarmas por parpadeo), y la cruda queda en BD (M-002).
+- Submódulo `simulator` y `build_paquetes_v11.ps1`: modificaciones preexistentes
+  a la campaña, intactas, fuera de los commits — decisión pendiente del autor.
+
+### Recomendación de orden
+
+P1+P2 en una sola tanda pequeña (misma mecánica de M-002: columna + migración +
+export), P4+P5 de pasada en el mismo commit. P3 esperar al diseño del análisis
+temporal (ítem 2 estructural) para no duplicar esquema sin necesidad.
