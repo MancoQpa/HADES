@@ -194,13 +194,24 @@ PFC con N=1 como resultado destacado, estudio de dominancia, límites
 explícitos. **Pendiente del autor**: revisión, lista de autores (J. Paris
 confirmado), formato de plantilla y envío. Clasificación propuesta: C4.
 
+### Verificación de conectividad (2026-07-12)
+
+- **ION 7400 real (10.200.142.125:102): NO alcanzable** desde la máquina de
+  desarrollo (TCP y ping fallan) — red distinta o requiere VPN/estar en
+  sitio. La prueba de la tubería de PQMLogger contra el ION real queda
+  supeditada al acceso de red.
+- Alternativa preparada y disponible: prueba end-to-end contra el simulador
+  de HADES (`SimulatorMain --port 10102 --profile <perfil> --interval 1000`,
+  feeder en PQMLogger con iedName=SIM1, ldInst=LD0, prefix=M03_).
+  **No ejecutada aún** — a decisión del autor cuándo correrla.
+
 ### Pendientes vigentes (reordenados tras el pivote)
 
 1. **Campaña de campo etiquetada** — ahora habilitada por PQMLogger; lo que
    falta es operativo: elegir feeders, relevar metadatos, determinar Udin
    en las unidades del ION por feeder, y una prueba de la tubería contra
-   un ION real antes de la campaña formal. Sigue siendo el cuello de
-   botella de todo lo demás.
+   un ION real antes de la campaña formal (requiere resolver el acceso de
+   red, ver arriba). Sigue siendo el cuello de botella de todo lo demás.
 2. Estructurales de HADES sin cambios: NILM sobre acumulado de campo,
    MSTA/MMTR al árbol, revisar FP=0.92 y cargas gemelas del PFC (esperan
    campo), URCB/BRCB (aplica a ambas apps), umbrales editables en GUI,
