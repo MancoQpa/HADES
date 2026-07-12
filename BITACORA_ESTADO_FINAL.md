@@ -1,6 +1,8 @@
 # Bitácora de Estado Final — HADES v1.2 (campaña de auditoría y mejoras, jul-2026)
 
-> **Última revisión de pendientes**: 2026-07-07 (ver sección al final).
+> **Última actualización**: 2026-07-12 (ver secciones al final: revisión de
+> pendientes, tanda P1–P5 resuelta, y pivote estratégico + app hermana
+> PQMLogger).
 
 > Instantánea del estado del proyecto al cierre de la campaña iniciada con la
 > auditoría del clasificador (análisis, bibliografía, modelo de decisión) y
@@ -148,3 +150,62 @@ temporal (ítem 2 estructural) para no duplicar esquema sin necesidad.
 Pendiente de deuda técnica queda solo **P3** (esperando el diseño del
 análisis temporal). El rol de logger/dataset de campo vive en **PQMLogger**
 (repo separado, `..\..\PQMLogger`).
+
+---
+
+## Actualización 2026-07-12 — Pivote estratégico y app hermana PQMLogger
+
+### Decisión de dirección (2026-07-09)
+
+HADES aún no puede ser el detector de cargas no lineales en producción que
+pretendía: toda la base acumulada es de simulador y solo existe una medición
+de campo (ION7400, N=1). La fase previa es operar como **PQM logger y
+generador de datasets etiquetados** hasta acumular diversidad de datos de
+campo; luego análisis (clustering para validar la taxonomía) y recién
+entonces ML. Ese rol se implementó en una **app nueva y separada** para no
+tocar HADES: **PQMLogger** (`C:\Users\admin\Documents\proyectos IA\PQMLogger`,
+repo privado `MancoQpa/PQMLogger`).
+
+El árbol de HADES NO se descarta — cambia de rol: etiquetador débil
+(fuente `HADES_WEAK_LABEL` en las etiquetas de PQMLogger), baseline ROC
+para cualquier ML futuro, y priorizador de ventanas a etiquetar.
+
+### PQMLogger — estado al 2026-07-12 (v0.4, 34/34 tests en verde)
+
+| Commit | Contenido |
+|---|---|
+| `7bd51c8` | Esqueleto: CLI headless, registro de feeders con metadatos (grupo vectorial, Scc, mezcla de clientes, Udin), SQLite |
+| `8f32592` | Agregación IEC 61000-4-30: sub-intervalos 3 s → 10 min alineado al reloj, cuadrática + min/max/P95, flagging (huecos, parciales, dip/swell/interrupción vs Udin) |
+| `04318b6` | CLI de etiquetado de verdad de terreno (label/list/delete/export-labels), solapes advertidos, fuentes con alias |
+| `5b3c08c` | export-dataset: join intervals × labels × feeder, reglas de higiene (flagged/ambiguos/parciales excluidos), esquema versionado con rotación |
+| `06c628d` | Espectro H1–H50 por intervalo (tabla interval_spectra, formato ancho como harmonic_spectra) y features espectrales de la **fase peor coherente** (M-001) en el dataset: thd_spectral, h3/h5/h7/h11/h13_h1 |
+
+Reutiliza la capa de adquisición de HADES por classpath
+(`HarmonicMonitor\classes` — compilar HADES antes). El dataset que produce
+tiene exactamente las features que consume el árbol: la comparación
+baseline-vs-ML sobre campo será directa. Pendientes propios: URCB/BRCB,
+weak labels automáticas, agregados por fase en `intervals`.
+
+### Publicación
+
+Resumen SESEP reescrito (`Downloads\20_4278_resumo_v2.docx`, 2026-07-09)
+alineado al pivote: plataforma de monitoreo/generación de datasets, hallazgo
+PFC con N=1 como resultado destacado, estudio de dominancia, límites
+explícitos. **Pendiente del autor**: revisión, lista de autores (J. Paris
+confirmado), formato de plantilla y envío. Clasificación propuesta: C4.
+
+### Pendientes vigentes (reordenados tras el pivote)
+
+1. **Campaña de campo etiquetada** — ahora habilitada por PQMLogger; lo que
+   falta es operativo: elegir feeders, relevar metadatos, determinar Udin
+   en las unidades del ION por feeder, y una prueba de la tubería contra
+   un ION real antes de la campaña formal. Sigue siendo el cuello de
+   botella de todo lo demás.
+2. Estructurales de HADES sin cambios: NILM sobre acumulado de campo,
+   MSTA/MMTR al árbol, revisar FP=0.92 y cargas gemelas del PFC (esperan
+   campo), URCB/BRCB (aplica a ambas apps), umbrales editables en GUI,
+   desacoplar ruta JDK (hecho en PQMLogger; pendiente en HADES).
+3. P3 de deuda técnica (diferido al diseño del análisis temporal).
+4. Paper ICHQP/IEEE PES: espera los datos de la campaña.
+5. Decisión del autor: submódulo `simulator` modificado y
+   `build_paquetes_v11.ps1` sin trackear (preexistentes, fuera de commits).
