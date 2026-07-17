@@ -1,9 +1,9 @@
 package com.harmonicmonitor.simulator;
 
 /**
- * Data class representing one simulation load profile for {@link IonSimServer}.
+ * Data class representing one simulation load profile for {@link GenericMeterSimServer}.
  *
- * Previously a {@code static} inner class of {@link IonSimServer};
+ * Previously a {@code static} inner class of {@link GenericMeterSimServer};
  * extracted to its own file (refactor F16-001).
  */
 class Profile {

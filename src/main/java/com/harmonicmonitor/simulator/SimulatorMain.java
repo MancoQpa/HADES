@@ -3,7 +3,7 @@ package com.harmonicmonitor.simulator;
 import java.util.logging.*;
 
 /**
- * Punto de entrada del simulador de escritorio ION 7400.
+ * Punto de entrada del simulador de escritorio de multimedidor genérico.
  *
  * Uso:
  *   java -cp <classpath> com.harmonicmonitor.simulator.SimulatorMain [opciones]
@@ -82,7 +82,7 @@ public class SimulatorMain {
                 "  iedName=" + iedName + "  ldInst=" + ldInst + "  prefix=" + prefix);
         System.out.println("──────────────────────────────────────────────────────");
 
-        IonSimServer server = new IonSimServer();
+        GenericMeterSimServer server = new GenericMeterSimServer();
         server.start(cidPath, port, iedName, ldInst, prefix, profile, noise, interval);
 
         System.out.println("Servidor activo. Presione Ctrl+C para detener.");

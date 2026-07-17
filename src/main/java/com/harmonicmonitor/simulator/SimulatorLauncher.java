@@ -169,7 +169,7 @@ public class SimulatorLauncher {
         String sep = File.pathSeparator;
         String cp  = "classes" + sep + "lib" + File.separator + "*";
 
-        // CID como ruta absoluta para que IonSimServer encuentre templates/
+        // CID como ruta absoluta para que GenericMeterSimServer encuentre templates/
         // independientemente del directorio de trabajo del subproceso
         String cidAbsolute = new File(System.getProperty("user.dir"),
                 "simulator" + File.separator + cidFile).getAbsolutePath();

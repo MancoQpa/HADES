@@ -17,14 +17,14 @@ import java.util.logging.Logger;
 import java.util.regex.*;
 
 /**
- * Servidor IEC 61850 de escritorio que simula un ION 7400.
+ * Servidor IEC 61850 de escritorio que simula un multimedidor genérico.
  *
  * Carga un CID, inicia ServerSap en el puerto indicado y actualiza
  * periódicamente los valores con ruido gaussiano sobre el perfil elegido.
  */
-public class IonSimServer {
+public class GenericMeterSimServer {
 
-    private static final Logger LOG = Logger.getLogger(IonSimServer.class.getName());
+    private static final Logger LOG = Logger.getLogger(GenericMeterSimServer.class.getName());
 
     private ServerSap    serverSap;
     private ServerModel  serverModel;
@@ -76,6 +76,9 @@ public class IonSimServer {
         // 3. Crear y arrancar ServerSap
         serverSap = new ServerSap(port, 0, null, serverModel, null);
         serverSap.startListening(null);
+        // setValues() exige BDAs de la copia interna del ServerSap (con bdaMirror
+        // enlazado); escribir sobre el modelo parseado original lanza NPE.
+        serverModel = serverSap.getModelCopy();
         LOG.info("Servidor IEC 61850 escuchando en puerto " + port);
 
         // 4. Aplicar valores iniciales
@@ -260,7 +263,7 @@ public class IonSimServer {
     private ServerModel parseCid(String cidPath, String targetIedName) throws Exception {
         String cid = Files.readString(Path.of(cidPath), StandardCharsets.UTF_8);
 
-        // Expandir arrays SCL con count> 1 (ej: armónicos en CIDs reales ION7400)
+        // Expandir arrays SCL con count> 1 (ej: armónicos en CIDs de medidores reales)
         cid = expandSclArraysInMemory(cid);
 
         // Auto-detectar el IED name en el CID y reemplazarlo si se pidió otro
