@@ -11,7 +11,7 @@ import java.util.regex.*;
  * Loads and parses {@link Profile} objects from JSON template files or embedded defaults.
  *
  * All methods are static; this class has no mutable state.
- * Extracted from {@link IonSimServer} (refactor F16-001).
+ * Extracted from {@link GenericMeterSimServer} (refactor F16-001).
  *
  * <p>Search order for JSON files:
  * <ol>

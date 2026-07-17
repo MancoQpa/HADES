@@ -55,7 +55,9 @@ class MmsNodeReader {
 
     /**
      * Discovers and caches a FC=MX node.
-     * Supports WYE/DEL/SEQ (ref.cVal.mag.f) and scalar MV (ref.mag.f).
+     * Supports WYE/DEL/SEQ (ref.cVal.mag.f), scalar MV (ref.mag.f) and
+     * flattened CIDs where the float DA is directly ref or ref.mag
+     * (e.g. the HADES simulator CID with scalar FLOAT32 DAs).
      */
     void cacheNodePair(String ref) {
         if (ref == null || serverModel == null) return;
@@ -83,6 +85,18 @@ class MmsNodeReader {
                                  : (leaf   instanceof FcModelNode) ? (FcModelNode) leaf
                                  : null;
             if (fcParent != null) mxNodeCache.put(ref, new NodePair(fcParent, leaf));
+            return;
+        }
+
+        // Attempt 3: flattened CID → the float DA is directly ref (WYE/SEQ phase)
+        // or ref.mag (MV without AnalogueValue struct)
+        for (String flatRef : new String[]{ref, ref + ".mag"}) {
+            leaf = serverModel.findModelNode(flatRef, Fc.MX);
+            if (leaf == null) leaf = serverModel.findModelNode(flatRef, null);
+            if (leaf instanceof BdaFloat32 || leaf instanceof BdaFloat64) {
+                mxNodeCache.put(ref, new NodePair((FcModelNode) leaf, leaf));
+                return;
+            }
         }
     }
 
@@ -176,6 +190,17 @@ class MmsNodeReader {
             }
             if (magF instanceof BdaFloat32) return ((BdaFloat32) magF).getFloat();
             if (magF instanceof BdaFloat64) return (float)((double) ((BdaFloat64) magF).getDouble());
+        }
+
+        // Slow path — flattened CID: the float DA is directly ref or ref.mag
+        for (String flatRef : new String[]{ref, ref + ".mag"}) {
+            ModelNode flat = serverModel.findModelNode(flatRef, Fc.MX);
+            if (flat == null) flat = serverModel.findModelNode(flatRef, null);
+            if (flat instanceof BdaFloat32 || flat instanceof BdaFloat64) {
+                association.getDataValues((FcModelNode) flat);
+                if (flat instanceof BdaFloat32) return ((BdaFloat32) flat).getFloat();
+                return (float)((double) ((BdaFloat64) flat).getDouble());
+            }
         }
 
         return 0.0f;

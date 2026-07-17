@@ -17,14 +17,14 @@ import java.util.logging.Logger;
 import java.util.regex.*;
 
 /**
- * Servidor IEC 61850 de escritorio que simula un ION 7400.
+ * Servidor IEC 61850 de escritorio que simula un multimedidor genérico.
  *
  * Carga un CID, inicia ServerSap en el puerto indicado y actualiza
  * periódicamente los valores con ruido gaussiano sobre el perfil elegido.
  */
-public class IonSimServer {
+public class GenericMeterSimServer {
 
-    private static final Logger LOG = Logger.getLogger(IonSimServer.class.getName());
+    private static final Logger LOG = Logger.getLogger(GenericMeterSimServer.class.getName());
 
     private ServerSap    serverSap;
     private ServerModel  serverModel;
@@ -76,6 +76,9 @@ public class IonSimServer {
         // 3. Crear y arrancar ServerSap
         serverSap = new ServerSap(port, 0, null, serverModel, null);
         serverSap.startListening(null);
+        // setValues() exige BDAs de la copia interna del ServerSap (con bdaMirror
+        // enlazado); escribir sobre el modelo parseado original lanza NPE.
+        serverModel = serverSap.getModelCopy();
         LOG.info("Servidor IEC 61850 escuchando en puerto " + port);
 
         // 4. Aplicar valores iniciales
@@ -146,10 +149,17 @@ public class IonSimServer {
         String mmtr = ld + "MMTR1.";
         String msta = ld + "MSTA1.";
 
-        // ── MMXU: tensiones (WYE, phsX = BdaFloat32 directo) ────────────────
+        // ── MMXU: tensiones fase-neutro ───────────────────────────────────
         setMx(mmx + "PhV.phsA", n(profile.phVL1), changed);
         setMx(mmx + "PhV.phsB", n(profile.phVL2), changed);
         setMx(mmx + "PhV.phsC", n(profile.phVL3), changed);
+
+        // ── MMXU: tensiones línea-línea (≈ √3·fase-neutro); si el CID no
+        //    modela el DO PPV (p.ej. el CID aplanado), setMx lo omite ──────
+        final float SQRT3 = 1.7320508f;
+        setMx(mmx + "PPV.phsAB", n(profile.phVL1) * SQRT3, changed);
+        setMx(mmx + "PPV.phsBC", n(profile.phVL2) * SQRT3, changed);
+        setMx(mmx + "PPV.phsCA", n(profile.phVL3) * SQRT3, changed);
 
         // ── MMXU: corrientes ──────────────────────────────────────────────
         setMx(mmx + "A.phsA", n(profile.aL1), changed);
@@ -232,10 +242,15 @@ public class IonSimServer {
     // ── Helpers de escritura en modelo ────────────────────────────────────────
 
     private void setMx(String ref, float value, List<BasicDataAttribute> out) {
-        ModelNode node = serverModel.findModelNode(ref, Fc.MX);
-        if (node instanceof BdaFloat32) {
-            ((BdaFloat32) node).setFloat(value);
-            out.add((BdaFloat32) node);
+        // Soporta CID aplanado (DA FLOAT32 directo), MV estándar (ref.mag → mag.f)
+        // y CMV estándar de CIDs de fabricante (ref.phsX → cVal.mag.f)
+        for (String cand : new String[]{ref, ref + ".f", ref + ".cVal.mag.f"}) {
+            ModelNode node = serverModel.findModelNode(cand, Fc.MX);
+            if (node instanceof BdaFloat32) {
+                ((BdaFloat32) node).setFloat(value);
+                out.add((BdaFloat32) node);
+                return;
+            }
         }
     }
 
@@ -260,7 +275,7 @@ public class IonSimServer {
     private ServerModel parseCid(String cidPath, String targetIedName) throws Exception {
         String cid = Files.readString(Path.of(cidPath), StandardCharsets.UTF_8);
 
-        // Expandir arrays SCL con count> 1 (ej: armónicos en CIDs reales ION7400)
+        // Expandir arrays SCL con count> 1 (ej: armónicos en CIDs de medidores reales)
         cid = expandSclArraysInMemory(cid);
 
         // Auto-detectar el IED name en el CID y reemplazarlo si se pidió otro

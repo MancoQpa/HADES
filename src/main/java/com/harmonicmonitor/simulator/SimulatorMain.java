@@ -3,13 +3,13 @@ package com.harmonicmonitor.simulator;
 import java.util.logging.*;
 
 /**
- * Punto de entrada del simulador de escritorio ION 7400.
+ * Punto de entrada del simulador de escritorio de multimedidor genérico.
  *
  * Uso:
  *   java -cp <classpath> com.harmonicmonitor.simulator.SimulatorMain [opciones]
  *
  * Opciones:
- *   --cid      <ruta>    Ruta al archivo CID  (default: simulator/generic_meter_sim.cid)
+ *   --cid      <ruta>    Ruta al archivo CID  (default: simulator/generic_meter_sim2.cid)
  *   --port     <n>       Puerto MMS           (default: 10102)
  *   --ied      <nombre>  Nombre del IED       (default: SIM1)
  *   --ld       <inst>    Instancia LD         (default: LD0)
@@ -47,7 +47,7 @@ public class SimulatorMain {
         rootLog.setLevel(Level.INFO);
 
         // Valores por defecto
-        String cidPath   = "simulator/generic_meter_sim.cid";
+        String cidPath   = "simulator/generic_meter_sim2.cid";
         int    port      = 10102;
         String iedName   = "SIM1";
         String ldInst    = "LD0";
@@ -82,7 +82,7 @@ public class SimulatorMain {
                 "  iedName=" + iedName + "  ldInst=" + ldInst + "  prefix=" + prefix);
         System.out.println("──────────────────────────────────────────────────────");
 
-        IonSimServer server = new IonSimServer();
+        GenericMeterSimServer server = new GenericMeterSimServer();
         server.start(cidPath, port, iedName, ldInst, prefix, profile, noise, interval);
 
         System.out.println("Servidor activo. Presione Ctrl+C para detener.");
