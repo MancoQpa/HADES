@@ -149,10 +149,17 @@ public class GenericMeterSimServer {
         String mmtr = ld + "MMTR1.";
         String msta = ld + "MSTA1.";
 
-        // ── MMXU: tensiones (WYE, phsX = BdaFloat32 directo) ────────────────
+        // ── MMXU: tensiones fase-neutro ───────────────────────────────────
         setMx(mmx + "PhV.phsA", n(profile.phVL1), changed);
         setMx(mmx + "PhV.phsB", n(profile.phVL2), changed);
         setMx(mmx + "PhV.phsC", n(profile.phVL3), changed);
+
+        // ── MMXU: tensiones línea-línea (≈ √3·fase-neutro); si el CID no
+        //    modela el DO PPV (p.ej. el CID aplanado), setMx lo omite ──────
+        final float SQRT3 = 1.7320508f;
+        setMx(mmx + "PPV.phsAB", n(profile.phVL1) * SQRT3, changed);
+        setMx(mmx + "PPV.phsBC", n(profile.phVL2) * SQRT3, changed);
+        setMx(mmx + "PPV.phsCA", n(profile.phVL3) * SQRT3, changed);
 
         // ── MMXU: corrientes ──────────────────────────────────────────────
         setMx(mmx + "A.phsA", n(profile.aL1), changed);

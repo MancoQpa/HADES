@@ -9,7 +9,7 @@ import java.util.logging.*;
  *   java -cp <classpath> com.harmonicmonitor.simulator.SimulatorMain [opciones]
  *
  * Opciones:
- *   --cid      <ruta>    Ruta al archivo CID  (default: simulator/generic_meter_sim.cid)
+ *   --cid      <ruta>    Ruta al archivo CID  (default: simulator/generic_meter_sim2.cid)
  *   --port     <n>       Puerto MMS           (default: 10102)
  *   --ied      <nombre>  Nombre del IED       (default: SIM1)
  *   --ld       <inst>    Instancia LD         (default: LD0)
@@ -47,7 +47,7 @@ public class SimulatorMain {
         rootLog.setLevel(Level.INFO);
 
         // Valores por defecto
-        String cidPath   = "simulator/generic_meter_sim.cid";
+        String cidPath   = "simulator/generic_meter_sim2.cid";
         int    port      = 10102;
         String iedName   = "SIM1";
         String ldInst    = "LD0";

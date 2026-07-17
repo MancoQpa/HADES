@@ -150,10 +150,10 @@ public class SimulatorLauncher {
         String profile  = jstr(body, "profile",  "crypto_mining");
         String noise    = jstr(body, "noise",    "0.03");
         int    interval = jint(body, "interval",  5000);
-        String cidFile  = jstr(body, "cid",      "generic_meter_sim.cid");
+        String cidFile  = jstr(body, "cid",      "generic_meter_sim2.cid");
         // Sanitize: only allow basename (no path traversal)
         if (cidFile.isEmpty() || cidFile.contains("..") || cidFile.contains("/") || cidFile.contains("\\"))
-            cidFile = "generic_meter_sim.cid";
+            cidFile = "generic_meter_sim2.cid";
 
         // Matar proceso existente con el mismo IED (por mapa y por puerto)
         Process old = procs.get(ied);
