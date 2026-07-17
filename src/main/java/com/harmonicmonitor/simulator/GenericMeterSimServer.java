@@ -235,10 +235,15 @@ public class GenericMeterSimServer {
     // ── Helpers de escritura en modelo ────────────────────────────────────────
 
     private void setMx(String ref, float value, List<BasicDataAttribute> out) {
-        ModelNode node = serverModel.findModelNode(ref, Fc.MX);
-        if (node instanceof BdaFloat32) {
-            ((BdaFloat32) node).setFloat(value);
-            out.add((BdaFloat32) node);
+        // Soporta CID aplanado (DA FLOAT32 directo), MV estándar (ref.mag → mag.f)
+        // y CMV estándar de CIDs de fabricante (ref.phsX → cVal.mag.f)
+        for (String cand : new String[]{ref, ref + ".f", ref + ".cVal.mag.f"}) {
+            ModelNode node = serverModel.findModelNode(cand, Fc.MX);
+            if (node instanceof BdaFloat32) {
+                ((BdaFloat32) node).setFloat(value);
+                out.add((BdaFloat32) node);
+                return;
+            }
         }
     }
 
